@@ -107,4 +107,4 @@ template JsonMaskObjectNIVC(TOTAL_BYTES, DATA_BYTES, MAX_STACK_HEIGHT, maxKeyLen
     // No need to pad as this is currently when TOTAL_BYTES == TOTAL_BYTES_USED
 }
 
-component main { public [step_in] } = JsonMaskArrayIndexNIVC(4160, 320, 5);
+component main { public [step_in] } = JsonMaskObjectNIVC(4160, 320, 5, 10);

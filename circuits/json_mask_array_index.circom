@@ -1,5 +1,7 @@
 pragma circom 2.1.9;
 
+include "parser-attestor/circuits/json/interpreter.circom";
+
 template JsonMaskArrayIndexNIVC(TOTAL_BYTES, DATA_BYTES, MAX_STACK_HEIGHT) {
     // ------------------------------------------------------------------------------------------------------------------ //
     // ~~ Set sizes at compile time ~~
