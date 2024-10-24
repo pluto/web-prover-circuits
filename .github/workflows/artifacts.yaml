@@ -1,12 +1,8 @@
 name: build-circuits
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 on:
-  push:
-    branches: [ "main" ]
+  release:
+    types: [published]
   pull_request:
     branches: [ "main" ]
 
@@ -47,7 +43,7 @@ jobs:
 
     - name: Install Node.js dependencies
       run: |
-        npm install
+        npm ci
 
     - name: Get package version
       id: package_version
@@ -137,18 +133,13 @@ jobs:
         path: artifacts/
         retention-days: 5
 
-    # Create Release only on push to main
-    - name: Create Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Add artifacts to existing release
+    - name: Upload Release Asset
+      if: github.event_name == 'release'
       uses: softprops/action-gh-release@v1
       with:
         files: circom-artifacts-v${{ env.VERSION }}.zip
-        name: Circuit Artifacts v${{ env.VERSION }}
-        tag_name: v${{ env.VERSION }}
-        body: |
-          Automated release of compiled Circom circuits
-          Version: ${{ env.VERSION }}
-          Commit: ${{ github.sha }}
+        tag_name: ${{ github.ref }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
