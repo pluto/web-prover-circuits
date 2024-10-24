@@ -1,0 +1,96 @@
+name: build-circuits
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Protocol Buffers
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y protobuf-compiler libprotobuf-dev
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: nightly-2024-06-10
+
+    - name: Install Circom
+      run: |
+        CIRCOM_VERSION=2.1.9
+        curl -L https://github.com/iden3/circom/releases/download/v$CIRCOM_VERSION/circom-linux-amd64 -o circom
+        chmod +x circom
+        sudo mv circom /usr/local/bin/
+        circom --version
+
+    - name: Install circom-witnesscalc
+      run: |
+        cd .. && git clone https://github.com/pluto/circom-witnesscalc.git
+        cd circom-witnesscalc
+        cargo install --path .
+        echo $(which build-circuit)
+
+    - name: Install Node.js dependencies
+      run: |
+        npm install
+
+    - name: Compile Circom circuits
+      run: |
+        mkdir -p artifacts
+        for circuit in circuits/*.circom; do
+          if [ -f "$circuit" ]; then
+            filename=$(basename "$circuit" .circom)
+            output_dir="artifacts/$filename"
+            mkdir -p "$output_dir"
+            
+            echo "Processing $filename..."
+            
+            # Run circom compilation
+            circom "$circuit" --r1cs --wasm -o "$output_dir" -l node_modules
+            
+            # Run witness calculator build
+            build-circuit "$circuit" "$output_dir/$filename.bin" -l node_modules
+          fi
+        done
+
+    - name: Create release artifacts
+      run: |
+        cd artifacts
+        zip -r ../circom-artifacts.zip ./*
+        cd ..
+
+    # Upload artifacts for PR
+    - name: Upload artifacts for PR
+      if: github.event_name == 'pull_request'
+      uses: actions/upload-artifact@v4
+      with:
+        name: circom-artifacts
+        path: artifacts/
+        retention-days: 5
+
+    # Create Release only on push to main
+    - name: Create Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: circom-artifacts.zip
+        name: Circuit Artifacts ${{ github.sha }}
+        tag_name: v${{ github.run_number }}
+        body: |
+          Automated release of compiled Circom circuits
+          Commit: ${{ github.sha }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
