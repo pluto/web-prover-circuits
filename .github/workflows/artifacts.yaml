@@ -1,12 +1,8 @@
 name: build-circuits
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 on:
-  push:
-    branches: [ "main" ]
+  release:
+    types: [published]
   pull_request:
     branches: [ "main" ]
 
@@ -45,7 +41,13 @@ jobs:
 
     - name: Install Node.js dependencies
       run: |
-        npm install
+        npm ci
+
+    - name: Get package version
+      id: package_version
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
 
     - name: Compile Circom circuits
       run: |
@@ -69,7 +71,7 @@ jobs:
     - name: Create release artifacts
       run: |
         cd artifacts
-        zip -r ../circom-artifacts.zip ./*
+        zip -r ../circom-artifacts-v${VERSION}.zip ./*
         cd ..
 
     # Upload artifacts for PR
@@ -77,20 +79,16 @@ jobs:
       if: github.event_name == 'pull_request'
       uses: actions/upload-artifact@v4
       with:
-        name: circom-artifacts
+        name: circom-artifacts-v${{ env.VERSION }}
         path: artifacts/
         retention-days: 5
 
-    # Create Release only on push to main
-    - name: Create Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Add artifacts to existing release
+    - name: Upload Release Asset
+      if: github.event_name == 'release'
       uses: softprops/action-gh-release@v1
       with:
-        files: circom-artifacts.zip
-        name: Circuit Artifacts ${{ github.sha }}
-        tag_name: v${{ github.run_number }}
-        body: |
-          Automated release of compiled Circom circuits
-          Commit: ${{ github.sha }}
+        files: circom-artifacts-v${{ env.VERSION }}.zip
+        tag_name: ${{ github.ref }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
