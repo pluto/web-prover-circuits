@@ -72,6 +72,16 @@ jobs:
         zip -r ../circom-artifacts.zip ./*
         cd ..
 
+    # Upload artifacts for PR
+    - name: Upload artifacts for PR
+      if: github.event_name == 'pull_request'
+      uses: actions/upload-artifact@v4
+      with:
+        name: circom-artifacts
+        path: artifacts/
+        retention-days: 5
+
+    # Create Release only on push to main
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v1
