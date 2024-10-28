@@ -1,0 +1,45 @@
+{
+    "data": {
+        "me": {
+            "profile": {
+                "topArtists": {
+                    "__typename": "ArtistPageV2",
+                    "items": [
+                        {
+                            "data": {
+                                "__typename": "Artist",
+                                "profile": {
+                                    "name": "Taylor Swift"
+                                },
+                                "uri": "spotify:artist:06HL4z0CvFAxyc27GXpf02",
+                                "visuals": {
+                                    "avatarImage": {
+                                        "sources": [
+                                            {
+                                                "height": 640,
+                                                "url": "https://i.scdn.co/image/ab6761610000e5ebe672b5f553298dcdccb0e676",
+                                                "width": 640
+                                            },
+                                            {
+                                                "height": 160,
+                                                "url": "https://i.scdn.co/image/ab6761610000f178e672b5f553298dcdccb0e676",
+                                                "width": 160
+                                            },
+                                            {
+                                                "height": 320,
+                                                "url": "https://i.scdn.co/image/ab67616100005174e672b5f553298dcdccb0e676",
+                                                "width": 320
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "totalCount": 1
+                }
+            }
+        }
+    },
+    "extensions": {}
+}

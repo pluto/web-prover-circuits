@@ -1,3 +1,19 @@
-*.r1cs
-*.bin
+/target
+
 node_modules/*
+
+# Circomkit generated
+build/*
+ptau/*
+circuits/test/*.circom
+circuits/main/*
+
+# Rust generated
+inputs/**/*.json
+!inputs/search/witness.json
+
+# Circom-witnesscalc generated
+ir_log/*
+log_input_signals.txt
+*.bin
+*.r1cs

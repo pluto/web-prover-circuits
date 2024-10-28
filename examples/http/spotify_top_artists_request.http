@@ -1,0 +1,3 @@
+GET /v1/me/top/artists?time_range=medium_term&limit=1 HTTP/1.1
+Host: api.spotify.com
+Authorization: Bearer BQBXRpIm2NL08akEiaxB5l42eiq6Zd9Q0S2-0Q4k0CMoa5u8o_ah_Ddjxt6Mv3226AEDyKYcFPpgw_6Asg-Y2hJpcuMya8wzqyqgiV-KH0vcEq7EFzODXoaBxsB0wryVCWDF6p5dqcpIHOz4QJqQa9mUA6sFzYNyECglT-BGcRe_N9f_3aqYTGQ-kkE-devPkPkEfDcbziT6mOzJfGRzLw

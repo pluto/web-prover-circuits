@@ -1,0 +1,8 @@
+{
+    "compilerOptions": {
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true
+    }
+}
