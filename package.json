@@ -4,7 +4,7 @@
   "description": "ZK Circuits for WebProofs",
   "dependencies": {
     "parser-attestor": "github:pluto/parser-attestor#b9feeeb240ddf867da85198de7d59e73cba4b008",
-    "aes-proof": "github:pluto/aes-proof#1d08e13ea4f381649cdff83f56d93444008b6548"
+    "aes-circuits": "github:pluto/aes-circuits#65f823fc5606fca74440fb0de939ae07a3c39a80"
   },
   "devDependencies": {
     "@semantic-release/commit-analyzer": "^11.1.0",
