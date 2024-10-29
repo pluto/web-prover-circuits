@@ -67,4 +67,4 @@ template AESGCMFOLD(INPUT_LEN) {
     writeNumberOfFoldedBlocks.out ==> step_out;
 }
 
-component main { public [step_in] } = AESGCMFOLD(16, 320, 4160);
+component main { public [step_in] } = AESGCMFOLD(4160);
