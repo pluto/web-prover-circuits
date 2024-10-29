@@ -2,6 +2,7 @@ pragma circom 2.1.9;
 
 include "../interpreter.circom";
 include "../../utils/array.circom";
+include "circomlib/circuits/comparators.circom";
 
 // TODO: should use a MAX_HEADER_NAME_LENGTH and a MAX_HEADER_VALUE_LENGTH
 template LockHeader(DATA_BYTES, MAX_STACK_HEIGHT, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH) {
@@ -48,9 +49,10 @@ template LockHeader(DATA_BYTES, MAX_STACK_HEIGHT, MAX_HEADER_NAME_LENGTH, MAX_HE
     signal headerFieldNameValueMatch <==  HeaderFieldNameValueMatchPadded(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH)(data, header, headerNameLength, value, headerValueLength, headerNameLocation);
     headerFieldNameValueMatch === 1;
 
-    // parser state should be parsing header
+    // parser state should be parsing header upto 2^10 max headers
     signal isParsingHeader <== IndexSelector(DATA_BYTES * 5)(httpParserState, headerNameLocation * 5 + 1);
-    isParsingHeader === 1;
+    signal parsingHeader <== GreaterThan(10)([isParsingHeader, 0]);
+    parsingHeader === 1;
 
     // ------------------------------------------------------------------------------------------------------------------ //
     // ~ Write out to next NIVC step

@@ -56,7 +56,7 @@ export function readHTTPInputFile(filename: string) {
 
         headerLines.forEach(line => {
             const [key, value] = line.split(/:\s(.+)/);
-            if (key) headers[key.toLowerCase()] = value ? value : '';
+            if (key) headers[key] = value ? value : '';
         });
 
         return headers;

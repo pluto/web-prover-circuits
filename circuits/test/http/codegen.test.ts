@@ -138,7 +138,7 @@ describe("HTTP :: Codegen :: Response", async () => {
 
         const headers = getHeaders(lockData);
 
-        const params = [input.length, parseInt(http.headers["Content-Length".toLowerCase()]), lockData.version.length, lockData.status.length, lockData.message.length];
+        const params = [input.length, parseInt(http.headers["Content-Length"]), lockData.version.length, lockData.status.length, lockData.message.length];
         headers.forEach(header => {
             params.push(header[0].length);
             params.push(header[1].length);
@@ -184,7 +184,7 @@ describe("HTTP :: Codegen :: Response", async () => {
 
         const headers = getHeaders(lockData);
 
-        const params = [input.length, parseInt(http.headers["Content-Length".toLowerCase()]), lockData.version.length, lockData.status.length, lockData.message.length];
+        const params = [input.length, parseInt(http.headers["Content-Length"]), lockData.version.length, lockData.status.length, lockData.message.length];
         headers.forEach(header => {
             params.push(header[0].length);
             params.push(header[1].length);

@@ -1,5 +1,4 @@
-import { circomkit, WitnessTester, generateDescription, readJsonFile, toByte } from "../../common";
-import { join } from "path";
+import { circomkit, WitnessTester, toByte } from "../../common";
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
@@ -37,8 +36,8 @@ let http_response_plaintext = [
     10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13,
     10, 32, 32, 32, 125, 13, 10, 125];
 
-describe("HTTPParseAndLockStartLineNIVC", async () => {
-    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "beginning", "middle", "final"], ["step_out"]>;
+describe("NIVC_HTTP", async () => {
+    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
     let lockHeaderCircuit: WitnessTester<["step_in", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
     let bodyMaskCircuit: WitnessTester<["step_in"], ["step_out"]>;
 
@@ -49,19 +48,19 @@ describe("HTTPParseAndLockStartLineNIVC", async () => {
 
     const MAX_HEADER_NAME_LENGTH = 20;
     const MAX_HEADER_VALUE_LENGTH = 35;
+    const MAX_BEGINNING_LENGTH = 10;
+    const MAX_MIDDLE_LENGTH = 30;
+    const MAX_FINAL_LENGTH = 10;
 
     const beginning = [72, 84, 84, 80, 47, 49, 46, 49]; // HTTP/1.1
-    const BEGINNING_LENGTH = 8;
     const middle = [50, 48, 48]; // 200
-    const MIDDLE_LENGTH = 3;
     const final = [79, 75]; // OK
-    const FINAL_LENGTH = 2;
 
     before(async () => {
         httpParseAndLockStartLineCircuit = await circomkit.WitnessTester(`ParseAndLockStartLine`, {
             file: "http/nivc/parse_and_lock_start_line",
             template: "ParseAndLockStartLine",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, BEGINNING_LENGTH, MIDDLE_LENGTH, FINAL_LENGTH],
+            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH],
         });
         console.log("#constraints:", await httpParseAndLockStartLineCircuit.getConstraintCount());
 
@@ -87,8 +86,11 @@ describe("HTTPParseAndLockStartLineNIVC", async () => {
 
     let headerNamePadded = headerName.concat(Array(MAX_HEADER_NAME_LENGTH - headerName.length).fill(0));
     let headerValuePadded = headerValue.concat(Array(MAX_HEADER_VALUE_LENGTH - headerValue.length).fill(0));
+    let beginningPadded = beginning.concat(Array(MAX_BEGINNING_LENGTH - beginning.length).fill(0));
+    let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
+    let finalPadded = final.concat(Array(MAX_FINAL_LENGTH - final.length).fill(0));
     it("HTTPParseAndExtract", async () => {
-        let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedJsonInput, beginning: beginning, middle: middle, final: final }, ["step_out"]);
+        let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedJsonInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
 
         let lockHeader = await lockHeaderCircuit.compute({ step_in: parseAndLockStartLine.step_out, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length }, ["step_out"]);
 
@@ -97,9 +99,9 @@ describe("HTTPParseAndLockStartLineNIVC", async () => {
         let bodyMaskOut = bodyMask.step_out as number[];
         let idx = bodyMaskOut.indexOf('{'.charCodeAt(0));
 
-        let extended_json_input_2 = extendedJsonInput.fill(0, 0, idx);
-        extended_json_input_2 = extended_json_input_2.fill(0, 320);
+        let maskedInput = extendedJsonInput.fill(0, 0, idx);
+        maskedInput = maskedInput.fill(0, 320);
 
-        bodyMaskOut === extended_json_input_2;
+        bodyMaskOut === maskedInput;
     });
 });
