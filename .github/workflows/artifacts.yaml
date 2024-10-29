@@ -5,12 +5,46 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    branches: [ "main" ]
+  release:
+    types: [published]
   pull_request:
     branches: [ "main" ]
 
 jobs:
+  check-version:
+    name: Check package.json version update
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Fetch two commits to get the base branch
+
+      - name: Fetch main branch
+        run: |
+          git fetch origin main
+
+      - name: Compare package.json version with main
+        id: version_check
+        run: |
+          # Extract version from package.json in PR branch
+          PR_VERSION=$(jq -r .version package.json)
+
+          # Extract version from package.json in main branch
+          MAIN_VERSION=$(git show origin/main:package.json | jq -r .version)
+
+          echo "PR version: $PR_VERSION"
+          echo "Main version: $MAIN_VERSION"
+
+          # Fail if versions match
+          if [ "$PR_VERSION" == "$MAIN_VERSION" ]; then
+            echo "Error: package.json version has not been updated in this PR."
+            exit 1
+          else
+            echo "package.json version has been updated in this PR."
+          fi
+
   build:
     runs-on: ubuntu-latest
 
@@ -47,29 +81,13 @@ jobs:
 
     - name: Install Node.js dependencies
       run: |
-        npm install
+        npm ci
 
-    - name: Get current version
-      id: current_version
+    - name: Get package version
+      id: package_version
       run: |
-        CURRENT_VERSION=$(node -p "require('./package.json').version")
-        echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
-
-    - name: Download previous artifacts
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
-        # Get the latest release tag
-        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
-        if [ "$LATEST_TAG" != "none" ]; then
-          mkdir -p previous_artifacts
-          # Download and extract previous artifacts
-          curl -L $(gh release download $LATEST_TAG -p "*.zip" --json assets -q ".[0].url") -o previous.zip || true
-          if [ -f previous.zip ]; then
-            unzip -q previous.zip -d previous_artifacts
-          fi
-        fi
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VERSION=$(node -p "require('./package.json').version")
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
 
     - name: Compile Circom circuits
       run: |
@@ -79,69 +97,21 @@ jobs:
             filename=$(basename "$circuit" .circom)
             output_dir="artifacts/$filename"
             mkdir -p "$output_dir"
-            
+
             echo "Processing $filename..."
-            
+
             # Run circom compilation
             circom "$circuit" --r1cs --wasm -o "$output_dir" -l node_modules
-            
+
             # Run witness calculator build
             build-circuit "$circuit" "$output_dir/$filename.bin" -l node_modules
           fi
         done
 
-    - name: Check for R1CS changes and update version
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      id: version_check
-      run: |
-        NEEDS_BUMP=false
-        
-        # Compare R1CS files if previous artifacts exist
-        if [ -d "previous_artifacts" ]; then
-          for r1cs in artifacts/*/*.r1cs; do
-            filename=$(basename $r1cs)
-            dirname=$(dirname $r1cs)
-            basedir=$(basename $dirname)
-            if [ -f "previous_artifacts/$basedir/$filename" ]; then
-              if ! cmp -s "$r1cs" "previous_artifacts/$basedir/$filename"; then
-                echo "R1CS change detected in $filename"
-                NEEDS_BUMP=true
-                break
-              fi
-            else
-              echo "New R1CS file detected: $filename"
-              NEEDS_BUMP=true
-              break
-            fi
-          done
-        else
-          echo "No previous artifacts found, will bump version"
-          NEEDS_BUMP=true
-        fi
-        
-        if [ "$NEEDS_BUMP" = "true" ]; then
-          # Split version into components
-          IFS='.' read -r -a version_parts <<< "$CURRENT_VERSION"
-          MAJOR="${version_parts[0]}"
-          MINOR="${version_parts[1]}"
-          PATCH="${version_parts[2]}"
-          
-          # Increment minor version
-          NEW_VERSION="$MAJOR.$((MINOR + 1)).0"
-          echo "Updating version to $NEW_VERSION"
-          
-          # Update package.json
-          npm version $NEW_VERSION --no-git-tag-version
-          
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-        else
-          echo "NEW_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
-        fi
-
     - name: Create release artifacts
       run: |
         cd artifacts
-        zip -r ../circom-artifacts.zip ./*
+        zip -r ../circom-artifacts-v${VERSION}.zip ./*
         cd ..
 
     # Upload artifacts for PR
@@ -149,31 +119,16 @@ jobs:
       if: github.event_name == 'pull_request'
       uses: actions/upload-artifact@v4
       with:
-        name: circom-artifacts
+        name: circom-artifacts-v${{ env.VERSION }}
         path: artifacts/
         retention-days: 5
 
-    # Create Release only on push to main
-    - name: Create Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Add artifacts to existing release
+    - name: Upload Release Asset
+      if: github.event_name == 'release'
       uses: softprops/action-gh-release@v1
       with:
-        files: circom-artifacts.zip
-        name: Circuit Artifacts v${{ env.NEW_VERSION }}
-        tag_name: v${{ env.NEW_VERSION }}
-        body: |
-          Automated release of compiled Circom circuits
-          Version: ${{ env.NEW_VERSION }}
-          Commit: ${{ github.sha }}
+        files: circom-artifacts-v${{ env.VERSION }}.zip
+        tag_name: ${{ github.ref }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    # Commit version bump if needed
-    - name: Commit version bump
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.NEW_VERSION != env.CURRENT_VERSION
-      run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-        git add package.json
-        git commit -m "chore: bump version to ${{ env.NEW_VERSION }} [skip ci]"
-        git push
