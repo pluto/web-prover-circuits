@@ -5,9 +5,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 permissions:
   contents: write
@@ -15,30 +12,6 @@ permissions:
   issues: write
 
 jobs:
-  verify:
-    name: Verify semantic release
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "lts/*"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify semantic release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npx semantic-release --dry-run
-
   release:
     name: Release
     runs-on: ubuntu-latest
@@ -57,6 +30,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Get package version
+        id: package_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Get Latest Successful build-circuits Run ID
         id: get_run_id
         env:
@@ -70,15 +49,21 @@ jobs:
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: circom-artifacts
+          name: circom-artifacts-v${{ env.VERSION }}
           path: .
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ env.run_id }}
 
-      - name: Release
+
+      # Add artifacts to existing release
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: circom-artifacts-v${{ env.VERSION }}.zip
+          tag_name: v${{ env.VERSION }}
+          body: |
+            Automated release of compiled Circom circuits
+            Version: ${{ env.VERSION }}
+            Commit: ${{ github.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npx semantic-release
-          RELEASE_TAG=$(git tag --list --contains HEAD | tail -1)
-          gh release upload $RELEASE_TAG "circom-artifacts.zip"

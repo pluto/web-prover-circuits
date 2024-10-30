@@ -9,6 +9,36 @@ on:
     branches: [ "main" ]
 
 jobs:
+  check-version:
+    name: Check package.json version update
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # Fetch two commits to get the base branch
+
+    - name: Fetch main branch
+      run: |
+        git fetch origin main
+    - name: Compare package.json version with main
+      id: version_check
+      run: |
+        # Extract version from package.json in PR branch
+        PR_VERSION=$(jq -r .version package.json)
+        # Extract version from package.json in main branch
+        MAIN_VERSION=$(git show origin/main:package.json | jq -r .version)
+        echo "PR version: $PR_VERSION"
+        echo "Main version: $MAIN_VERSION"
+        # Fail if versions match
+        if [ "$PR_VERSION" == "$MAIN_VERSION" ]; then
+          echo "Error: package.json version has not been updated in this PR."
+          exit 1
+        else
+          echo "package.json version has been updated in this PR."
+        fi
+
   build:
     runs-on: ubuntu-latest
 
@@ -79,7 +109,7 @@ jobs:
     - name: Create release artifacts
       run: |
         cd artifacts
-        zip -r ../circom-artifacts.zip ./*
+        zip -r ../circom-artifacts-v${{ env.VERSION }}.zip ./*
         cd ..
 
     # Upload artifacts for PR
@@ -87,6 +117,6 @@ jobs:
       if: github.event_name == 'pull_request'
       uses: actions/upload-artifact@v4
       with:
-        name: circom-artifacts
-        path: circom-artifacts.zip
+        name: circom-artifacts-v${{ env.VERSION }}
+        path: circom-artifacts-v${{ env.VERSION }}.zip
         retention-days: 5
