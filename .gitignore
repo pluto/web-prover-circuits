@@ -1,3 +1,5 @@
 *.r1cs
 *.bin
 node_modules/*
+
+circuits/test/*.circom

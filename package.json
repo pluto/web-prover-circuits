@@ -1,9 +1,38 @@
 {
   "name": "web-prover-circuits",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "ZK Circuits for WebProofs",
+  "version": "0.2.2",
+  "license": "Apache-2.0",
+  "scripts": {
+    "test": "npx mocha",
+    "par-test": "npx mocha --parallel"
+  },
   "dependencies": {
+    "@zk-email/circuits": "^6.1.1",
+    "circomlib": "^2.0.5",
     "parser-attestor": "github:pluto/parser-attestor#b9feeeb240ddf867da85198de7d59e73cba4b008",
-    "aes-proof": "github:pluto/aes-proof#9ef4926c8fec7784ddf2f6da2de3791da839983a"
+    "aes-circuits": "github:pluto/aes-circuits#65f823fc5606fca74440fb0de939ae07a3c39a80"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.17",
+    "circomkit": "0.3.0",
+    "snarkjs": "0.7.4",
+    "typescript": "5.6.2",
+    "@types/node": "22.5.4",
+    "mocha": "10.7.3",
+    "@types/mocha": "^10.0.1",
+    "poseidon-lite": "0.3.0",
+    "ts-node": "^10.9.1",
+    "@semantic-release/commit-analyzer": "^11.1.0",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^9.2.6",
+    "@semantic-release/npm": "^11.0.2",
+    "@semantic-release/release-notes-generator": "^12.1.0",
+    "semantic-release": "^23.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pluto/web-prover-circuits.git"
   }
 }
