@@ -3,6 +3,10 @@
   "description": "ZK Circuits for WebProofs",
   "version": "0.2.2",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pluto/web-prover-circuits.git"
+  },
   "scripts": {
     "test": "npx mocha",
     "par-test": "npx mocha --parallel"
@@ -28,9 +32,5 @@
     "@semantic-release/npm": "^11.0.2",
     "@semantic-release/release-notes-generator": "^12.1.0",
     "semantic-release": "^23.0.2"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/pluto/web-prover-circuits.git"
   }
 }
