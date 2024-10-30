@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+content-type: application/json; charset=utf-8
+content-encoding: gzip
+Transfer-Encoding: chunked
+
+{
+    "data": {"items": [{"data": "Artist","profile": {"name": "Taylor Swift"}}]}
+}
