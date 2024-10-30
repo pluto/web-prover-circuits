@@ -1,5 +1,4 @@
 import { circomkit, WitnessTester, generateDescription, readJSONInputFile } from "../../common";
-import { PoseidonModular } from "../../common/poseidon";
 
 describe("Interpreter", async () => {
     describe("InsideKeyAtTop", async () => {
