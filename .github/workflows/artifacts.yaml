@@ -5,8 +5,6 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  release:
-    types: [published]
   pull_request:
     branches: [ "main" ]
 
@@ -16,34 +14,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2  # Fetch two commits to get the base branch
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # Fetch two commits to get the base branch
 
-      - name: Fetch main branch
-        run: |
-          git fetch origin main
-
-      - name: Compare package.json version with main
-        id: version_check
-        run: |
-          # Extract version from package.json in PR branch
-          PR_VERSION=$(jq -r .version package.json)
-
-          # Extract version from package.json in main branch
-          MAIN_VERSION=$(git show origin/main:package.json | jq -r .version)
-
-          echo "PR version: $PR_VERSION"
-          echo "Main version: $MAIN_VERSION"
-
-          # Fail if versions match
-          if [ "$PR_VERSION" == "$MAIN_VERSION" ]; then
-            echo "Error: package.json version has not been updated in this PR."
-            exit 1
-          else
-            echo "package.json version has been updated in this PR."
-          fi
+    - name: Fetch main branch
+      run: |
+        git fetch origin main
+    - name: Compare package.json version with main
+      id: version_check
+      run: |
+        # Extract version from package.json in PR branch
+        PR_VERSION=$(jq -r .version package.json)
+        # Extract version from package.json in main branch
+        MAIN_VERSION=$(git show origin/main:package.json | jq -r .version)
+        echo "PR version: $PR_VERSION"
+        echo "Main version: $MAIN_VERSION"
+        # Fail if versions match
+        if [ "$PR_VERSION" == "$MAIN_VERSION" ]; then
+          echo "Error: package.json version has not been updated in this PR."
+          exit 1
+        else
+          echo "package.json version has been updated in this PR."
+        fi
 
   build:
     runs-on: ubuntu-latest
@@ -63,6 +57,10 @@ jobs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: nightly-2024-06-10
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
 
     - name: Install Circom
       run: |
@@ -111,7 +109,7 @@ jobs:
     - name: Create release artifacts
       run: |
         cd artifacts
-        zip -r ../circom-artifacts-v${VERSION}.zip ./*
+        zip -r ../circom-artifacts-v${{ env.VERSION }}.zip ./*
         cd ..
 
     # Upload artifacts for PR
@@ -120,15 +118,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: circom-artifacts-v${{ env.VERSION }}
-        path: artifacts/
+        path: circom-artifacts-v${{ env.VERSION }}.zip
         retention-days: 5
-
-    # Add artifacts to existing release
-    - name: Upload Release Asset
-      if: github.event_name == 'release'
-      uses: softprops/action-gh-release@v1
-      with:
-        files: circom-artifacts-v${{ env.VERSION }}.zip
-        tag_name: ${{ github.ref }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
