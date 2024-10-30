@@ -1,0 +1,9 @@
+{
+    "extension": [
+        "ts"
+    ],
+    "require": "ts-node/register",
+    "spec": "circuits/test/**/*.test.ts",
+    "timeout": 100000,
+    "exit": true
+}
