@@ -113,3 +113,35 @@ template BitwiseRightShift(n, r) {
         out[i] <== in[i-r];
     }
 }
+
+// compute the XOR of n inputs, each m bits wide
+template XorMultiple(n, m) {
+    signal input inputs[n][m];
+    signal output out[m];
+
+    signal mids[n][m];
+    mids[0] <== inputs[0];
+
+    component xors[n-1];
+    for(var i=0; i<n-1; i++) {
+        xors[i] = BitwiseXor(m);
+        xors[i].a <== mids[i];
+        xors[i].b <== inputs[i+1];
+        mids[i+1] <== xors[i].out;
+    }
+
+    out <== mids[n-1];
+}
+
+// XOR two n bit arrays
+template BitwiseXor(n) {
+    signal input a[n];
+    signal input b[n];
+    signal output out[n];
+    signal mid[n];
+
+    for (var k=0; k<n; k++) {
+        mid[k] <== a[k]*b[k];
+        out[k] <== a[k] + b[k] - 2*mid[k];
+    }
+}

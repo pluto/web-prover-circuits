@@ -196,9 +196,17 @@ template ScalarArrayMul(n) {
     }
 }
 
-// TODO: Below really needs documentation.
+/*
+This template sums over the elements in an array
+# Params:
+ - `n`: the length of the array
 
-// from: https://github.com/pluto/aes-proof/blob/main/circuits/aes-gcm/helper_functions.circom
+# Inputs:
+ - `array[n]`: an array of `n` numbers
+
+# Outputs:
+ - `sum`: the sum of the array elements
+*/
 template SumMultiple(n) {
     signal input nums[n];
     signal output sum;
@@ -213,6 +221,17 @@ template SumMultiple(n) {
     sum <== sums[n-1];
 }
 
+/*
+This template selects a the value of an array at an index
+# Params:
+ - `n`: the length of the array
+
+# Inputs:
+ - `index`: the index to select
+
+# Outputs:
+ - `out`: the value of the array at this index
+*/
 template IndexSelector(total) {
     signal input in[total];
     signal input index;
@@ -233,6 +252,18 @@ template IndexSelector(total) {
     out <== calcTotal.sum;
 }
 
+/*
+This template selects an array in a mxn matrix
+# Params:
+ - `m`: the row dimensions
+ - `n`: the column dimensions
+
+# Inputs:
+ - `index`: the index to select
+
+# Outputs:
+ - `out`: the array at index
+*/
 template ArraySelector(m, n) {
     signal input in[m][n];
     signal input index;
@@ -252,7 +283,6 @@ template ArraySelector(m, n) {
     sum === 1;
 
     signal sums[n][m+1];
-    // note: loop order is column-wise, not row-wise
     for (var j = 0; j < n; j++) {
         sums[j][0] <== 0;
         for (var i = 0; i < m; i++) {
@@ -270,8 +300,6 @@ template ArrayMux(n) {
     signal output out[n];   // Output array
 
     for (var i = 0; i < n; i++) {
-        // If sel = 0, out[i] = a[i]
-        // If sel = 1, out[i] = b[i]
         out[i] <== (b[i] - a[i]) * sel + a[i];
     }
 }
