@@ -1,7 +1,7 @@
 pragma circom 2.1.9;
 
-include "gctr-nivc.circom";
-include "../../utils/array.circom";
+include "aes-gcm/nivc/gctr-nivc.circom";
+include "utils/array.circom";
 
 
 // Compute AES-GCTR
@@ -68,3 +68,5 @@ template AESGCTRFOLD(INPUT_LEN) {
     writeCounter.index <== INPUT_LEN*2;
     writeCounter.out ==> step_out;
 }
+
+component main { public [step_in] } = AESGCMFOLD(4160);

@@ -7,7 +7,7 @@ describe("aes-gctr-nivc", () => {
 
     it("all correct for self generated single zero pt block case", async () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
-            file: "aes-gcm/nivc/aes-gctr-nivc",
+            file: "aes-gctr-nivc",
             template: "AESGCTRFOLD",
             params: [16], // input len is 16 bytes
         });
@@ -28,7 +28,7 @@ describe("aes-gctr-nivc", () => {
 
     it("all correct for self generated single non zero pt block", async () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
-            file: "aes-gcm/nivc/aes-gctr-nivc",
+            file: "aes-gctr-nivc",
             template: "AESGCTRFOLD",
             params: [16], // input len is 16 bytes
         });
@@ -52,7 +52,7 @@ describe("aes-gctr-nivc", () => {
 
     it("all correct for self generated two block case first fold", async () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
-            file: "aes-gcm/nivc/aes-gctr-nivc",
+            file: "aes-gctr-nivc",
             template: "AESGCTRFOLD",
             params: [32], // input len is 32 bytes
         });
@@ -76,7 +76,7 @@ describe("aes-gctr-nivc", () => {
 
     it("all correct for self generated two block case second fold", async () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
-            file: "aes-gcm/nivc/aes-gctr-nivc",
+            file: "aes-gctr-nivc",
             template: "AESGCTRFOLD",
             params: [32], // input len is 32 bytes
         });
