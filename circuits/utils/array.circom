@@ -303,3 +303,71 @@ template ArrayMux(n) {
         out[i] <== (b[i] - a[i]) * sel + a[i];
     }
 }
+
+// E.g., given an array of m=160, we want to write at `index` to the n=16 bytes at that index.
+template WriteToIndex(m, n) {
+    signal input array_to_write_to[m];
+    signal input array_to_write_at_index[n]; 
+    signal input index;
+
+    signal output out[m];
+
+    assert(m >= n);
+
+    // Note: this is underconstrained, we need to constrain that index + n <= m
+    // Need to constrain that index + n <= m -- can't be an assertion, because uses a signal
+    // ------------------------- //
+
+    // Here, we get an array of ALL zeros, except at the `index` AND `index + n`
+    //                                    beginning-------^^^^^ end---^^^^^^^^^  
+    signal indexMatched[m];
+    component indexBegining[m];
+    component indexEnding[m];
+    for(var i = 0 ; i < m ; i++) {
+        indexBegining[i] = IsZero();
+        indexBegining[i].in <== i - index; 
+        indexEnding[i] = IsZero();
+        indexEnding[i].in <== i - (index + n);
+        indexMatched[i] <== indexBegining[i].out + indexEnding[i].out;
+    }
+
+    // E.g., index == 31, m == 160, n == 16
+    // => indexMatch[31] == 1;
+    // => indexMatch[47] == 1;
+    // => otherwise, all 0. 
+
+    signal accum[m];
+    accum[0] <== indexMatched[0]; 
+
+    component writeAt = IsZero();
+    writeAt.in <== accum[0] - 1;
+
+    component or = OR();
+    or.a <== (writeAt.out * array_to_write_at_index[0]);
+    or.b <== (1 - writeAt.out) * array_to_write_to[0];
+    out[0] <== or.out;
+    //          IF accum == 1 then { array_to_write_at } ELSE IF accum != 1 then { array to write_to }
+    var accum_index = accum[0];
+
+    component writeSelector[m - 1];
+    component indexSelector[m - 1];
+    component ors[m-1];
+    for(var i = 1 ; i < m ; i++) {
+        // accum will be 1 at all indices where we want to write the new array
+        accum[i] <== accum[i-1] + indexMatched[i];
+        writeSelector[i-1] = IsZero();
+        writeSelector[i-1].in <== accum[i] - 1;
+        // IsZero(accum[i] - 1); --> tells us we are in the range where we want to write the new array
+
+        indexSelector[i-1] = IndexSelector(n);
+        indexSelector[i-1].index <== accum_index;
+        indexSelector[i-1].in <== array_to_write_at_index;
+        // When accum is not zero, out is array_to_write_at_index, otherwise it is array_to_write_to
+
+        ors[i-1] = OR();
+        ors[i-1].a <== (writeSelector[i-1].out * indexSelector[i-1].out);
+        ors[i-1].b <== (1 - writeSelector[i-1].out) * array_to_write_to[i];
+        out[i] <== ors[i-1].out;
+        accum_index += writeSelector[i-1].out;
+    }
+}
