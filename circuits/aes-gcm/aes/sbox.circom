@@ -277,7 +277,7 @@ template XTimes(n){
         mul[i].a <== bits.out[i];
         mul[i].b <== XTimes2[i-1].out;
 
-                xor[i] = XorBits();
+                xor[i] = BitwiseXor(8);
                 xor[i].a <== inter[i-1];
                 xor[i].b <== mul[i].c;
                 inter[i] <== xor[i].out;

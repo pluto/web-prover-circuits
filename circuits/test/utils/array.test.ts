@@ -158,7 +158,7 @@ describe("array_builder", () => {
     it("test array builder", async () => {
       let circuit: WitnessTester<["array_to_write_to", "array_to_write_at_index", "index"], ["out"]>;
       circuit = await circomkit.WitnessTester(`ArrayBuilder`, {
-        file: "aes-gcm/utils",
+        file: "utils/array",
         template: "WriteToIndex",
         params: [160, 16],
       });
@@ -182,7 +182,7 @@ describe("array_builder", () => {
     it("test array builder", async () => {
       let circuit: WitnessTester<["array_to_write_to", "array_to_write_at_index", "index"], ["out"]>;
       circuit = await circomkit.WitnessTester(`ArrayBuilder`, {
-        file: "aes-gcm/utils",
+        file: "utils/array",
         template: "WriteToIndex",
         params: [160, 16],
       });
@@ -206,7 +206,7 @@ describe("array_builder", () => {
     it("test array builder", async () => {
       let circuit: WitnessTester<["array_to_write_to", "array_to_write_at_index", "index"], ["out"]>;
       circuit = await circomkit.WitnessTester(`ArrayBuilder`, {
-        file: "aes-gcm/utils",
+        file: "utils/array",
         template: "WriteToIndex",
         params: [160, 16],
       });
@@ -230,7 +230,7 @@ describe("array_builder", () => {
     it("test array builder with index = n", async () => {
       let circuit: WitnessTester<["array_to_write_to", "array_to_write_at_index", "index"], ["out"]>;
       circuit = await circomkit.WitnessTester(`ArrayBuilder`, {
-        file: "aes-gcm/utils",
+        file: "utils/array",
         template: "WriteToIndex",
         params: [37, 16],
       });
@@ -240,14 +240,14 @@ describe("array_builder", () => {
       let expected = new Array(16).fill(0x00).concat(array_to_write_at_index).concat(new Array(37 - array_to_write_at_index.length - 16).fill(0x00));
       let index = 16;
   
-      await circuit.expectConstraintPass(
+      await circuit.expectPass(
         {
           array_to_write_to: array_to_write_to,
           array_to_write_at_index: array_to_write_at_index,
           index: index
         },
         {
-            out: expected
+          out: expected
         }
       );
     });
@@ -255,7 +255,7 @@ describe("array_builder", () => {
     it("test array builder with index > n", async () => {
       let circuit: WitnessTester<["array_to_write_to", "array_to_write_at_index", "index"], ["out"]>;
       circuit = await circomkit.WitnessTester(`ArrayBuilder`, {
-        file: "aes-gcm/utils",
+        file: "utils/array",
         template: "WriteToIndex",
         params: [37, 4],
       });
@@ -273,15 +273,192 @@ describe("array_builder", () => {
       ];
       let index = 32;
   
-      let witness = await circuit.compute(
+      await circuit.expectPass(
         {
           array_to_write_to: array_to_write_to,
           array_to_write_at_index: array_to_write_at_index,
           index: index
         },
-        ["out"]
+        {
+          out: expected
+        }
       );
-      assert.deepEqual(witness.out, expected.map(BigInt));
     });
-    
+});  
+
+describe("ToBlocks", () => {
+    let circuit: WitnessTester<["stream"], ["blocks"]>;
+    it("should convert stream to block", async () => {
+      circuit = await circomkit.WitnessTester(`ToBlocks`, {
+        file: "utils/array",
+        template: "ToBlocks",
+        params: [16],
+      });
+      await circuit.expectPass(
+        {
+          stream: [0x32, 0x88, 0x31, 0xe0, 0x43, 0x5a, 0x31, 0x37, 0xf6, 0x30, 0x98, 0x07, 0xa8, 0x8d, 0xa2, 0x34],
+        },
+        {
+          blocks: [
+            [
+              [0x32, 0x43, 0xf6, 0xa8],
+              [0x88, 0x5a, 0x30, 0x8d],
+              [0x31, 0x31, 0x98, 0xa2],
+              [0xe0, 0x37, 0x07, 0x34],
+            ],
+          ],
+        }
+      );
+    });
+    it("should pad 1 in block", async () => {
+      circuit = await circomkit.WitnessTester(`ToBlocks`, {
+        file: "utils/array",
+        template: "ToBlocks",
+        params: [15],
+      });
+      await circuit.expectPass(
+        {
+          stream: [0x32, 0x88, 0x31, 0xe0, 0x43, 0x5a, 0x31, 0x37, 0xf6, 0x30, 0x98, 0x07, 0xa8, 0x8d, 0xa2],
+        },
+        {
+          blocks: [
+            [
+              [0x32, 0x43, 0xf6, 0xa8],
+              [0x88, 0x5a, 0x30, 0x8d],
+              [0x31, 0x31, 0x98, 0xa2],
+              [0xe0, 0x37, 0x07, 0x01],
+            ],
+          ],
+        }
+      );
+    });
+    it("should pad 0's in block", async () => {
+      circuit = await circomkit.WitnessTester(`ToBlocks`, {
+        file: "utils/array",
+        template: "ToBlocks",
+        params: [14],
+      });
+      await circuit.expectPass(
+        {
+          stream: [0x32, 0x88, 0x31, 0xe0, 0x43, 0x5a, 0x31, 0x37, 0xf6, 0x30, 0x98, 0x07, 0xa8, 0x8d],
+        },
+        {
+          blocks: [
+            [
+              [0x32, 0x43, 0xf6, 0xa8],
+              [0x88, 0x5a, 0x30, 0x8d],
+              [0x31, 0x31, 0x98, 0x01],
+              [0xe0, 0x37, 0x07, 0x00],
+            ],
+          ],
+        }
+      );
+    });
+    it("should generate enough blocks", async () => {
+      circuit = await circomkit.WitnessTester(`ToBlocks`, {
+        file: "utils/array",
+        template: "ToBlocks",
+        params: [17],
+      });
+      await circuit.expectPass(
+        {
+          stream: [0x32, 0x88, 0x31, 0xe0, 0x42, 0x5a, 0x31, 0x37, 0xf6, 0x30, 0x98, 0x07, 0xa8, 0x8d, 0xa2, 0x34, 0x12],
+        },
+        {
+          blocks: [
+            [
+              [0x32, 0x42, 0xf6, 0xa8],
+              [0x88, 0x5a, 0x30, 0x8d],
+              [0x31, 0x31, 0x98, 0xa2],
+              [0xe0, 0x37, 0x07, 0x34],
+            ],
+            [
+              [0x12, 0x00, 0x00, 0x00],
+              [0x01, 0x00, 0x00, 0x00],
+              [0x00, 0x00, 0x00, 0x00],
+              [0x00, 0x00, 0x00, 0x00],
+            ],
+          ],
+        }
+      );
+    });
+  });
+  
+  
+  describe("ToStream", () => {
+    let circuit: WitnessTester<["blocks"], ["stream"]>;
+    it("should convert blocks to stream#1", async () => {
+      circuit = await circomkit.WitnessTester(`ToStream`, {
+        file: "utils/array",
+        template: "ToStream",
+        params: [1, 16],
+      });
+      await circuit.expectPass(
+        {
+          blocks: [
+            [
+              [0x32, 0x43, 0xf6, 0xa8],
+              [0x88, 0x5a, 0x30, 0x8d],
+              [0x31, 0x31, 0x98, 0xa2],
+              [0xe0, 0x37, 0x07, 0x34],
+            ],
+          ],
+        },
+        {
+          stream: [0x32, 0x88, 0x31, 0xe0, 0x43, 0x5a, 0x31, 0x37, 0xf6, 0x30, 0x98, 0x07, 0xa8, 0x8d, 0xa2, 0x34],
+        }
+      );
+    });
+    it("should convert blocks to stream#2", async () => {
+      circuit = await circomkit.WitnessTester(`ToStream`, {
+        file: "utils/array",
+        template: "ToStream",
+        params: [1, 15],
+      });
+      await circuit.expectPass(
+        {
+          blocks: [
+            [
+              [0x32, 0x43, 0xf6, 0xa8],
+              [0x88, 0x5a, 0x30, 0x8d],
+              [0x31, 0x31, 0x98, 0xa2],
+              [0xe0, 0x37, 0x07, 0x01],
+            ],
+          ],
+        },
+        {
+          stream: [0x32, 0x88, 0x31, 0xe0, 0x43, 0x5a, 0x31, 0x37, 0xf6, 0x30, 0x98, 0x07, 0xa8, 0x8d, 0xa2],
+        }
+      );
+    });
+    it("should convert multiple blocks to stream", async () => {
+      circuit = await circomkit.WitnessTester(`ToStream`, {
+        file: "utils/array",
+        template: "ToStream",
+        params: [2, 18],
+      });
+      await circuit.expectPass(
+        {
+          blocks: [
+            [
+              [0x32, 0x43, 0xf6, 0xa8],
+              [0x88, 0x5a, 0x30, 0x8d],
+              [0x31, 0x31, 0x98, 0xa2],
+              [0xe0, 0x37, 0x07, 0x01],
+            ],
+            [
+              [0x32, 0x43, 0xf6, 0xa8],
+              [0x88, 0x5a, 0x30, 0x8d],
+              [0x31, 0x31, 0x98, 0xa2],
+              [0xe0, 0x37, 0x07, 0x01],
+            ],
+          ],
+        },
+        {
+          stream: [
+            0x32, 0x88, 0x31, 0xe0, 0x43, 0x5a, 0x31, 0x37, 0xf6, 0x30, 0x98, 0x07, 0xa8, 0x8d, 0xa2, 0x01, 0x32, 0x88,
+          ],
+        }
+      );
+    });
   });

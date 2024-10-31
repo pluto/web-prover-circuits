@@ -59,15 +59,15 @@ template S0(){
     num2bits[1] = Num2Bits(8);
     num2bits[1].in <== TBox(1)(in[1]);
 
-    xor[0] = XorBits();
+    xor[0] = BitwiseXor(8);
     xor[0].a <== num2bits[0].out;
     xor[0].b <== num2bits[1].out;
 
-    xor[1] = XorBits();
+    xor[1] = BitwiseXor(8);
     xor[1].a <== xor[0].out;
     xor[1].b <== num2bits[2].out;
 
-    xor[2] = XorBits();
+    xor[2] = BitwiseXor(8);
     xor[2].a <== xor[1].out;
     xor[2].b <== num2bits[3].out;
 
@@ -99,15 +99,15 @@ template S1(){
     num2bits[3] = Num2Bits(8);
     num2bits[3].in <== in[3];
 
-    xor[0] = XorBits();
+    xor[0] = BitwiseXor(8);
     xor[0].a <== num2bits[0].out;
     xor[0].b <== num2bits[1].out;
 
-    xor[1] = XorBits();
+    xor[1] = BitwiseXor(8);
     xor[1].a <== xor[0].out;
     xor[1].b <== num2bits[2].out;
 
-    xor[2] = XorBits();
+    xor[2] = BitwiseXor(8);
     xor[2].a <== xor[1].out;
     xor[2].b <== num2bits[3].out;
 
@@ -138,15 +138,15 @@ template S2() {
     num2bits[3] = Num2Bits(8);
     num2bits[3].in <== TBox(1)(in[3]);
 
-    xor[0] = XorBits();
+    xor[0] = BitwiseXor(8);
     xor[0].a <== num2bits[0].out;
     xor[0].b <== num2bits[1].out;
 
-    xor[1] = XorBits();
+    xor[1] = BitwiseXor(8);
     xor[1].a <== xor[0].out;
     xor[1].b <== num2bits[2].out;
 
-    xor[2] = XorBits();
+    xor[2] = BitwiseXor(8);
     xor[2].a <== xor[1].out;
     xor[2].b <== num2bits[3].out;
 
@@ -177,15 +177,15 @@ template S3() {
     num2bits[3] = Num2Bits(8);
     num2bits[3].in <== TBox(0)(in[3]);
 
-    xor[0] = XorBits();
+    xor[0] = BitwiseXor(8);
     xor[0].a <== num2bits[0].out;
     xor[0].b <== num2bits[1].out;
 
-    xor[1] = XorBits();
+    xor[1] = BitwiseXor(8);
     xor[1].a <== xor[0].out;
     xor[1].b <== num2bits[2].out;
 
-    xor[2] = XorBits();
+    xor[2] = BitwiseXor(8);
     xor[2].a <== num2bits[3].out;
     xor[2].b <== xor[1].out;
 

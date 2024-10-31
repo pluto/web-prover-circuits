@@ -22,7 +22,16 @@ template ASCII(n) {
     }
 }
 
-// n is the number of bytes to convert to bits
+/*
+This template converts bytes to bits.
+# Params:
+ - `n`: the number of bytes
+
+# Inputs:
+ - `in[n]`: array of bytes of length n
+# Outputs:
+ - `out`: an array of bits of length n * 8
+*/
 template BytesToBits(n_bytes) {
     signal input in[n_bytes];
     signal output out[n_bytes*8];
@@ -36,7 +45,15 @@ template BytesToBits(n_bytes) {
     }
 }
 
-// n is the number of bytes we want
+/*
+This template converts bits to bytes.
+# Params:
+ - `n`: the number of bytes you want out
+# Inputs:
+ - `in[n]`: array of bits of length n * 8
+# Outputs:
+ - `out`: an array of bytes of length n
+*/
 template BitsToBytes(n) {
     signal input in[n*8];
     signal output out[n];
@@ -50,22 +67,14 @@ template BitsToBytes(n) {
     }
 }
 
-// XORs two arrays of bits
-template XorBits(){
-        signal input a[8];
-        signal input b[8];
-        signal output out[8];
-
-    component xor[8];
-    for (var i = 0; i < 8; i++) {
-        xor[i] = XOR();
-        xor[i].a <== a[i];
-        xor[i].b <== b[i];
-        out[i] <== xor[i].out;
-    }
-}
-
-// XORs two bytes
+/*
+This template XORs two bytes.
+# Inputs:
+ - `a`: a single byte
+ - `b`: a single byte
+# Outputs:
+ - `out`: a XOR b
+*/
 template XorByte(){
         signal input a;
         signal input b;
@@ -77,7 +86,7 @@ template XorByte(){
         component bbits = Num2Bits(8);
         bbits.in <== b;
 
-        component XorBits = XorBits();
+        component XorBits = BitwiseXor(8);
         XorBits.a <== abits.out;
         XorBits.b <== bbits.out;
 
@@ -87,7 +96,14 @@ template XorByte(){
         out <== num.out;
 }
 
-// XOR n bytes
+/*
+This template XORs n bytes.
+# Inputs:
+ - `a`: an array of bytes of length n
+ - `b`: an array of bytes of length n
+# Outputs:
+ - `out`: a XOR b
+*/
 template XORBLOCK(n_bytes){
     signal input a[n_bytes];
     signal input b[n_bytes];
@@ -102,7 +118,16 @@ template XORBLOCK(n_bytes){
     }
 }
 
-// right shifts a n bit array by r
+/*
+This template right shifts an n bit array by r.
+# Params:
+ - `n`: length of bits to right shift
+ - `r`: number of bits to right shift by
+# Inputs:
+ - `in`: an array of bits of length n
+# Outputs:
+ - `out`: the bit array right shifted by r
+*/
 template BitwiseRightShift(n, r) {
     signal input in[n];
     signal output out[n];
@@ -114,7 +139,16 @@ template BitwiseRightShift(n, r) {
     }
 }
 
-// compute the XOR of n inputs, each m bits wide
+/*
+This template computes the XOR of n inputs, each m bits wide.
+# Params:
+ - `n`: number of inputs to xor
+ - `m`: size of each input
+# Inputs:
+ - `in`: a n x m mattrix representing n inputs each of size m
+# Outputs:
+ - `out`: a single size m output which is the the n inputs xor'ed together
+*/
 template XorMultiple(n, m) {
     signal input inputs[n][m];
     signal output out[m];
@@ -133,7 +167,16 @@ template XorMultiple(n, m) {
     out <== mids[n-1];
 }
 
-// XOR two n bit arrays
+/*
+This template XORs two arrays of n bits.
+# Params:
+ - `n`: number of bits to xor
+# Inputs:
+ - `a[n]`: array of bits of length n
+ - `b[n]`: array of bits of length n
+# Outputs:
+ - `out`: an array of bits of length n
+*/
 template BitwiseXor(n) {
     signal input a[n];
     signal input b[n];

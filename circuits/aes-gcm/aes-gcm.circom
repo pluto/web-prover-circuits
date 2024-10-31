@@ -2,7 +2,7 @@ pragma circom 2.1.9;
 
 include "ghash/ghash.circom";
 include "aes/cipher.circom";
-include "../utils/transformations.circom";
+include "../utils/array.circom";
 include "gctr.circom";
 
 

@@ -1,7 +1,6 @@
 pragma circom 2.1.9;
 
 include "gctr-nivc.circom";
-include "../../utils/transformations.circom";
 include "../../utils/array.circom";
 
 

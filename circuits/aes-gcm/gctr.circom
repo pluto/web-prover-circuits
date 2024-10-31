@@ -1,6 +1,6 @@
 pragma circom 2.1.9;
 include "aes/cipher.circom";
-include "../utils/transformations.circom";
+include "../utils/array.circom";
 include "../utils/bytes.circom";
 
 // GCTR Process to be used in AES-GCM as in https://nvlpubs.nist.gov/nistpubs/legacy/sp/nistspecialpublication800-38d.pdf

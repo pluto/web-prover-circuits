@@ -1,7 +1,7 @@
 pragma circom 2.1.9;
 
 include "../aes/cipher.circom";
-include "../../utils/transformations.circom";
+include "../../utils/array.circom";
 include "../gctr.circom";
 
 /// AES-GCTR with 128 bit key encryption according to: https://nvlpubs.nist.gov/nistpubs/legacy/sp/nistspecialpublication800-38d.pdf

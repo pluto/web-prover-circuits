@@ -1,6 +1,8 @@
 pragma circom 2.1.9;
 
 include "circomlib/circuits/comparators.circom";
+include "circomlib/circuits/gates.circom";
+include "circomlib/circuits/mux1.circom";
 
 /*
 This template is an indicator for two equal array inputs.
@@ -292,19 +294,46 @@ template ArraySelector(m, n) {
     }
 }
 
-// multiplexer for arrays of length n
+/*
+This template is multiplexer for two arrays of length n
+# Params:
+ - `n`: the array length
+
+# Inputs:
+ - `a`: the first array
+ - `b`: the second array
+ - `sel`: the selector (1 or 0)
+
+# Outputs:
+ - `out`: the array selected
+*/
 template ArrayMux(n) {
-    signal input a[n];      // First input array
-    signal input b[n];      // Second input array
-    signal input sel;       // Selector signal (0 or 1)
-    signal output out[n];   // Output array
+    signal input a[n]; 
+    signal input b[n];    
+    signal input sel;      
+    signal output out[n];  
 
     for (var i = 0; i < n; i++) {
         out[i] <== (b[i] - a[i]) * sel + a[i];
     }
 }
 
-// E.g., given an array of m=160, we want to write at `index` to the n=16 bytes at that index.
+/*
+This template writes one array to a larger array of fixed size starting at an index
+E.g., given an array of m=160, we want to write at `index` to the n=16 bytes at that index.
+This is used to write to nivc signals that are incrementally written to on each fold.
+# Params:
+ - `m`: the length of the array writing to
+ - `n`: the array be written
+
+# Inputs:
+ - `array_to_write_to`: the array we of length m we are writing to
+ - `array_to_write_at_index`: the array of length n we are writing to the array of length m
+ - `index`: the index we are writing to `array_to_write_to`
+
+# Outputs:
+ - `out`: the new array
+*/
 template WriteToIndex(m, n) {
     signal input array_to_write_to[m];
     signal input array_to_write_at_index[n]; 
@@ -369,5 +398,117 @@ template WriteToIndex(m, n) {
         ors[i-1].b <== (1 - writeSelector[i-1].out) * array_to_write_to[i];
         out[i] <== ors[i-1].out;
         accum_index += writeSelector[i-1].out;
+    }
+}
+
+
+/*
+Convert stream of plain text to blocks of 16 bytes
+# Params:
+ - `l`: the length of the byte stream
+
+# Inputs:
+ - `stream`: the stream of bytes of length l
+
+# Outputs:
+ - `out`: n 4x4 blocks representing 16 bytes
+*/
+template ToBlocks(l){
+        signal input stream[l];
+
+        var n = l\16;
+        if(l%16 > 0){
+                n = n + 1;
+        }
+        signal output blocks[n][4][4];
+
+        var i, j, k;
+
+        for (var idx = 0; idx < l; idx++) {
+                blocks[i][k][j] <== stream[idx];
+                k = k + 1;
+                if (k == 4){
+                        k = 0;
+                        j = j + 1;
+                        if (j == 4){
+                                j = 0;
+                                i = i + 1;
+                        }
+                }
+        }
+
+        if (l%16 > 0){
+               blocks[i][k][j] <== 1;
+               k = k + 1;
+        }
+}
+
+
+/*
+convert blocks of 16 bytes to stream of bytes
+# Params:
+ - `l`: the length of the byte stream
+ - `n`: the number of blocks
+
+# Inputs:
+ - `blocks`: n 4x4 blocks representing 16 bytes
+
+# Outputs:
+ - `out`: the stream of bytes of length l
+*/
+template ToStream(n,l){
+        signal input blocks[n][4][4];
+
+        signal output stream[l];
+
+        var i, j, k;
+
+        while(i*16 + j*4 + k < l){
+                stream[i*16 + j*4 + k] <== blocks[i][k][j];
+                k = k + 1;
+                if (k == 4){
+                        k = 0;
+                        j = j + 1;
+                        if (j == 4){
+                                j = 0;
+                                i = i + 1;
+                        }
+                }
+        }
+}
+
+/*
+Increment a 32-bit word, represented as a 4-byte array
+# Inputs:
+ - `in`: a 4 byte word
+
+# Outputs:
+ - `out`: an incremented 4 byte word
+*/
+template IncrementWord() {
+    signal input in[4];
+    signal output out[4];
+    signal carry[4];
+    carry[3] <== 1;
+
+    component IsGreaterThan[4];
+    component mux[4];
+    for (var i = 3; i >= 0; i--) {
+        // check to carry overflow
+        IsGreaterThan[i] = GreaterThan(8);
+        IsGreaterThan[i].in[0] <== in[i] + carry[i];
+        IsGreaterThan[i].in[1] <== 0xFF;
+
+        // multiplexer to select the output
+        mux[i] = Mux1();
+        mux[i].c[0] <== in[i] + carry[i];
+        mux[i].c[1] <== 0x00;
+        mux[i].s <== IsGreaterThan[i].out;
+        out[i] <== mux[i].out;
+
+        // propagate the carry to the next bit
+        if (i > 0) {
+            carry[i - 1] <== IsGreaterThan[i].out;
+        }
     }
 }
