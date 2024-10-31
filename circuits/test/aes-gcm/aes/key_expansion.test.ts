@@ -1,5 +1,5 @@
 import { WitnessTester } from "circomkit";
-import { circomkit } from "../common";
+import { circomkit } from "../../common";
 
 describe("KeyExpansion", () => {
   it("should compute correctly for aes128", async () => {

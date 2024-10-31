@@ -1,5 +1,5 @@
 import { WitnessTester } from "circomkit";
-import { circomkit } from "../common";
+import { circomkit } from "../../common";
 
 describe("Cipher", () => {
   let circuit: WitnessTester<["block", "key"], ["cipher"]>;

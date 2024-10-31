@@ -101,3 +101,15 @@ template XORBLOCK(n_bytes){
         out[i] <== xorByte[i].out;
     }
 }
+
+// right shifts a n bit array by r
+template BitwiseRightShift(n, r) {
+    signal input in[n];
+    signal output out[n];
+    for (var i=0; i<r; i++) {
+        out[i] <== 0;
+    }
+    for (var i=r; i<n; i++) {
+        out[i] <== in[i-r];
+    }
+}

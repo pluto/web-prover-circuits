@@ -1,5 +1,5 @@
 import { WitnessTester } from "circomkit";
-import { circomkit } from "../common";
+import { circomkit } from "../../common";
 
 describe("MixColumns", () => {
   it("s0 should compute correctly", async () => {

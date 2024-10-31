@@ -2,9 +2,6 @@
 pragma circom 2.1.9;
 
 include "key_expansion.circom";
-include "circomlib/circuits/comparators.circom";
-include "circomlib/circuits/bitify.circom";
-include "circomlib/circuits/gates.circom";
 include "mix_columns.circom";
 include "../../utils/bytes.circom";
 

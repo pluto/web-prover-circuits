@@ -1,5 +1,5 @@
 import { WitnessTester } from "circomkit";
-import { circomkit } from "../common";
+import { circomkit } from "../../common";
 
 describe("SBox", () => {
   let circuit: WitnessTester<["in"], ["out"]>;

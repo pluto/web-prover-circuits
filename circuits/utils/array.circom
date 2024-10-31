@@ -261,3 +261,17 @@ template ArraySelector(m, n) {
         out[j] <== sums[j][m];
     }
 }
+
+// multiplexer for arrays of length n
+template ArrayMux(n) {
+    signal input a[n];      // First input array
+    signal input b[n];      // Second input array
+    signal input sel;       // Selector signal (0 or 1)
+    signal output out[n];   // Output array
+
+    for (var i = 0; i < n; i++) {
+        // If sel = 0, out[i] = a[i]
+        // If sel = 1, out[i] = b[i]
+        out[i] <== (b[i] - a[i]) * sel + a[i];
+    }
+}
