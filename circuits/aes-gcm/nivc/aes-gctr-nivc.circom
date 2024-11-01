@@ -5,10 +5,15 @@ include "../../utils/array.circom";
 
 
 // Compute AES-GCTR
-template AESGCTRFOLD(DATA_BYTES) {
-
-    assert(DATA_BYTES % 16 == 0);
-    var TOTAL_BYTES_ACROSS_NIVC = (DATA_BYTES * 2) + 4;
+template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
+    // ------------------------------------------------------------------------------------------------------------------ //
+    // ~~ Set sizes at compile time ~~    
+    assert(DATA_BYTES % 16 == 0); 
+    // Total number of variables in the parser for each byte of data
+    var PER_ITERATION_DATA_LENGTH = MAX_STACK_HEIGHT * 2 + 2;
+    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * (PER_ITERATION_DATA_LENGTH + 1) + 1;
+    // ------------------------------------------------------------------------------------------------------------------ //
+    
 
     signal input key[16];
     signal input iv[12];
@@ -25,7 +30,7 @@ template AESGCTRFOLD(DATA_BYTES) {
     // We extract the number from the 4 byte word counter
     component last_counter_bits = BytesToBits(4);
     for(var i = 0; i < 4; i ++) {
-        last_counter_bits.in[i] <== step_in[DATA_BYTES*2 + i];
+        last_counter_bits.in[i] <== step_in[DATA_BYTES * 2 + i];
     }
     component last_counter_num = Bits2Num(32);
     // pass in reverse order
@@ -35,14 +40,19 @@ template AESGCTRFOLD(DATA_BYTES) {
 
     counter <== last_counter_num.out - 1;
 
+    // TODO (Colin): We can't call this `WriteToIndex` array this many times, it is too expensive.
     // write new plain text block.
-    signal plainTextAccumulator[TOTAL_BYTES_ACROSS_NIVC];    
-    component writeToIndex = WriteToIndex(TOTAL_BYTES_ACROSS_NIVC, 16);
-    writeToIndex.array_to_write_to <== step_in;
+    signal prevAccumulatedPlaintext[DATA_BYTES];
+    for(var i = 0 ; i < DATA_BYTES ; i++) {
+        prevAccumulatedPlaintext[i] <== step_in[i];   
+    }
+    signal nextAccumulatedPlaintext[DATA_BYTES];    
+    component writeToIndex = WriteToIndex(DATA_BYTES, 16);
+    writeToIndex.array_to_write_to <== prevAccumulatedPlaintext;
     writeToIndex.array_to_write_at_index <== plainText;
     writeToIndex.index <== counter * 16;
-    writeToIndex.out ==> plainTextAccumulator;
-
+    writeToIndex.out ==> nextAccumulatedPlaintext;
+    
     // folds one block
     component aes = AESGCTRFOLDABLE();
     aes.key       <== key;
@@ -51,22 +61,37 @@ template AESGCTRFOLD(DATA_BYTES) {
     aes.plainText <== plainText;
 
     for(var i = 0; i < 4; i++) {
-        aes.lastCounter[i] <== step_in[DATA_BYTES*2 + i];
+        aes.lastCounter[i] <== step_in[DATA_BYTES * 2 + i];
     }
 
     // accumulate cipher text
-    signal cipherTextAccumulator[TOTAL_BYTES_ACROSS_NIVC];
-    component writeCipherText = WriteToIndex(TOTAL_BYTES_ACROSS_NIVC, 16);
-    writeCipherText.array_to_write_to <== plainTextAccumulator;
+    signal prevAccumulatedCiphertext[DATA_BYTES];
+    for(var i = 0 ; i < DATA_BYTES ; i++) {
+        prevAccumulatedCiphertext[i] <== step_in[DATA_BYTES + i];   
+    }
+    signal nextAccumulatedCiphertext[DATA_BYTES];
+    component writeCipherText = WriteToIndex(DATA_BYTES, 16);
+    writeCipherText.array_to_write_to <== prevAccumulatedCiphertext;
     writeCipherText.array_to_write_at_index <== aes.cipherText;
-    writeCipherText.index <== DATA_BYTES + counter * 16;
-    writeCipherText.out ==> cipherTextAccumulator;
+    writeCipherText.index <== counter * 16;
+    writeCipherText.out ==> nextAccumulatedCiphertext;
+
+    for(var i = 0 ; i < TOTAL_BYTES_ACROSS_NIVC ; i++) {
+        if(i < DATA_BYTES) {
+            step_out[i] <== nextAccumulatedPlaintext[i];
+        } else if(i < 2 * DATA_BYTES) {
+            step_out[i] <== nextAccumulatedCiphertext[i - DATA_BYTES];
+        } else if(i < 2 * DATA_BYTES + 4) {
+            step_out[i] <== aes.counter[i - (2 * DATA_BYTES)];
+        }
+    }
 
     // get counter
-    signal counterAccumulator[TOTAL_BYTES_ACROSS_NIVC];
-    component writeCounter = WriteToIndex(TOTAL_BYTES_ACROSS_NIVC, 4);
-    writeCounter.array_to_write_to <== cipherTextAccumulator;
-    writeCounter.array_to_write_at_index <== aes.counter;
-    writeCounter.index <== DATA_BYTES*2;
-    writeCounter.out ==> step_out;
+    // signal counterAccumulator[TOTAL_BYTES_ACROSS_NIVC];
+    // component writeCounter = WriteToIndex(TOTAL_BYTES_ACROSS_NIVC, 4);
+    // writeCounter.array_to_write_to <== cipherTextAccumulator;
+    // writeCounter.array_to_write_at_index <== aes.counter;
+    // writeCounter.index <== DATA_BYTES*2;
+    // writeCounter.out ==> step_out;
+    
 }

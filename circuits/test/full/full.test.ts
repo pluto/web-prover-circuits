@@ -62,28 +62,29 @@ describe("NIVC_FULL", async () => {
         aesCircuit = await circomkit.WitnessTester("AESGCTRFOLD", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [DATA_BYTES],
+            params: [DATA_BYTES, MAX_STACK_HEIGHT],
         });
+        // console.log("#constraints (AES-GCTR):", await aesCircuit.getConstraintCount()); // TODO (Colin): This is at 1.3M constraints...
         httpParseAndLockStartLineCircuit = await circomkit.WitnessTester(`ParseAndLockStartLine`, {
             file: "http/nivc/parse_and_lock_start_line",
             template: "ParseAndLockStartLine",
             params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH],
         });
-        console.log("#constraints:", await httpParseAndLockStartLineCircuit.getConstraintCount());
+        console.log("#constraints (HTTP-PARSE-AND-LOCK-START-LINE):", await httpParseAndLockStartLineCircuit.getConstraintCount());
 
         lockHeaderCircuit = await circomkit.WitnessTester(`LockHeader`, {
             file: "http/nivc/lock_header",
             template: "LockHeader",
             params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH],
         });
-        console.log("#constraints:", await lockHeaderCircuit.getConstraintCount());
+        console.log("#constraints (HTTP-LOCK-HEADER):", await lockHeaderCircuit.getConstraintCount());
 
         bodyMaskCircuit = await circomkit.WitnessTester(`BodyMask`, {
             file: "http/nivc/body_mask",
             template: "HTTPMaskBodyNIVC",
             params: [DATA_BYTES, MAX_STACK_HEIGHT],
         });
-        console.log("#constraints:", await bodyMaskCircuit.getConstraintCount());
+        console.log("#constraints (HTTP-BODY-MASK):", await bodyMaskCircuit.getConstraintCount());
     });
 
 
@@ -95,18 +96,23 @@ describe("NIVC_FULL", async () => {
     let beginningPadded = beginning.concat(Array(MAX_BEGINNING_LENGTH - beginning.length).fill(0));
     let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
     let finalPadded = final.concat(Array(MAX_FINAL_LENGTH - final.length).fill(0));
-    it("HTTPParseAndExtract", async () => {
+    it("NIVC_CHAIN", async () => {
         // fold 16 bytes at a time
         let aes_gcm: CircuitSignals = { step_out: [] };
         console.log("DATA_BYTES", DATA_BYTES);
 
-        for (let i = 0; i < (DATA_BYTES / 16); i++) {
+        // Run the 0th chunk of plaintext
+        const init_nivc_input = Array(TOTAL_BYTES_ACROSS_NIVC).fill(0); // Blank array to write chunks to and pass through NIVC chain
+        let pt = http_response_plaintext.slice(16, 16 + 16);
+        aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), plainText: pt, aad: Array(16).fill(0), step_in: init_nivc_input }, ["step_out"]);
+        for (let i = 1; i < (DATA_BYTES / 16); i++) {
             // off by one here
-            let pt = http_response_plaintext.slice(i * 16, i * 16 +16);
+            let pt = http_response_plaintext.slice(i * 16, i * 16 + 16);
             console.log("pt", pt);
-            aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), plainText: pt, aad: Array(16).fill(0), step_in: Array(DATA_BYTES * 2 + 4).fill(0) }, ["step_out"]);
+            aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), plainText: pt, aad: Array(16).fill(0), step_in: aes_gcm.step_out }, ["step_out"]);
         }
         let out = aes_gcm.step_out as number[];
+        console.log(JSON.stringify(out));
         let extendedJsonInput = out.slice(0, DATA_BYTES).concat(Array(Math.max(0, TOTAL_BYTES_ACROSS_NIVC - http_response_plaintext.length)).fill(0));
         let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedJsonInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
 
