@@ -88,7 +88,7 @@ describe("NIVC_FULL", async () => {
     });
 
 
-    let headerName = toByte("content-type");
+    let headerName = toByte("content-type")
     let headerValue = toByte("application/json; charset=utf-8");
 
     let headerNamePadded = headerName.concat(Array(MAX_HEADER_NAME_LENGTH - headerName.length).fill(0));
@@ -99,21 +99,21 @@ describe("NIVC_FULL", async () => {
     it("NIVC_CHAIN", async () => {
         // fold 16 bytes at a time
         let aes_gcm: CircuitSignals = { step_out: [] };
-        console.log("DATA_BYTES", DATA_BYTES);
+        // console.log("DATA_BYTES", DATA_BYTES);
 
         // Run the 0th chunk of plaintext
-        const init_nivc_input = Array(TOTAL_BYTES_ACROSS_NIVC).fill(0); // Blank array to write chunks to and pass through NIVC chain
+        const counter = [0x00, 0x00, 0x00, 0x01];
+        const init_nivc_input = new Array(TOTAL_BYTES_ACROSS_NIVC).fill(0x00);
+        counter.forEach((value, index) => {
+            init_nivc_input[2 * DATA_BYTES + index] = value;
+        });
         let pt = http_response_plaintext.slice(0, 16);
-        console.log("pt", pt);
         aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), plainText: pt, aad: Array(16).fill(0), step_in: init_nivc_input }, ["step_out"]);
         for (let i = 1; i < (DATA_BYTES / 16); i++) {
-            // off by one here
             let pt = http_response_plaintext.slice(i * 16, i * 16 + 16);
-            console.log("pt", pt);
             aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), plainText: pt, aad: Array(16).fill(0), step_in: aes_gcm.step_out }, ["step_out"]);
         }
         let out = aes_gcm.step_out as number[];
-        console.log(JSON.stringify(out));
         let extendedJsonInput = out.slice(0, DATA_BYTES).concat(Array(Math.max(0, TOTAL_BYTES_ACROSS_NIVC - http_response_plaintext.length)).fill(0));
         let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedJsonInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
 

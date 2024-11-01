@@ -25,7 +25,7 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
     // step_in[DATA_BYTES_LEN*2..DATA_BYTES*2+4]  => accumulate counter
     signal input step_in[TOTAL_BYTES_ACROSS_NIVC]; 
     signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
-    signal counter;
+    
 
     // We extract the number from the 4 byte word counter
     component last_counter_bits = BytesToBits(4);
@@ -37,10 +37,10 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
     for (var i = 0; i< 32; i++){
         last_counter_num.in[i] <== last_counter_bits.out[31 - i];
     }
+    signal index <== last_counter_num.out - 1;
 
-    counter <== last_counter_num.out;
+    // TODO (Colin): We can probably make a template that writes to two multiple arrays at once that saves us even more constraints here instead of just using the `WriteToIndex` twice
 
-    // TODO (Colin): We can't call this `WriteToIndex` array this many times, it is too expensive.
     // write new plain text block.
     signal prevAccumulatedPlaintext[DATA_BYTES];
     for(var i = 0 ; i < DATA_BYTES ; i++) {
@@ -50,8 +50,8 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
     component writeToIndex = WriteToIndex(DATA_BYTES, 16);
     writeToIndex.array_to_write_to <== prevAccumulatedPlaintext;
     writeToIndex.array_to_write_at_index <== plainText;
-    writeToIndex.index <== counter * 16;
-    writeToIndex.out ==> nextAccumulatedPlaintext;
+    writeToIndex.index <== index * 16;
+    nextAccumulatedPlaintext <== writeToIndex.out;
     
     // folds one block
     component aes = AESGCTRFOLDABLE();
@@ -73,8 +73,8 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
     component writeCipherText = WriteToIndex(DATA_BYTES, 16);
     writeCipherText.array_to_write_to <== prevAccumulatedCiphertext;
     writeCipherText.array_to_write_at_index <== aes.cipherText;
-    writeCipherText.index <== counter * 16;
-    writeCipherText.out ==> nextAccumulatedCiphertext;
+    writeCipherText.index <== index * 16;
+    nextAccumulatedCiphertext <== writeCipherText.out;
 
     for(var i = 0 ; i < TOTAL_BYTES_ACROSS_NIVC ; i++) {
         if(i < DATA_BYTES) {
@@ -83,6 +83,8 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
             step_out[i] <== nextAccumulatedCiphertext[i - DATA_BYTES];
         } else if(i < 2 * DATA_BYTES + 4) {
             step_out[i] <== aes.counter[i - (2 * DATA_BYTES)];
+        } else {
+            step_out[i] <== 0;
         }
     }
 }
