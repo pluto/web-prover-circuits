@@ -12,19 +12,26 @@ include "json/nivc/extractor.circom";
 // AES -> HTTP Parse -> http lock header -> http body mask -> json parse -> json_mask_object/json_mask_array -> extract value
 // DATA_BYTES = length of block * 2 + 4
 // e.g. 36 = 16 * 2 + 4 for a single block
-template WEPPROOF(DATA_BYTES) { 
+template WEPPROOF(
+    DATA_BYTES, 
+    MAX_STACK_HEIGHT, 
+    MAX_BEGINNING_LENGTH, 
+    MAX_MIDDLE_LENGTH, 
+    MAX_FINAL_LENGTH, 
+    MAX_HEADER_NAME_LENGTH, 
+    MAX_HEADER_VALUE_LENGTH, 
+    MAX_KEY_LENGTH, 
+    MAX_VALUE_LENGTH) { 
 
-    // AES inputs
+    var TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * 2 + 4;
+    signal input step_in[TOTAL_BYTES_ACROSS_NIVC]; 
+    signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
+
+    // AES
     signal input key[16];
     signal input iv[12];
     signal input aad[16];
     signal input plainText[16];
-    // step_in[0..INPUT_LEN] => accumulate plaintext blocks
-    // step_in[INPUT_LEN..INPUT_LEN*2]  => accumulate ciphertext blocks
-    // step_in[INPUT_LEN*2..INPUT_LEN*2+4]  => accumulate counter
-    signal input step_in[DATA_BYTES]; 
-    signal output step_out[DATA_BYTES];
-
     component aes_gctr_nivc = AESGCTRFOLD(DATA_BYTES);
     aes_gctr_nivc.key <== key;
     aes_gctr_nivc.iv <== iv;
@@ -32,16 +39,19 @@ template WEPPROOF(DATA_BYTES) {
     aes_gctr_nivc.plainText <== plainText;
     aes_gctr_nivc.step_in <== step_in;
 
-    // Parse and lock start line inputs
-    signal input beginning;
-    signal input beginning_length;
-    signal input middle;
-    signal input middle_length;
-    signal input final;
-    signal input final_length;
+    // Parse and lock 
+    component http_parse = ParseAndLockStartLine(DATA_BYTES, 
+            MAX_STACK_HEIGHT, 
+            MAX_BEGINNING_LENGTH, 
+            MAX_MIDDLE_LENGTH, 
+            MAX_FINAL_LENGTH);
     
-    // ParseAndLockStartLine(DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH)
-    component http_parse = ParseAndLockStartLine(DATA_BYTES, 16, 10, 3, 2);
+    signal input beginning[MAX_BEGINNING_LENGTH];
+    signal input beginning_length;
+    signal input middle[MAX_MIDDLE_LENGTH];
+    signal input middle_length;
+    signal input final[MAX_FINAL_LENGTH];
+    signal input final_length;
 
     http_parse.step_in <== aes_gctr_nivc.step_out;
     http_parse.beginning <== beginning;
@@ -51,13 +61,15 @@ template WEPPROOF(DATA_BYTES) {
     http_parse.final <== final;
     http_parse.final_length <== final_length;
 
-    // template LockHeader(DATA_BYTES, MAX_STACK_HEIGHT, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH)
-    component http_lock_header = LockHeader(DATA_BYTES, 16, 12, 16);
+    // Lock header
+    component http_lock_header = LockHeader(DATA_BYTES, 
+            MAX_STACK_HEIGHT, 
+            MAX_HEADER_NAME_LENGTH, 
+            MAX_HEADER_VALUE_LENGTH);
 
-
-    signal input header;
+    signal input header[MAX_HEADER_NAME_LENGTH];
     signal input headerNameLength;
-    signal input value;
+    signal input value[MAX_HEADER_VALUE_LENGTH];
     signal input headerValueLength;
 
     http_lock_header.step_in <== http_parse.step_out;
@@ -66,26 +78,44 @@ template WEPPROOF(DATA_BYTES) {
     http_lock_header.value <== value;
     http_lock_header.headerValueLength <== headerValueLength;
 
-    // template HTTPMaskBodyNIVC(DATA_BYTES, MAX_STACK_HEIGHT)
-    component http_body_mask = HTTPMaskBodyNIVC(DATA_BYTES, 16);
-
+    // HTTP body mask
+    component http_body_mask = HTTPMaskBodyNIVC(DATA_BYTES, MAX_STACK_HEIGHT);
     http_body_mask.step_in <== http_lock_header.step_out;
 
-    // JsonParseNIVC(DATA_BYTES, MAX_STACK_HEIGHT)
-    component json_parse = JsonParseNIVC(DATA_BYTES, 16);
-
+    // JSON parse
+    component json_parse = JsonParseNIVC(DATA_BYTES, MAX_STACK_HEIGHT);
     json_parse.step_in <== http_body_mask.step_out;
 
-    // // template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH)
-    // component json_mask_object = JsonMaskObjectNIVC(DATA_BYTES, 16, 4);
+    // Note: picked Array over object for now 
+    // TODO(WJ 2024-11-01): add conditional logic via a mux
+    // template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH)
+    // component json_mask_object = JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH);
 
-    // template JsonMaskArrayIndexNIVC(DATA_BYTES, MAX_STACK_HEIGHT)
-    component json_mask_array = JsonMaskArrayIndexNIVC(DATA_BYTES, 16);
+    // JSON array
+    component json_mask_array = JsonMaskArrayIndexNIVC(DATA_BYTES, MAX_STACK_HEIGHT);
     json_mask_array.step_in <== json_parse.step_out;
 
-    // template MaskExtractFinal(DATA_BYTES, MAX_STACK_HEIGHT, MAX_VALUE_LENGTH)
-    component extract_value = MaskExtractFinal(DATA_BYTES, 32, 32);
+    // Final Extraction
+    component extract_value = MaskExtractFinal(DATA_BYTES, MAX_STACK_HEIGHT, MAX_VALUE_LENGTH);
 }
-    
-component main = WEPPROOF(36);
 
+/// Note, DATA_BYTES > MAX_BEGINNING_LENGTH and MAX_MIDDLE_LENGTH and MAX_FINAL_LENGTH
+component main = WEPPROOF(
+    64, // DATA_BYTES
+    5,  // MAX_STACK_HEIGHT
+    10, // MAX_BEGINNING_LENGTH
+    50, // MAX_MIDDLE_LENGTH
+    10, // MAX_FINAL_LENGTH
+    12, // MAX_HEADER_NAME_LENGTH
+    16,  // MAX_HEADER_VALUE_LENGTH
+    8,  // MAX_KEY_LENGTH
+    16  // MAX_VALUE_LENGTH
+    );
+
+    // const MAX_STACK_HEIGHT = 5;
+    // const PER_ITERATION_DATA_LENGTH = MAX_STACK_HEIGHT * 2 + 2;
+    // const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * (PER_ITERATION_DATA_LENGTH + 1) + 1;
+
+    // const MAX_BEGINNING_LENGTH = 10;
+    // const MAX_MIDDLE_LENGTH = 50;
+    // const MAX_FINAL_LENGTH = 10;
