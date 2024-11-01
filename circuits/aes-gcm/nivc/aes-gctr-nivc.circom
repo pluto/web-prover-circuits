@@ -38,7 +38,7 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
         last_counter_num.in[i] <== last_counter_bits.out[31 - i];
     }
 
-    counter <== last_counter_num.out - 1;
+    counter <== last_counter_num.out;
 
     // TODO (Colin): We can't call this `WriteToIndex` array this many times, it is too expensive.
     // write new plain text block.
@@ -85,13 +85,4 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
             step_out[i] <== aes.counter[i - (2 * DATA_BYTES)];
         }
     }
-
-    // get counter
-    // signal counterAccumulator[TOTAL_BYTES_ACROSS_NIVC];
-    // component writeCounter = WriteToIndex(TOTAL_BYTES_ACROSS_NIVC, 4);
-    // writeCounter.array_to_write_to <== cipherTextAccumulator;
-    // writeCounter.array_to_write_at_index <== aes.counter;
-    // writeCounter.index <== DATA_BYTES*2;
-    // writeCounter.out ==> step_out;
-    
 }

@@ -64,7 +64,7 @@ describe("NIVC_FULL", async () => {
             template: "AESGCTRFOLD",
             params: [DATA_BYTES, MAX_STACK_HEIGHT],
         });
-        // console.log("#constraints (AES-GCTR):", await aesCircuit.getConstraintCount()); // TODO (Colin): This is at 1.3M constraints...
+        console.log("#constraints (AES-GCTR):", await aesCircuit.getConstraintCount());
         httpParseAndLockStartLineCircuit = await circomkit.WitnessTester(`ParseAndLockStartLine`, {
             file: "http/nivc/parse_and_lock_start_line",
             template: "ParseAndLockStartLine",
@@ -103,7 +103,8 @@ describe("NIVC_FULL", async () => {
 
         // Run the 0th chunk of plaintext
         const init_nivc_input = Array(TOTAL_BYTES_ACROSS_NIVC).fill(0); // Blank array to write chunks to and pass through NIVC chain
-        let pt = http_response_plaintext.slice(16, 16 + 16);
+        let pt = http_response_plaintext.slice(0, 16);
+        console.log("pt", pt);
         aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), plainText: pt, aad: Array(16).fill(0), step_in: init_nivc_input }, ["step_out"]);
         for (let i = 1; i < (DATA_BYTES / 16); i++) {
             // off by one here
