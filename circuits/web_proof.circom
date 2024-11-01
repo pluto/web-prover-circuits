@@ -14,11 +14,46 @@ include "json/nivc/extractor.circom";
 // e.g. 36 = 16 * 2 + 4 for a single block
 template WEPPROOF(DATA_BYTES) { 
 
-    // template AESGCTRFOLD(DATA)
-    component aes_gctr_nivc = AESGCTRFOLD(DATA_BYTES);
+    // AES inputs
+    signal input key[16];
+    signal input iv[12];
+    signal input aad[16];
+    signal input plainText[16];
+    // step_in[0..INPUT_LEN] => accumulate plaintext blocks
+    // step_in[INPUT_LEN..INPUT_LEN*2]  => accumulate ciphertext blocks
+    // step_in[INPUT_LEN*2..INPUT_LEN*2+4]  => accumulate counter
+    signal input step_in[DATA_BYTES]; 
+    signal output step_out[DATA_BYTES];
 
-    // template ParseAndLockStartLine(DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH)
-    component http_parse = ParseAndLockStartLine(DATA_BYTES, 16, 8, 3, 2);
+    component aes_gctr_nivc = AESGCTRFOLD(DATA_BYTES);
+    aes_gctr_nivc.key <== key;
+    aes_gctr_nivc.iv <== iv;
+    aes_gctr_nivc.aad <== aad;
+    aes_gctr_nivc.plainText <== plainText;
+    aes_gctr_nivc.step_in <== step_in;
+
+    // Parse and lock start line inputs
+    signal input beginning;
+    signal input beginning_length;
+    signal input middle;
+    signal input middle_length;
+    signal input final;
+    signal input final_length;
+    
+    // ParseAndLockStartLine(DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH)
+    component http_parse = ParseAndLockStartLine(DATA_BYTES, 16, 10, 3, 2);
+
+    http_parse.step_in <== aes_gctr_nivc.step_out;
+
+    // First three bytes are "GET", then zero's for third parameter - 3 bytes
+    // in this case 4 so we add one zero byte
+    http_parse.beginning <== [0x47, 0x45, 0x54, 0x00];
+    http_parse.beginning_length <== MAX_BEGINNING_LENGTH;
+    http_parse.middle[MAX_MIDDLE_LENGTH];
+    http_parse.middle_length;
+    http_parse.final[MAX_FINAL_LENGTH];
+    http_parse.final_length;
+
 
     // template LockHeader(DATA_BYTES, MAX_STACK_HEIGHT, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH)
     component http_lock_header = LockHeader(DATA_BYTES, 16, 12, 16);
