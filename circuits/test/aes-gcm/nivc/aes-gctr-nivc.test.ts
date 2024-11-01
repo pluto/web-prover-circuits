@@ -9,7 +9,7 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [16], // input len is 16 bytes
+            params: [36], // input len is 16 bytes
         });
 
         let key       = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
@@ -30,7 +30,7 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [16], // input len is 16 bytes
+            params: [36], // input len is 16 bytes
         });
         
         let key       = [0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31];
@@ -54,7 +54,7 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [32], // input len is 32 bytes
+            params: [68], // input len is 32 bytes
         });
 
         let zero_block = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
@@ -78,7 +78,7 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [32], // input len is 32 bytes
+            params: [68], // input len is 32 bytes
         });
 
         let zero_block = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];

@@ -5,9 +5,11 @@ include "../../utils/array.circom";
 
 
 // Compute AES-GCTR
-template AESGCTRFOLD(INPUT_LEN) {
+template AESGCTRFOLD(DATA_BYTES) {
+    // Length of plaintext
+    var INPUT_LEN = (DATA_BYTES - 4) / 2;
     assert(INPUT_LEN % 16 == 0);
-    var DATA_BYTES = (INPUT_LEN * 2) + 4;
+    
     signal input key[16];
     signal input iv[12];
     signal input aad[16];
