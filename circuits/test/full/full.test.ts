@@ -1,3 +1,4 @@
+import { CircuitSignals } from "circomkit";
 import { circomkit, WitnessTester, toByte } from "../common";
 
 // HTTP/1.1 200 OK
@@ -36,7 +37,7 @@ let http_response_plaintext = [
     10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13,
     10, 32, 32, 32, 125, 13, 10, 125];
 
-describe("NIVC_HTTP", async () => {
+describe("NIVC_FULL", async () => {
     let aesCircuit: WitnessTester<["key", "iv", "plainText", "aad", "step_in"], ["step_out"]>;
     let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
     let lockHeaderCircuit: WitnessTester<["step_in", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
@@ -85,7 +86,6 @@ describe("NIVC_HTTP", async () => {
         console.log("#constraints:", await bodyMaskCircuit.getConstraintCount());
     });
 
-    let extendedJsonInput = http_response_plaintext.concat(Array(Math.max(0, TOTAL_BYTES_ACROSS_NIVC - http_response_plaintext.length)).fill(0));
 
     let headerName = toByte("content-type");
     let headerValue = toByte("application/json; charset=utf-8");
@@ -96,6 +96,18 @@ describe("NIVC_HTTP", async () => {
     let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
     let finalPadded = final.concat(Array(MAX_FINAL_LENGTH - final.length).fill(0));
     it("HTTPParseAndExtract", async () => {
+        // fold 16 bytes at a time
+        let aes_gcm: CircuitSignals = { step_out: [] };
+        console.log("DATA_BYTES", DATA_BYTES);
+
+        for (let i = 0; i < (DATA_BYTES / 16); i++) {
+            // off by one here
+            let pt = http_response_plaintext.slice(i * 16, i * 16 +16);
+            console.log("pt", pt);
+            aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), plainText: pt, aad: Array(16).fill(0), step_in: Array(DATA_BYTES * 2 + 4).fill(0) }, ["step_out"]);
+        }
+        let out = aes_gcm.step_out as number[];
+        let extendedJsonInput = out.slice(0, DATA_BYTES).concat(Array(Math.max(0, TOTAL_BYTES_ACROSS_NIVC - http_response_plaintext.length)).fill(0));
         let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedJsonInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
 
         let lockHeader = await lockHeaderCircuit.compute({ step_in: parseAndLockStartLine.step_out, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length }, ["step_out"]);
