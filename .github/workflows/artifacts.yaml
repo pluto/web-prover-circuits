@@ -57,10 +57,6 @@ jobs:
       with:
         toolchain: nightly-2024-06-10
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-on-failure: true
-
     - name: Install Circom
       run: |
         CIRCOM_VERSION=2.1.9
