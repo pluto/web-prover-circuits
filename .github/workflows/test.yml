@@ -38,6 +38,11 @@ jobs:
     - name: Run tests
       run: npm run test
 
+    - name: Install Protocol Buffers
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y protobuf-compiler libprotobuf-dev
+
     - name: Install circom-witnesscalc
       run: |
         cd .. && git clone https://github.com/pluto/circom-witnesscalc.git
