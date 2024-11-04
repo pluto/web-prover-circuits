@@ -7,13 +7,13 @@ include "../../utils/array.circom";
 // Compute AES-GCTR
 template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
     // ------------------------------------------------------------------------------------------------------------------ //
-    // ~~ Set sizes at compile time ~~    
-    assert(DATA_BYTES % 16 == 0); 
+    // ~~ Set sizes at compile time ~~
+    assert(DATA_BYTES % 16 == 0);
     // Total number of variables in the parser for each byte of data
     var PER_ITERATION_DATA_LENGTH = MAX_STACK_HEIGHT * 2 + 2;
     var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * (PER_ITERATION_DATA_LENGTH + 1) + 1;
     // ------------------------------------------------------------------------------------------------------------------ //
-    
+
 
     signal input key[16];
     signal input iv[12];
@@ -23,9 +23,9 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
     // step_in[0..DATA_BYTES] => accumulate plaintext blocks
     // step_in[DATA_BYTES..DATA_BYTES*2]  => accumulate ciphertext blocks
     // step_in[DATA_BYTES_LEN*2..DATA_BYTES*2+4]  => accumulate counter
-    signal input step_in[TOTAL_BYTES_ACROSS_NIVC]; 
+    signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
     signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
-    
+
 
     // We extract the number from the 4 byte word counter
     component last_counter_bits = BytesToBits(4);
@@ -38,7 +38,7 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
         last_counter_num.in[i] <== last_counter_bits.out[31 - i];
     }
     signal index <== last_counter_num.out - 1;
-    
+
     // folds one block
     component aes = AESGCTRFOLDABLE();
     aes.key       <== key;
@@ -54,12 +54,12 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
     // Write out the plaintext and ciphertext to our accumulation arrays, both at once.
     signal prevAccumulatedPlaintext[DATA_BYTES];
     for(var i = 0 ; i < DATA_BYTES ; i++) {
-        prevAccumulatedPlaintext[i] <== step_in[i];   
+        prevAccumulatedPlaintext[i] <== step_in[i];
     }
     signal prevAccumulatedCiphertext[DATA_BYTES];
     for(var i = 0 ; i < DATA_BYTES ; i++) {
-        prevAccumulatedCiphertext[i] <== step_in[DATA_BYTES + i];   
-    }    
+        prevAccumulatedCiphertext[i] <== step_in[DATA_BYTES + i];
+    }
     component nextTexts = WriteToIndexForTwoArrays(DATA_BYTES, 16);
     nextTexts.first_array_to_write_to <== prevAccumulatedPlaintext;
     nextTexts.second_array_to_write_to <== prevAccumulatedCiphertext;
@@ -86,8 +86,8 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
 template WriteToIndexForTwoArrays(m, n) {
     signal input first_array_to_write_to[m];
     signal input second_array_to_write_to[m];
-    signal input first_array_to_write_at_index[n]; 
-    signal input second_array_to_write_at_index[n]; 
+    signal input first_array_to_write_at_index[n];
+    signal input second_array_to_write_at_index[n];
     signal input index;
 
     signal output outFirst[m];
@@ -100,13 +100,13 @@ template WriteToIndexForTwoArrays(m, n) {
     // ------------------------- //
 
     // Here, we get an array of ALL zeros, except at the `index` AND `index + n`
-    //                                    beginning-------^^^^^ end---^^^^^^^^^  
+    //                                    beginning-------^^^^^ end---^^^^^^^^^
     signal indexMatched[m];
     component indexBegining[m];
     component indexEnding[m];
     for(var i = 0 ; i < m ; i++) {
         indexBegining[i] = IsZero();
-        indexBegining[i].in <== i - index; 
+        indexBegining[i].in <== i - index;
         indexEnding[i] = IsZero();
         indexEnding[i].in <== i - (index + n);
         indexMatched[i] <== indexBegining[i].out + indexEnding[i].out;
@@ -115,10 +115,10 @@ template WriteToIndexForTwoArrays(m, n) {
     // E.g., index == 31, m == 160, n == 16
     // => indexMatch[31] == 1;
     // => indexMatch[47] == 1;
-    // => otherwise, all 0. 
+    // => otherwise, all 0.
 
     signal accum[m];
-    accum[0] <== indexMatched[0]; 
+    accum[0] <== indexMatched[0];
 
     component writeAt = IsZero();
     writeAt.in <== accum[0] - 1;
@@ -133,10 +133,11 @@ template WriteToIndexForTwoArrays(m, n) {
     orSecond.b <== (1 - writeAt.out) * second_array_to_write_to[0];
     outSecond[0] <== orSecond.out;
     //          IF accum == 1 then { array_to_write_at } ELSE IF accum != 1 then { array to write_to }
-    var accum_index = accum[0];
+    signal accum_index[m];
+    accum_index[0] <== accum[0];
 
     component writeSelector[m - 1];
-    component indexSelectorFirst[m - 1]; 
+    component indexSelectorFirst[m - 1];
     component indexSelectorSecond[m - 1];
     component orsFirst[m-1];
     component orsSecond[m-1];
@@ -148,11 +149,11 @@ template WriteToIndexForTwoArrays(m, n) {
         // IsZero(accum[i] - 1); --> tells us we are in the range where we want to write the new array
 
         indexSelectorFirst[i-1] = IndexSelector(n);
-        indexSelectorFirst[i-1].index <== accum_index;
+        indexSelectorFirst[i-1].index <== accum_index[i-1];
         indexSelectorFirst[i-1].in <== first_array_to_write_at_index;
 
         indexSelectorSecond[i-1] = IndexSelector(n);
-        indexSelectorSecond[i-1].index <== accum_index;
+        indexSelectorSecond[i-1].index <== accum_index[i-1];
         indexSelectorSecond[i-1].in <== second_array_to_write_at_index;
         // When accum is not zero, out is array_to_write_at_index, otherwise it is array_to_write_to
 
@@ -166,6 +167,6 @@ template WriteToIndexForTwoArrays(m, n) {
         orsSecond[i-1].b <== (1 - writeSelector[i-1].out) * second_array_to_write_to[i];
         outSecond[i] <== orsSecond[i-1].out;
 
-        accum_index += writeSelector[i-1].out;
+        accum_index[i] <== accum_index[i-1] + writeSelector[i-1].out;
     }
 }
