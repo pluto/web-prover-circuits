@@ -1,4 +1,4 @@
-name: build-circuits
+name: build-artifacts
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
