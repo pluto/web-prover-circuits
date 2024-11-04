@@ -40,9 +40,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Fetch the latest successful run of the build-circuits workflow on main
+          # Fetch the latest successful run of the build-artifacts workflow on main
           response=$(gh api -X GET /repos/${{ github.repository }}/actions/workflows/artifacts.yaml/runs \
-            -f status=success -q '.workflow_runs | map(select(.name == "build-circuits")) | .[0].id')
+            -f status=success -q '.workflow_runs | map(select(.name == "build-artifacts")) | .[0].id')
           echo "run_id=${response}" >> $GITHUB_ENV
 
       - name: Download Build Artifacts
@@ -58,7 +58,7 @@ jobs:
           echo "Automated release of compiled Circom circuits" > release_notes.md
           echo "Version: ${{ env.VERSION }}" >> release_notes.md
           echo "Commit: ${{ github.sha }}" >> release_notes.md
-          echo "\nArtifacts included:" >> release_notes.md
+          echo "Artifacts included:" >> release_notes.md
           for zip in artifacts/circom-artifacts-*-v${{ env.VERSION }}.zip; do
             basename "$zip" >> release_notes.md
           done
