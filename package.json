@@ -1,7 +1,7 @@
 {
   "name": "web-prover-circuits",
   "description": "ZK Circuits for WebProofs",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -13,9 +13,7 @@
   },
   "dependencies": {
     "@zk-email/circuits": "^6.1.1",
-    "aes-proof": "github:pluto/aes-proof#1d08e13ea4f381649cdff83f56d93444008b6548",
-    "circomlib": "^2.0.5",
-    "parser-attestor": "github:pluto/parser-attestor#b9feeeb240ddf867da85198de7d59e73cba4b008"
+    "circomlib": "^2.0.5"
   },
   "devDependencies": {
     "@semantic-release/commit-analyzer": "^11.1.0",

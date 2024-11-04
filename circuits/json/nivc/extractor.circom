@@ -43,5 +43,3 @@ template MaskExtractFinal(DATA_BYTES, MAX_STACK_HEIGHT, MAX_VALUE_LENGTH) {
     // TODO: Do anything with last depth?
     // step_out[TOTAL_BYTES_ACROSS_NIVC - 1] <== 0;
 }
-
-// component main { public [step_in] } = MaskExtractFinal(4160, 320, 200);

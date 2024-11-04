@@ -1,4 +1,3 @@
-# .github/workflows/release.yml
 name: Release
 
 on:
@@ -50,20 +49,26 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: circom-artifacts-v${{ env.VERSION }}
-          path: .
+          path: ./artifacts
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ env.run_id }}
 
+      - name: Prepare Release Notes
+        run: |
+          echo "Automated release of compiled Circom circuits" > release_notes.md
+          echo "Version: ${{ env.VERSION }}" >> release_notes.md
+          echo "Commit: ${{ github.sha }}" >> release_notes.md
+          echo "\nArtifacts included:" >> release_notes.md
+          for zip in artifacts/circom-artifacts-*-v${{ env.VERSION }}.zip; do
+            basename "$zip" >> release_notes.md
+          done
 
-      # Add artifacts to existing release
-      - name: Upload Release Asset
+      # Create release with all artifact files
+      - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
-          files: circom-artifacts-v${{ env.VERSION }}.zip
+          files: artifacts/circom-artifacts-*-v${{ env.VERSION }}.zip
           tag_name: v${{ env.VERSION }}
-          body: |
-            Automated release of compiled Circom circuits
-            Version: ${{ env.VERSION }}
-            Commit: ${{ github.sha }}
+          body_path: release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
