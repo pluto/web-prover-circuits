@@ -57,10 +57,6 @@ jobs:
       with:
         toolchain: nightly-2024-06-10
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-on-failure: true
-
     - name: Install Circom
       run: |
         CIRCOM_VERSION=2.1.9
@@ -79,11 +75,18 @@ jobs:
         VERSION=$(node -p "require('./package.json').version")
         echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+    - name: Setup circom-witnesscalc
+      run: |
+        cd .. && git clone https://github.com/iden3/circom-witnesscalc.git
+        cd circom-witnesscalc
+        cargo install --path .
+        echo $(which build-circuit)
+
     - name: Build circuits using Makefile
       run: |
         make debug  # Show what will be processed
         make build  # Build the circuits
-    
+
     - name: Create release artifacts
       run: |
         # Get the list of target directories
@@ -91,7 +94,7 @@ jobs:
           if [ -d "$target_dir/artifacts" ]; then
             # Extract the target size from the directory name
             target_size=$(basename "$target_dir")
-            
+
             echo "Creating archive for $target_size"
             # Create zip file for this target size
             ( cd "$target_dir/artifacts" && \

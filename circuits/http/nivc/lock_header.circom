@@ -87,7 +87,9 @@ template FirstStringMatch(dataLen, maxKeyLen) {
         paddedData[dataLen + i] <== 0;
     }
 
-    var matched = 0;
+    signal isMatched[dataLen+1];
+    isMatched[0] <== 0;
+
     var counter = 0;
     component stringMatch[dataLen];
     component hasMatched[dataLen];
@@ -101,13 +103,13 @@ template FirstStringMatch(dataLen, maxKeyLen) {
         stringMatch[idx] = IsEqualArray(maxKeyLen);
         stringMatch[idx].in[0] <== key;
         for (var key_idx = 0 ; key_idx < maxKeyLen ; key_idx++) {
-            isFirstMatchAndInsideBound[idx * maxKeyLen + key_idx] <== (1 - matched) * (1 - isKeyOutOfBounds[key_idx]);
+            isFirstMatchAndInsideBound[idx * maxKeyLen + key_idx] <== (1 - isMatched[idx]) * (1 - isKeyOutOfBounds[key_idx]);
             stringMatch[idx].in[1][key_idx] <== paddedData[idx + key_idx] * isFirstMatchAndInsideBound[idx * maxKeyLen + key_idx];
         }
         hasMatched[idx] = IsEqual();
         hasMatched[idx].in <== [stringMatch[idx].out, 1];
-        matched += hasMatched[idx].out;
-        counter += (1 - matched); // TODO: Off by one? Move before?
+        isMatched[idx+1] <== isMatched[idx] + hasMatched[idx].out;
+        counter += (1 - isMatched[idx+1]); // TODO: Off by one? Move before?
     }
     position <== counter;
 }
