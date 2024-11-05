@@ -59,7 +59,7 @@ describe("NIVC Extract", async () => {
         extract_value_circuit = await circomkit.WitnessTester(`JsonMaskExtractFinal`, {
             file: "json/nivc/extractor",
             template: "MaskExtractFinal",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_VALUE_LENGTH],
+            params: [DATA_BYTES, MAX_VALUE_LENGTH],
         });
         console.log("#constraints:", await extract_value_circuit.getConstraintCount());
     });
