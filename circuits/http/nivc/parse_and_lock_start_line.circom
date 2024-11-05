@@ -4,8 +4,6 @@ include "../parser/machine.circom";
 include "../interpreter.circom";
 include "../../utils/bytes.circom";
 
-// TODO: Note that TOTAL_BYTES will match what we have for AESGCMFOLD step_out
-// I have not gone through to double check the sizes of everything yet.
 template ParseAndLockStartLine(DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH) {
     // ------------------------------------------------------------------------------------------------------------------ //
     // ~~ Set sizes at compile time ~~
@@ -41,11 +39,11 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGT
     // dataASCII.in <== data;
 
     signal input beginning[MAX_BEGINNING_LENGTH];
-    signal input beginning_length;
+    signal input beginningLen;
     signal input middle[MAX_MIDDLE_LENGTH];
-    signal input middle_length;
+    signal input middleLen;
     signal input final[MAX_FINAL_LENGTH];
-    signal input final_length;
+    signal input finalLen;
 
     // Initialze the parser
     component State[DATA_BYTES];
@@ -60,7 +58,7 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGT
 
     /*
     Note, because we know a beginning is the very first thing in a request
-    we can make this more efficient by just comparing the first `BEGINNING_LENGTH` bytes
+    we can make this more efficient by just comparing the first `beginningLen` bytes
     of the data ASCII against the beginning ASCII itself.
     */
 
@@ -98,20 +96,20 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGT
     }
 
     // Additionally verify beginning had correct length
-    beginning_length === middle_start_counter - 1;
+    beginningLen === middle_start_counter - 1;
 
-    signal beginningMatch <== SubstringMatchWithIndexPadded(DATA_BYTES, MAX_BEGINNING_LENGTH)(data, beginning, beginning_length, 0);
+    signal beginningMatch <== SubstringMatchWithIndexPadded(DATA_BYTES, MAX_BEGINNING_LENGTH)(data, beginning, beginningLen, 0);
 
     // Check middle is correct by substring match and length check
-    signal middleMatch <== SubstringMatchWithIndexPadded(DATA_BYTES, MAX_MIDDLE_LENGTH)(data, middle, middle_length, middle_start_counter);
+    signal middleMatch <== SubstringMatchWithIndexPadded(DATA_BYTES, MAX_MIDDLE_LENGTH)(data, middle, middleLen, middle_start_counter);
     middleMatch === 1;
-    middle_length === middle_end_counter - middle_start_counter - 1;
+    middleLen === middle_end_counter - middle_start_counter - 1;
 
     // Check final is correct by substring match and length check
-    signal finalMatch <== SubstringMatchWithIndexPadded(DATA_BYTES, MAX_FINAL_LENGTH)(data, final, final_length, middle_end_counter);
+    signal finalMatch <== SubstringMatchWithIndexPadded(DATA_BYTES, MAX_FINAL_LENGTH)(data, final, finalLen, middle_end_counter);
     finalMatch === 1;
     // -2 here for the CRLF
-    final_length === final_end_counter - middle_end_counter - 2;
+    finalLen === final_end_counter - middle_end_counter - 2;
 
     // ------------------------------------------------------------------------------------------------------------------ //
     // ~ Write out to next NIVC step (Lock Header)
