@@ -19,8 +19,6 @@ template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
         data[i] <== step_in[i];
     }
 
-    // Constraints. 
-    signal value_starting_index[DATA_BYTES - MAX_KEY_LENGTH];
     // flag determining whether this byte is matched value
     signal is_value_match[DATA_BYTES - MAX_KEY_LENGTH];
 
@@ -35,12 +33,11 @@ template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
 
     signal parsing_key[DATA_BYTES - MAX_KEY_LENGTH];
     signal parsing_value[DATA_BYTES - MAX_KEY_LENGTH];
-    signal parsing_object_value[DATA_BYTES - MAX_KEY_LENGTH];
     signal is_key_match[DATA_BYTES - MAX_KEY_LENGTH];
     signal is_key_match_for_value[DATA_BYTES+1 - MAX_KEY_LENGTH];
     is_key_match_for_value[0] <== 0;
     signal is_next_pair_at_depth[DATA_BYTES - MAX_KEY_LENGTH];
-    signal or[DATA_BYTES - MAX_KEY_LENGTH];
+    signal or[DATA_BYTES - MAX_KEY_LENGTH - 1];
 
     // initialise first iteration
 
@@ -85,12 +82,12 @@ template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
         is_key_match_for_value[data_idx+1] <== Mux1()([is_key_match_for_value[data_idx] * (1-is_next_pair_at_depth[data_idx]), is_key_match[data_idx] * (1-is_next_pair_at_depth[data_idx])], is_key_match[data_idx]);
         is_value_match[data_idx] <== is_key_match_for_value[data_idx+1] * parsing_value[data_idx];
 
-        or[data_idx] <== OR()(is_value_match[data_idx], is_value_match[data_idx - 1]);
+        or[data_idx - 1] <== OR()(is_value_match[data_idx], is_value_match[data_idx - 1]);
 
         // mask = currently parsing value and all subsequent keys matched
-        step_out[data_idx] <== data[data_idx] * or[data_idx];
+        step_out[data_idx] <== data[data_idx] * or[data_idx - 1];
     }
-    for(var i = DATA_BYTES - MAX_KEY_LENGTH; i < 2 * DATA_BYTES ; i ++) {
+    for(var i = DATA_BYTES - MAX_KEY_LENGTH; i < 2 * DATA_BYTES + 4; i ++) {
         step_out[i] <== 0;
     }
 }
@@ -111,9 +108,6 @@ template JsonMaskArrayIndexNIVC(DATA_BYTES, MAX_STACK_HEIGHT) {
         data[i] <== step_in[i];
     }
 
-    // value starting index in `data`
-    signal value_starting_index[DATA_BYTES];
-
     component State[DATA_BYTES];
     State[0] = StateUpdate(MAX_STACK_HEIGHT);
     State[0].byte           <== data[0];
@@ -124,7 +118,7 @@ template JsonMaskArrayIndexNIVC(DATA_BYTES, MAX_STACK_HEIGHT) {
     State[0].parsing_number <== 0;
 
     signal parsing_array[DATA_BYTES];
-    signal or[DATA_BYTES];
+    signal or[DATA_BYTES - 1];
 
     parsing_array[0] <== InsideArrayIndexObject()(State[0].next_stack[0], State[0].next_stack[1], State[0].next_parsing_string, State[0].next_parsing_number, index);
     step_out[0] <== data[0] * parsing_array[0]; // TODO (autoparallel): is this totally correcot or do we need an or, i think it's right
@@ -139,10 +133,10 @@ template JsonMaskArrayIndexNIVC(DATA_BYTES, MAX_STACK_HEIGHT) {
 
         parsing_array[data_idx] <== InsideArrayIndexObject()(State[data_idx].next_stack[0], State[data_idx].next_stack[1], State[data_idx].next_parsing_string, State[data_idx].next_parsing_number, index);
 
-        or[data_idx] <== OR()(parsing_array[data_idx], parsing_array[data_idx - 1]);
-        step_out[data_idx] <== data[data_idx] * or[data_idx];
+        or[data_idx - 1] <== OR()(parsing_array[data_idx], parsing_array[data_idx - 1]);
+        step_out[data_idx] <== data[data_idx] * or[data_idx - 1];
     }
-    for(var i = DATA_BYTES ; i < 2 * DATA_BYTES ; i++) {
+    for(var i = DATA_BYTES ; i < 2 * DATA_BYTES + 4; i++) {
         step_out[i] <== 0;
     }
 }
