@@ -5,11 +5,8 @@ include "@zk-email/circuits/utils/array.circom";
 
 template MaskExtractFinal(DATA_BYTES, MAX_STACK_HEIGHT, MAX_VALUE_LENGTH) {
     // ------------------------------------------------------------------------------------------------------------------ //
-    // ~~ Set sizes at compile time ~~
-    // Total number of variables in the parser for each byte of data
     assert(MAX_STACK_HEIGHT >= 2);
-    var PER_ITERATION_DATA_LENGTH = MAX_STACK_HEIGHT * 2 + 2;
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * (PER_ITERATION_DATA_LENGTH + 1) + 1;
+    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * 2 + 4; // aes pt/ct + ctr
     // ------------------------------------------------------------------------------------------------------------------ //
     signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
     signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
