@@ -2,7 +2,7 @@ import { circomkit, WitnessTester, toByte } from "../../common";
 import { readHTTPInputFile } from "../../common/http";
 
 describe("HTTPParseAndLockStartLine", async () => {
-    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
+    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "beginning", "beginningLen", "middle", "middleLen", "final", "finalLen"], ["step_out"]>;
 
     const DATA_BYTES = 320;
     const MAX_STACK_HEIGHT = 5;
@@ -30,7 +30,7 @@ describe("HTTPParseAndLockStartLine", async () => {
             let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
             let finalPadded = final.concat(Array(MAX_FINAL_LENGTH - final.length).fill(0));
 
-            await httpParseAndLockStartLineCircuit.expectPass({ step_in: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length });
+            await httpParseAndLockStartLineCircuit.expectPass({ step_in: extendedInput, beginning: beginningPadded, beginningLen: beginning.length, middle: middlePadded, middleLen: middle.length, final: finalPadded, finalLen: final.length });
         });
     }
 
@@ -42,7 +42,7 @@ describe("HTTPParseAndLockStartLine", async () => {
             let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
             let finalPadded = final.concat(Array(MAX_FINAL_LENGTH - final.length).fill(0));
 
-            await httpParseAndLockStartLineCircuit.expectFail({ step_in: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length });
+            await httpParseAndLockStartLineCircuit.expectFail({ step_in: extendedInput, beginning: beginningPadded, beginningLen: beginning.length, middle: middlePadded, middleLen: middle.length, final: finalPadded, finalLen: final.length });
         });
     }
 

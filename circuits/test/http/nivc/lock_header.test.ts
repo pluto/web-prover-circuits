@@ -2,7 +2,7 @@ import { circomkit, WitnessTester, toByte } from "../../common";
 import { readHTTPInputFile } from "../../common/http";
 
 describe("HTTPLockHeader", async () => {
-    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
+    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "beginning", "beginningLen", "middle", "middleLen", "final", "finalLen"], ["step_out"]>;
     let lockHeaderCircuit: WitnessTester<["step_in", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
 
     const DATA_BYTES = 320;
@@ -43,7 +43,7 @@ describe("HTTPLockHeader", async () => {
             let headerNamePadded = headerName.concat(Array(MAX_HEADER_NAME_LENGTH - headerName.length).fill(0));
             let headerValuePadded = headerValue.concat(Array(MAX_HEADER_VALUE_LENGTH - headerValue.length).fill(0));
 
-            let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
+            let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedInput, beginning: beginningPadded, beginningLen: beginning.length, middle: middlePadded, middleLen: middle.length, final: finalPadded, finalLen: final.length }, ["step_out"]);
 
             await lockHeaderCircuit.expectPass({ step_in: parseAndLockStartLine.step_out, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length });
         });
@@ -60,7 +60,7 @@ describe("HTTPLockHeader", async () => {
             let headerNamePadded = headerName.concat(Array(MAX_HEADER_NAME_LENGTH - headerName.length).fill(0));
             let headerValuePadded = headerValue.concat(Array(MAX_HEADER_VALUE_LENGTH - headerValue.length).fill(0));
 
-            let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
+            let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedInput, beginning: beginningPadded, beginningLen: beginning.length, middle: middlePadded, middleLen: middle.length, final: finalPadded, finalLen: final.length }, ["step_out"]);
 
             await lockHeaderCircuit.expectFail({ step_in: parseAndLockStartLine.step_out, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length });
         });
