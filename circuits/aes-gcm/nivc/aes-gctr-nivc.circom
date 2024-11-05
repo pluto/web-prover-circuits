@@ -5,13 +5,12 @@ include "../../utils/array.circom";
 
 
 // Compute AES-GCTR
-template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
+template AESGCTRFOLD(DATA_BYTES) {
     // ------------------------------------------------------------------------------------------------------------------ //
     // ~~ Set sizes at compile time ~~
     assert(DATA_BYTES % 16 == 0);
-    // Total number of variables in the parser for each byte of data
-    var PER_ITERATION_DATA_LENGTH = MAX_STACK_HEIGHT * 2 + 2;
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * (PER_ITERATION_DATA_LENGTH + 1) + 1;
+    // Value for accumulating both plaintext and ciphertext as well as counter
+    var TOTAL_BYTES_ACROSS_NIVC = 2 * DATA_BYTES + 4; 
     // ------------------------------------------------------------------------------------------------------------------ //
 
 
@@ -75,8 +74,6 @@ template AESGCTRFOLD(DATA_BYTES, MAX_STACK_HEIGHT) {
             step_out[i] <== nextTexts.outSecond[i - DATA_BYTES];
         } else if(i < 2 * DATA_BYTES + 4) {
             step_out[i] <== aes.counter[i - (2 * DATA_BYTES)];
-        } else {
-            step_out[i] <== 0;
         }
     }
 }
