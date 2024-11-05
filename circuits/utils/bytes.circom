@@ -188,3 +188,13 @@ template BitwiseXor(n) {
         out[k] <== a[k] + b[k] - 2*mid[k];
     }
 }
+
+template DoubleBytePackArray(n) {
+    signal input lower[n];
+    signal input upper[n];
+    signal output out[n];
+
+    for(var i = 0 ; i < 16 ; i++) {
+        out[i] <== lower[i] + 2**8 * upper[i];
+    }
+}
