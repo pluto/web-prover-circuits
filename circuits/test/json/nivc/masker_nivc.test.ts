@@ -81,7 +81,7 @@ describe("NIVC Extract", async () => {
     let key1Len = 5;
     let key2 = [112, 114, 111, 102, 105, 108, 101, 0]; // "profile"
     let key2Len = 7;
-    let key3 = [110, 97, 109, 101, 0, 0, 0, 0]; "name"
+    let key3 = [110, 97, 109, 101, 0, 0, 0, 0]; // "name"
     let key3Len = 4;
 
     let value = toByte("\"Taylor Swift\"");
