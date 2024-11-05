@@ -32,7 +32,7 @@ template MaskExtractFinal(DATA_BYTES, MAX_STACK_HEIGHT, MAX_VALUE_LENGTH) {
         value_starting_index[i] <== value_starting_index[i-1] + i * (1-is_zero_mask[i]) * is_prev_starting_index[i];
     }
     // TODO: Clear step out?
-    signal output value[MAX_VALUE_LENGTH] <== SelectSubArray(DATA_BYTES, MAX_VALUE_LENGTH)(data, value_starting_index[DATA_BYTES-1], MAX_VALUE_LENGTH);
+    signal value[MAX_VALUE_LENGTH] <== SelectSubArray(DATA_BYTES, MAX_VALUE_LENGTH)(data, value_starting_index[DATA_BYTES-1], MAX_VALUE_LENGTH);
     for (var i = 0 ; i < MAX_VALUE_LENGTH ; i++) {
         // log(i, value[i]);
         step_out[i] <== value[i];
