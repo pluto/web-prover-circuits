@@ -119,3 +119,52 @@ describe("ByteUnpack2", () => {
     });
 
 });
+
+
+
+// Generic version
+describe("GenericBytePack2", () => {
+    let circuit: WitnessTester<["in"], ["out"]>;
+    before(async () => {
+        circuit = await circomkit.WitnessTester(`GenericBytePackArray`, {
+            file: "utils/bytes",
+            template: "GenericBytePackArray",
+            params: [2, 3],
+        });
+        console.log("#constraints:", await circuit.getConstraintCount());
+    });
+    it("witness: lower = [1,0,0], upper = [0,1,0]", async () => {
+        await circuit.expectPass(
+            { in: [[1, 0, 0], [0, 1, 0]] }, { out: [1, 256] }
+        );
+    });
+    it("witness: lower = [1,0,0], upper = [0,0,1]", async () => {
+        await circuit.expectPass(
+            { in: [[1, 0, 0], [0, 0, 1]] }, { out: [1, 65536] }
+        );
+    });
+});
+
+describe("GenericByteUnpack2", () => {
+    let circuit: WitnessTester<["in"], ["out"]>;
+    before(async () => {
+        circuit = await circomkit.WitnessTester(`GenericByteUnpackArray`, {
+            file: "utils/bytes",
+            template: "GenericByteUnpackArray",
+            params: [2, 3],
+        });
+        console.log("#constraints:", await circuit.getConstraintCount());
+    });
+
+    it("witness: in = [1,256]", async () => {
+        await circuit.expectPass(
+            { in: [1, 256] }, { out: [[1, 0, 0], [0, 1, 0]] }
+        );
+    });
+
+    it("witness: in = [1,256]", async () => {
+        await circuit.expectPass(
+            { in: [1, 65536] }, { out: [[1, 0, 0], [0, 0, 1]] }
+        );
+    });
+});
