@@ -9,7 +9,7 @@ include "../../utils/bytes.circom";
 template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH) {
     // ------------------------------------------------------------------------------------------------------------------ //
     // ~~ Set sizes at compile time ~~
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * 2 + 4; // AES ct/pt + ctr
+    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES + 4; // AES ct/pt + ctr
     // ------------------------------------------------------------------------------------------------------------------ //
 
     // ------------------------------------------------------------------------------------------------------------------ //
@@ -17,10 +17,13 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENG
     signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
 
     // Get the plaintext
-    signal data[DATA_BYTES];
+    signal packedData[DATA_BYTES];
     for (var i = 0 ; i < DATA_BYTES ; i++) {
-        data[i] <== step_in[i];
+        packedData[i] <== step_in[i];
     }
+    component unpackData = UnpackDoubleByteArray(DATA_BYTES);
+    unpackData.in <== packedData;
+    signal data[DATA_BYTES] <== unpackData.lower;
 
     signal input beginning[MAX_BEGINNING_LENGTH];
     signal input beginning_length;
@@ -100,7 +103,7 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENG
     for (var i = 0 ; i < TOTAL_BYTES_ACROSS_NIVC ; i++) {
         // add plaintext http input to step_out and ignore the ciphertext
         if(i < DATA_BYTES) {
-            step_out[i] <== step_in[i];
+            step_out[i] <== data[i]; // PASS OUT JUST THE PLAINTEXT DATA
         } else {
             step_out[i] <== 0;
         }

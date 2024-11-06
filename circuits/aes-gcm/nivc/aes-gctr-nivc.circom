@@ -50,10 +50,7 @@ template AESGCTRFOLD(DATA_BYTES) {
     }
 
     // Write out the plaintext and ciphertext to our accumulation arrays, both at once.
-    signal nextPackedChunk[16];
-    for(var i = 0 ; i < 16 ; i++) {
-        nextPackedChunk[i] <== plainText[i] + 2**8 * aes.cipherText[i];
-    }
+    signal nextPackedChunk[16] <== DoubleBytePackArray(16)(plainText, aes.cipherText);
 
     signal prevAccumulatedPackedText[DATA_BYTES];
     for(var i = 0 ; i < DATA_BYTES ; i++) {

@@ -49,7 +49,7 @@ describe("NIVC_FULL", async () => {
 
     const DATA_BYTES = 320;
     const MAX_STACK_HEIGHT = 5;
-    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * 2 + 4;
+    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES + 4;
 
     const MAX_HEADER_NAME_LENGTH = 20;
     const MAX_HEADER_VALUE_LENGTH = 35;
@@ -132,7 +132,7 @@ describe("NIVC_FULL", async () => {
         const counter = [0x00, 0x00, 0x00, 0x01];
         const init_nivc_input = new Array(TOTAL_BYTES_ACROSS_NIVC).fill(0x00);
         counter.forEach((value, index) => {
-            init_nivc_input[2 * DATA_BYTES + index] = value;
+            init_nivc_input[DATA_BYTES + index] = value;
         });
         let pt = http_response_plaintext.slice(0, 16);
         aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), plainText: pt, aad: Array(16).fill(0), step_in: init_nivc_input }, ["step_out"]);
@@ -153,8 +153,6 @@ describe("NIVC_FULL", async () => {
 
         let maskedInput = extendedJsonInput.fill(0, 0, idx);
         maskedInput = maskedInput.fill(0, 320);
-
-
 
         let key0 = [100, 97, 116, 97, 0, 0, 0, 0]; // "data"
         let key0Len = 4;

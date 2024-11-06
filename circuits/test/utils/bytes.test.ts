@@ -23,3 +23,99 @@ describe("ASCII", () => {
         );
     });
 });
+
+describe("BytePack", () => {
+    let circuit: WitnessTester<["lower", "upper"], ["out"]>;
+    before(async () => {
+        circuit = await circomkit.WitnessTester(`DoubleBytePackArray`, {
+            file: "utils/bytes",
+            template: "DoubleBytePackArray",
+            params: [1],
+        });
+        console.log("#constraints:", await circuit.getConstraintCount());
+    });
+
+    it("witness: lower = 0, upper = 1", async () => {
+        await circuit.expectPass(
+            { lower: [0], upper: [1] }, { out: [256] }
+        );
+    });
+
+    it("witness: lower = 1, upper = 1", async () => {
+        await circuit.expectPass(
+            { lower: [1], upper: [1] }, { out: [257] }
+        );
+    });
+
+    it("witness: lower = 1, upper = 0", async () => {
+        await circuit.expectPass(
+            { lower: [1], upper: [0] }, { out: [1] }
+        );
+    });
+});
+
+describe("BytePack2", () => {
+    let circuit: WitnessTester<["lower", "upper"], ["out"]>;
+    before(async () => {
+        circuit = await circomkit.WitnessTester(`DoubleBytePackArray`, {
+            file: "utils/bytes",
+            template: "DoubleBytePackArray",
+            params: [2],
+        });
+        console.log("#constraints:", await circuit.getConstraintCount());
+    });
+    it("witness: lower = [1,0], upper = [0,1]", async () => {
+        await circuit.expectPass(
+            { lower: [1, 0], upper: [0, 1] }, { out: [1, 256] }
+        );
+    });
+});
+
+describe("ByteUnpack", () => {
+    let circuit: WitnessTester<["in"], ["lower", "upper"]>;
+    before(async () => {
+        circuit = await circomkit.WitnessTester(`UnpackDoubleByteArray`, {
+            file: "utils/bytes",
+            template: "UnpackDoubleByteArray",
+            params: [1],
+        });
+        console.log("#constraints:", await circuit.getConstraintCount());
+    });
+
+    it("witness: in = 256", async () => {
+        await circuit.expectPass(
+            { in: [256] }, { lower: [0], upper: [1] }
+        );
+    });
+
+    it("witness: in = 257", async () => {
+        await circuit.expectPass(
+            { in: [257] }, { lower: [1], upper: [1] }
+        );
+    });
+
+    it("witness: in = 1", async () => {
+        await circuit.expectPass(
+            { in: [1] }, { lower: [1], upper: [] }
+        );
+    });
+});
+
+describe("ByteUnpack2", () => {
+    let circuit: WitnessTester<["in"], ["lower", "upper"]>;
+    before(async () => {
+        circuit = await circomkit.WitnessTester(`UnpackDoubleByteArray`, {
+            file: "utils/bytes",
+            template: "UnpackDoubleByteArray",
+            params: [2],
+        });
+        console.log("#constraints:", await circuit.getConstraintCount());
+    });
+
+    it("witness: in = [1,256]", async () => {
+        await circuit.expectPass(
+            { in: [1, 256] }, { lower: [1, 0], upper: [0, 1] }
+        );
+    });
+
+});

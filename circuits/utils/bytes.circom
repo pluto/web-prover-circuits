@@ -194,7 +194,31 @@ template DoubleBytePackArray(n) {
     signal input upper[n];
     signal output out[n];
 
-    for(var i = 0 ; i < 16 ; i++) {
+    for(var i = 0 ; i < n ; i++) {
         out[i] <== lower[i] + 2**8 * upper[i];
     }
+}
+
+template UnpackDoubleByteArray(n) {
+    signal input in[n];
+    signal output lower[n];
+    signal output upper[n];
+
+    signal inBits[n][16];
+    var lowerAccum[n];
+    var upperAccum[n];
+    for(var i = 0 ; i < n ; i ++) {
+        inBits[i] <== Num2Bits(16)(in[i]);
+        lowerAccum[i] = 0;
+        upperAccum[i] = 0;
+        for(var j = 0 ; j < 16 ; j++) {
+            if(j < 8) {
+                lowerAccum[i] += inBits[i][j] * 2**j;
+            } else {
+                upperAccum[i] += inBits[i][j] * 2**(j-8);
+            }
+        }
+    }
+    lower <== lowerAccum;
+    upper <== upperAccum;
 }

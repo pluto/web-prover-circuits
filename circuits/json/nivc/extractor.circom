@@ -5,7 +5,7 @@ include "@zk-email/circuits/utils/array.circom";
 
 template MaskExtractFinal(DATA_BYTES, MAX_VALUE_LENGTH) {
     // ------------------------------------------------------------------------------------------------------------------ //
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * 2 + 4; // aes pt/ct + ctr
+    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES + 4; // aes pt/ct + ctr
     // ------------------------------------------------------------------------------------------------------------------ //
     signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
     signal output step_out[TOTAL_BYTES_ACROSS_NIVC];

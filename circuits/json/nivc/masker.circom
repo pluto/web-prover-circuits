@@ -5,7 +5,7 @@ include "../interpreter.circom";
 template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
     // ------------------------------------------------------------------------------------------------------------------ //
     assert(MAX_STACK_HEIGHT >= 2); // TODO (autoparallel): idk if we need this now
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * 2 + 4; // aes ct/pt + ctr
+    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES + 4; // aes ct/pt + ctr
     // ------------------------------------------------------------------------------------------------------------------ //
     signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
     signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
@@ -87,7 +87,7 @@ template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
         // mask = currently parsing value and all subsequent keys matched
         step_out[data_idx] <== data[data_idx] * or[data_idx - 1];
     }
-    for(var i = DATA_BYTES - MAX_KEY_LENGTH; i < 2 * DATA_BYTES + 4; i ++) {
+    for(var i = DATA_BYTES - MAX_KEY_LENGTH; i < DATA_BYTES + 4; i ++) {
         step_out[i] <== 0;
     }
 }
@@ -95,7 +95,7 @@ template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
 template JsonMaskArrayIndexNIVC(DATA_BYTES, MAX_STACK_HEIGHT) {
     // ------------------------------------------------------------------------------------------------------------------ //
     assert(MAX_STACK_HEIGHT >= 2); // TODO (autoparallel): idk if we need this now
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * 2 + 4; // aes ct/pt + ctr
+    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES + 4; // aes ct/pt + ctr
     // ------------------------------------------------------------------------------------------------------------------ //
     signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
     signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
@@ -136,7 +136,7 @@ template JsonMaskArrayIndexNIVC(DATA_BYTES, MAX_STACK_HEIGHT) {
         or[data_idx - 1] <== OR()(parsing_array[data_idx], parsing_array[data_idx - 1]);
         step_out[data_idx] <== data[data_idx] * or[data_idx - 1];
     }
-    for(var i = DATA_BYTES ; i < 2 * DATA_BYTES + 4; i++) {
+    for(var i = DATA_BYTES ; i < TOTAL_BYTES_ACROSS_NIVC; i++) {
         step_out[i] <== 0;
     }
 }
