@@ -31,7 +31,6 @@ let json_input = [123, 13, 10, 32, 32, 32, 34, 100, 97, 116, 97, 34, 58, 32, 123
     13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13, 10, 32, 32, 32, 125, 13, 10, 125];
 
 describe("NIVC Extract", async () => {
-    let parse_circuit: WitnessTester<["step_in"], ["step_out"]>;
     let json_mask_object_circuit: WitnessTester<["step_in", "key", "keyLen"], ["step_out"]>;
     let json_mask_arr_circuit: WitnessTester<["step_in", "index"], ["step_out"]>;
     let extract_value_circuit: WitnessTester<["step_in"], ["step_out"]>;
@@ -40,17 +39,9 @@ describe("NIVC Extract", async () => {
     const MAX_STACK_HEIGHT = 5;
     const MAX_KEY_LENGTH = 8;
     const MAX_VALUE_LENGTH = 35;
-    const PER_ITERATION_DATA_LENGTH = MAX_STACK_HEIGHT * 2 + 2;
-    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * (PER_ITERATION_DATA_LENGTH + 1) + 1;
+    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * 2 + 4;
 
     before(async () => {
-        parse_circuit = await circomkit.WitnessTester(`JsonParseNIVC`, {
-            file: "json/nivc/parse",
-            template: "JsonParseNIVC",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT],
-        });
-        console.log("#constraints:", await parse_circuit.getConstraintCount());
-
         json_mask_arr_circuit = await circomkit.WitnessTester(`JsonMaskArrayIndexNIVC`, {
             file: "json/nivc/masker",
             template: "JsonMaskArrayIndexNIVC",
@@ -68,7 +59,7 @@ describe("NIVC Extract", async () => {
         extract_value_circuit = await circomkit.WitnessTester(`JsonMaskExtractFinal`, {
             file: "json/nivc/extractor",
             template: "MaskExtractFinal",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_VALUE_LENGTH],
+            params: [DATA_BYTES, MAX_VALUE_LENGTH],
         });
         console.log("#constraints:", await extract_value_circuit.getConstraintCount());
     });
@@ -87,9 +78,8 @@ describe("NIVC Extract", async () => {
     let value = toByte("\"Taylor Swift\"");
 
     it("parse and mask", async () => {
-        let json_parse = await parse_circuit.compute({ step_in: extended_json_input }, ["step_out"]);
 
-        let json_extract_key0 = await json_mask_object_circuit.compute({ step_in: json_parse.step_out, key: key0, keyLen: key0Len }, ["step_out"]);
+        let json_extract_key0 = await json_mask_object_circuit.compute({ step_in: extended_json_input, key: key0, keyLen: key0Len }, ["step_out"]);
 
         let json_extract_key1 = await json_mask_object_circuit.compute({ step_in: json_extract_key0.step_out, key: key1, keyLen: key1Len }, ["step_out"]);
 

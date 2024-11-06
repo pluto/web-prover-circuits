@@ -6,9 +6,7 @@ describe("HTTPLockHeader", async () => {
     let lockHeaderCircuit: WitnessTester<["step_in", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
 
     const DATA_BYTES = 320;
-    const MAX_STACK_HEIGHT = 5;
-    const PER_ITERATION_DATA_LENGTH = MAX_STACK_HEIGHT * 2 + 2;
-    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * (PER_ITERATION_DATA_LENGTH + 1) + 1;
+    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * 2 + 4;
 
     const MAX_BEGINNING_LENGTH = 10;
     const MAX_MIDDLE_LENGTH = 50;
@@ -20,14 +18,14 @@ describe("HTTPLockHeader", async () => {
         httpParseAndLockStartLineCircuit = await circomkit.WitnessTester(`ParseAndLockStartLine`, {
             file: "http/nivc/parse_and_lock_start_line",
             template: "ParseAndLockStartLine",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH],
+            params: [DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH],
         });
         console.log("#constraints:", await httpParseAndLockStartLineCircuit.getConstraintCount());
 
         lockHeaderCircuit = await circomkit.WitnessTester(`LockHeader`, {
             file: "http/nivc/lock_header",
             template: "LockHeader",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH],
+            params: [DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH],
         });
         console.log("#constraints:", await lockHeaderCircuit.getConstraintCount());
     });

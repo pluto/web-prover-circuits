@@ -2,20 +2,18 @@ import { assert } from "chai";
 import { WitnessTester } from "circomkit";
 import { circomkit } from "../../common";
 
-const MAX_STACK_HEIGHT = 0;
-
 describe("aes-gctr-nivc", () => {
     let circuit_one_block: WitnessTester<["key", "iv", "plainText", "aad", "step_in"], ["step_out"]>;
 
 
     const DATA_BYTES_0 = 16;
-    const TOTAL_BYTES_ACROSS_NIVC_0 = DATA_BYTES_0 * (MAX_STACK_HEIGHT + 2 + 1) + 1;
+    const TOTAL_BYTES_ACROSS_NIVC_0 = 2 * DATA_BYTES_0 + 4;
 
     it("all correct for self generated single zero pt block case", async () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [DATA_BYTES_0, MAX_STACK_HEIGHT], // input len is 16 bytes
+            params: [DATA_BYTES_0], // input len is 16 bytes
         });
 
         let key = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
@@ -40,7 +38,7 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [DATA_BYTES_0, MAX_STACK_HEIGHT], // input len is 16 bytes
+            params: [DATA_BYTES_0], // input len is 16 bytes
         });
 
         let key = [0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31];
@@ -63,7 +61,7 @@ describe("aes-gctr-nivc", () => {
     });
 
     const DATA_BYTES_1 = 32;
-    const TOTAL_BYTES_ACROSS_NIVC_1 = DATA_BYTES_1 * (MAX_STACK_HEIGHT + 2 + 1) + 1;
+    const TOTAL_BYTES_ACROSS_NIVC_1 = DATA_BYTES_1 * 2 + 4;
 
 
     let zero_block = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
@@ -79,7 +77,7 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [DATA_BYTES_1, MAX_STACK_HEIGHT], // input len is 32 bytes
+            params: [DATA_BYTES_1], // input len is 32 bytes
         });
 
         const counter = [0x00, 0x00, 0x00, 0x01];
@@ -98,7 +96,7 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [DATA_BYTES_1, MAX_STACK_HEIGHT], // input len is 32 bytes
+            params: [DATA_BYTES_1], // input len is 32 bytes
         });
 
         const counter = [0x00, 0x00, 0x00, 0x02];

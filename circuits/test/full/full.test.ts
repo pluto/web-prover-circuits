@@ -49,8 +49,7 @@ describe("NIVC_FULL", async () => {
 
     const DATA_BYTES = 320;
     const MAX_STACK_HEIGHT = 5;
-    const PER_ITERATION_DATA_LENGTH = MAX_STACK_HEIGHT * 2 + 2;
-    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * (PER_ITERATION_DATA_LENGTH + 1) + 1;
+    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * 2 + 4;
 
     const MAX_HEADER_NAME_LENGTH = 20;
     const MAX_HEADER_VALUE_LENGTH = 35;
@@ -69,36 +68,29 @@ describe("NIVC_FULL", async () => {
         aesCircuit = await circomkit.WitnessTester("AESGCTRFOLD", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT],
+            params: [DATA_BYTES],
         });
         console.log("#constraints (AES-GCTR):", await aesCircuit.getConstraintCount());
         httpParseAndLockStartLineCircuit = await circomkit.WitnessTester(`ParseAndLockStartLine`, {
             file: "http/nivc/parse_and_lock_start_line",
             template: "ParseAndLockStartLine",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH],
+            params: [DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH],
         });
         console.log("#constraints (HTTP-PARSE-AND-LOCK-START-LINE):", await httpParseAndLockStartLineCircuit.getConstraintCount());
 
         lockHeaderCircuit = await circomkit.WitnessTester(`LockHeader`, {
             file: "http/nivc/lock_header",
             template: "LockHeader",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH],
+            params: [DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH],
         });
         console.log("#constraints (HTTP-LOCK-HEADER):", await lockHeaderCircuit.getConstraintCount());
 
         bodyMaskCircuit = await circomkit.WitnessTester(`BodyMask`, {
             file: "http/nivc/body_mask",
             template: "HTTPMaskBodyNIVC",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT],
+            params: [DATA_BYTES],
         });
         console.log("#constraints (HTTP-BODY-MASK):", await bodyMaskCircuit.getConstraintCount());
-
-        parse_circuit = await circomkit.WitnessTester(`JsonParseNIVC`, {
-            file: "json/nivc/parse",
-            template: "JsonParseNIVC",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT],
-        });
-        console.log("#constraints (JSON-PARSE):", await parse_circuit.getConstraintCount());
 
         json_mask_arr_circuit = await circomkit.WitnessTester(`JsonMaskArrayIndexNIVC`, {
             file: "json/nivc/masker",
@@ -117,7 +109,7 @@ describe("NIVC_FULL", async () => {
         extract_value_circuit = await circomkit.WitnessTester(`JsonMaskExtractFinal`, {
             file: "json/nivc/extractor",
             template: "MaskExtractFinal",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_VALUE_LENGTH],
+            params: [DATA_BYTES, MAX_VALUE_LENGTH],
         });
         console.log("#constraints (JSON-MASK-EXTRACT-FINAL):", await extract_value_circuit.getConstraintCount());
     });
@@ -175,9 +167,7 @@ describe("NIVC_FULL", async () => {
 
         let value = toByte("\"Taylor Swift\"");
 
-        let json_parse = await parse_circuit.compute({ step_in: bodyMaskOut }, ["step_out"]);
-
-        let json_extract_key0 = await json_mask_object_circuit.compute({ step_in: json_parse.step_out, key: key0, keyLen: key0Len }, ["step_out"]);
+        let json_extract_key0 = await json_mask_object_circuit.compute({ step_in: bodyMaskOut, key: key0, keyLen: key0Len }, ["step_out"]);
 
         let json_num = json_extract_key0.step_out as number[];
         console.log("json_extract_key0", json_num);

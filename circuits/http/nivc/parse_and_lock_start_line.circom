@@ -6,39 +6,21 @@ include "../../utils/bytes.circom";
 
 // TODO: Note that TOTAL_BYTES will match what we have for AESGCMFOLD step_out
 // I have not gone through to double check the sizes of everything yet.
-template ParseAndLockStartLine(DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH) {
+template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH) {
     // ------------------------------------------------------------------------------------------------------------------ //
     // ~~ Set sizes at compile time ~~
-    // Total number of variables in the parser for each byte of data
-    // var AES_BYTES                 = DATA_BYTES + 50; // TODO: Might be wrong, but good enough for now
-    /* 5 is for the variables:
-        next_parsing_start
-        next_parsing_header
-        next_parsing_field_name
-        next_parsing_field_value
-        State[i].next_parsing_body
-    */
-    var TOTAL_BYTES_HTTP_STATE    = DATA_BYTES * (5 + 1); // data + parser vars
-    var PER_ITERATION_DATA_LENGTH = MAX_STACK_HEIGHT * 2 + 2;
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * (PER_ITERATION_DATA_LENGTH + 1) + 1;
+    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * 2 + 4; // AES ct/pt + ctr
     // ------------------------------------------------------------------------------------------------------------------ //
 
     // ------------------------------------------------------------------------------------------------------------------ //
-    // ~ Unravel from previous NIVC step ~
-    // Read in from previous NIVC step (JsonParseNIVC)
     signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
     signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
 
+    // Get the plaintext
     signal data[DATA_BYTES];
     for (var i = 0 ; i < DATA_BYTES ; i++) {
-        // data[i] <== step_in[50 + i]; // THIS WAS OFFSET FOR AES, WHICH WE NEED TO TAKE INTO ACCOUNT
         data[i] <== step_in[i];
     }
-
-    // // TODO: check if these needs to here or not
-    // DON'T THINK WE NEED THIS SINCE AES SHOULD OUTPUT ASCII OR FAIL
-    // component dataASCII = ASCII(DATA_BYTES);
-    // dataASCII.in <== data;
 
     signal input beginning[MAX_BEGINNING_LENGTH];
     signal input beginning_length;
@@ -114,21 +96,13 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_STACK_HEIGHT, MAX_BEGINNING_LENGT
     final_length === final_end_counter - middle_end_counter - 2;
 
     // ------------------------------------------------------------------------------------------------------------------ //
-    // ~ Write out to next NIVC step (Lock Header)
-    for (var i = 0 ; i < DATA_BYTES ; i++) {
-        // add plaintext http input to step_out
-        // step_out[i] <== step_in[50 + i]; // AGAIN, NEED TO ACCOUNT FOR AES VARIABLES POSSIBLY
-        step_out[i] <== step_in[i];
-
-        // add parser state
-        step_out[DATA_BYTES + i * 5]     <== State[i].next_parsing_start;
-        step_out[DATA_BYTES + i * 5 + 1] <== State[i].next_parsing_header;
-        step_out[DATA_BYTES + i * 5 + 2] <== State[i].next_parsing_field_name;
-        step_out[DATA_BYTES + i * 5 + 3] <== State[i].next_parsing_field_value;
-        step_out[DATA_BYTES + i * 5 + 4] <== State[i].next_parsing_body;
-    }
-    // Pad remaining with zeros
-    for (var i = TOTAL_BYTES_HTTP_STATE ; i < TOTAL_BYTES_ACROSS_NIVC ; i++ ) {
-        step_out[i] <== 0;
+    // write out the pt again
+    for (var i = 0 ; i < TOTAL_BYTES_ACROSS_NIVC ; i++) {
+        // add plaintext http input to step_out and ignore the ciphertext
+        if(i < DATA_BYTES) {
+            step_out[i] <== step_in[i];
+        } else {
+            step_out[i] <== 0;
+        }
     }
 }

@@ -1,40 +1,69 @@
 pragma circom 2.1.9;
 
+include "../parser/machine.circom";
 include "../interpreter.circom";
 include "../../utils/array.circom";
 include "circomlib/circuits/comparators.circom";
 
 // TODO: should use a MAX_HEADER_NAME_LENGTH and a MAX_HEADER_VALUE_LENGTH
-template LockHeader(DATA_BYTES, MAX_STACK_HEIGHT, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH) {
+template LockHeader(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH) {
     // ------------------------------------------------------------------------------------------------------------------ //
-    // ~~ Set sizes at compile time ~~
-    // Total number of variables in the parser for each byte of data
-    /* 5 is for the variables:
-        next_parsing_start
-        next_parsing_header
-        next_parsing_field_name
-        next_parsing_field_value
-        State[i].next_parsing_body
-    */
-    var TOTAL_BYTES_HTTP_STATE    = DATA_BYTES * (5 + 1); // data + parser vars
-    var PER_ITERATION_DATA_LENGTH = MAX_STACK_HEIGHT * 2 + 2;
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * (PER_ITERATION_DATA_LENGTH + 1) + 1;
+    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * 2 + 4; // aes pt/ct + ctr
     // ------------------------------------------------------------------------------------------------------------------ //
 
     // ------------------------------------------------------------------------------------------------------------------ //
-    // ~ Unravel from previous NIVC step ~
-    // Read in from previous NIVC step (HttpParseAndLockStartLine or HTTPLockHeader)
     signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
     signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
 
+    // get the plaintext
     signal data[DATA_BYTES];
     for (var i = 0 ; i < DATA_BYTES ; i++) {
         data[i] <== step_in[i];
     }
+    
+    // ------------------------------------------------------------------------------------------------------------------ //
+    // PARSE
+    // Initialze the parser
+    component State[DATA_BYTES];
+    State[0]                     = HttpStateUpdate();
+    State[0].byte                <== data[0];
+    State[0].parsing_start       <== 1;
+    State[0].parsing_header      <== 0;
+    State[0].parsing_field_name  <== 0;
+    State[0].parsing_field_value <== 0;
+    State[0].parsing_body        <== 0;
+    State[0].line_status         <== 0;
+
+    // TODO (autoparallel): Redundant as fuck, but I'm doing this quickly sorry. I don't think this actually adds constraints
     signal httpParserState[DATA_BYTES * 5];
-    for (var i = 0 ; i < DATA_BYTES * 5 ; i++) {
-        httpParserState[i] <== step_in[DATA_BYTES + i];
+
+
+    var middle_start_counter = 1;
+    var middle_end_counter = 1;
+    var final_end_counter = 1;
+    for(var data_idx = 1; data_idx < DATA_BYTES; data_idx++) {
+        State[data_idx]                     = HttpStateUpdate();
+        State[data_idx].byte                <== data[data_idx];
+        State[data_idx].parsing_start       <== State[data_idx - 1].next_parsing_start;
+        State[data_idx].parsing_header      <== State[data_idx - 1].next_parsing_header;
+        State[data_idx].parsing_field_name  <== State[data_idx - 1].next_parsing_field_name;
+        State[data_idx].parsing_field_value <== State[data_idx - 1].next_parsing_field_value;
+        State[data_idx].parsing_body        <== State[data_idx - 1].next_parsing_body;
+        State[data_idx].line_status         <== State[data_idx - 1].next_line_status;
     }
+    // ------------------------------------------------------------------------------------------------------------------ //
+
+    
+    // TODO (autoparallel): again bad
+    // Get those redundant variables
+    for(var i = 0 ; i < DATA_BYTES ; i++) {
+        httpParserState[i * 5]     <== State[i].next_parsing_start;
+        httpParserState[i * 5 + 1] <== State[i].next_parsing_header;
+        httpParserState[i * 5 + 2] <== State[i].next_parsing_field_name;
+        httpParserState[i * 5 + 3] <== State[i].next_parsing_field_value;
+        httpParserState[i * 5 + 4] <== State[i].next_parsing_body;
+    }
+
 
     // TODO: Better naming for these variables
     signal input header[MAX_HEADER_NAME_LENGTH];
@@ -55,22 +84,16 @@ template LockHeader(DATA_BYTES, MAX_STACK_HEIGHT, MAX_HEADER_NAME_LENGTH, MAX_HE
     parsingHeader === 1;
 
     // ------------------------------------------------------------------------------------------------------------------ //
-    // ~ Write out to next NIVC step
-    for (var i = 0 ; i < DATA_BYTES ; i++) {
-        // add plaintext http input to step_out
-        step_out[i] <== step_in[i];
+    // write out the pt again
+    for (var i = 0 ; i < TOTAL_BYTES_ACROSS_NIVC ; i++) {
+        // add plaintext http input to step_out and ignore the ciphertext
+        if(i < DATA_BYTES) {
+            step_out[i] <== step_in[i];
+        } else {
+            step_out[i] <== 0;
+        }
+    }
 
-        // add parser state
-        step_out[DATA_BYTES + i * 5]     <== step_in[DATA_BYTES + i * 5];
-        step_out[DATA_BYTES + i * 5 + 1] <== step_in[DATA_BYTES + i * 5 + 1];
-        step_out[DATA_BYTES + i * 5 + 2] <== step_in[DATA_BYTES + i * 5 + 2];
-        step_out[DATA_BYTES + i * 5 + 3] <== step_in[DATA_BYTES + i * 5 + 3];
-        step_out[DATA_BYTES + i * 5 + 4] <== step_in[DATA_BYTES + i * 5 + 4];
-    }
-    // Pad remaining with zeros
-    for (var i = TOTAL_BYTES_HTTP_STATE ; i < TOTAL_BYTES_ACROSS_NIVC ; i++ ) {
-        step_out[i] <== 0;
-    }
 }
 
 // TODO: Handrolled template that I haven't tested YOLO.
