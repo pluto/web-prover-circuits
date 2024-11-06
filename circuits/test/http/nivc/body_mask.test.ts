@@ -42,7 +42,7 @@ describe("NIVC_HTTP", async () => {
     let bodyMaskCircuit: WitnessTester<["step_in"], ["step_out"]>;
 
     const DATA_BYTES = 320;
-    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * 2 + 4;
+    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES + 4;
 
     const MAX_HEADER_NAME_LENGTH = 20;
     const MAX_HEADER_VALUE_LENGTH = 35;

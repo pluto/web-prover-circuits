@@ -6,7 +6,7 @@ describe("HTTPLockHeader", async () => {
     let lockHeaderCircuit: WitnessTester<["step_in", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
 
     const DATA_BYTES = 320;
-    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * 2 + 4;
+    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES + 4;
 
     const MAX_BEGINNING_LENGTH = 10;
     const MAX_MIDDLE_LENGTH = 50;

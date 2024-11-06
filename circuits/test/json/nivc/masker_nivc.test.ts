@@ -39,7 +39,7 @@ describe("NIVC Extract", async () => {
     const MAX_STACK_HEIGHT = 5;
     const MAX_KEY_LENGTH = 8;
     const MAX_VALUE_LENGTH = 35;
-    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES * 2 + 4;
+    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES + 4;
 
     before(async () => {
         json_mask_arr_circuit = await circomkit.WitnessTester(`JsonMaskArrayIndexNIVC`, {
