@@ -10,7 +10,7 @@ template AESGCTRFOLD(DATA_BYTES) {
     // ~~ Set sizes at compile time ~~
     assert(DATA_BYTES % 16 == 0);
     // Value for accumulating both packed plaintext and ciphertext as well as counter
-    // var TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES + 4; 
+    var TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES + 4; 
     // ------------------------------------------------------------------------------------------------------------------ //
 
 
@@ -22,14 +22,14 @@ template AESGCTRFOLD(DATA_BYTES) {
     // step_in[0..DATA_BYTES] => accumulate plaintext blocks
     // step_in[DATA_BYTES..DATA_BYTES*2]  => accumulate ciphertext blocks
     // step_in[DATA_BYTES_LEN*2..DATA_BYTES*2+4]  => accumulate counter
-    signal input step_in[4];
-    signal output step_out[4];
+    signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
+    signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
 
 
     // We extract the number from the 4 byte word counter
     component last_counter_bits = BytesToBits(4);
     for(var i = 0; i < 4; i ++) {
-        last_counter_bits.in[i] <== step_in[i];
+        last_counter_bits.in[i] <== step_in[DATA_BYTES + i];
     }
     component last_counter_num = Bits2Num(32);
     // pass in reverse order
@@ -46,7 +46,7 @@ template AESGCTRFOLD(DATA_BYTES) {
     aes.plainText <== plainText;
 
     for(var i = 0; i < 4; i++) {
-        aes.lastCounter[i] <== step_in[i];
+        aes.lastCounter[i] <== step_in[DATA_BYTES + i];
     }
 
     // Write out the plaintext and ciphertext to our accumulation arrays, both at once.
@@ -54,20 +54,19 @@ template AESGCTRFOLD(DATA_BYTES) {
 
     signal prevAccumulatedPackedText[DATA_BYTES];
     for(var i = 0 ; i < DATA_BYTES ; i++) {
-        prevAccumulatedPackedText[i] <== 0;
+        prevAccumulatedPackedText[i] <== step_in[i];
     }
     component nextAccumulatedPackedText = WriteToIndex(DATA_BYTES, 16);
     nextAccumulatedPackedText.array_to_write_to <== prevAccumulatedPackedText;
     nextAccumulatedPackedText.array_to_write_at_index <== nextPackedChunk;
     nextAccumulatedPackedText.index <== index * 16;
 
-    step_out <== aes.counter;
-    // for(var i = 0 ; i < TOTAL_BYTES_ACROSS_NIVC ; i++) {
-    //     if(i < DATA_BYTES) {
-    //         step_out[i] <== nextAccumulatedPackedText.out[i];
-    //     } else {
-    //         step_out[i] <== aes.counter[i - DATA_BYTES];
-    //     }
-    // }
+    for(var i = 0 ; i < TOTAL_BYTES_ACROSS_NIVC ; i++) {
+        if(i < DATA_BYTES) {
+            step_out[i] <== nextAccumulatedPackedText.out[i];
+        } else {
+            step_out[i] <== aes.counter[i - DATA_BYTES];
+        }
+    }
 }
 
