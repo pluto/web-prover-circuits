@@ -235,5 +235,12 @@
       50,
       100
     ]
+  },
+  "nivc_body_mask": {
+    "file": "http/nivc/body_mask",
+    "template": "HTTPMaskBodyNIVC",
+    "params": [
+      1024
+    ]
   }
 }

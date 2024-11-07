@@ -16,8 +16,8 @@ template LockHeader(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH)
 
     // Authenticate the plaintext we are passing in
     signal input data[DATA_BYTES];
-    signal dataHash <== DataHasher(DATA_BYTES)(data);
-    dataHash === step_in[0];
+    signal data_hash <== DataHasher(DATA_BYTES)(data);
+    data_hash === step_in[0];
     step_out[0] <== step_in[0];
     
     // ------------------------------------------------------------------------------------------------------------------ //
