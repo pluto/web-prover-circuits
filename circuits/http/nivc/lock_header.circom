@@ -4,22 +4,21 @@ include "../parser/machine.circom";
 include "../interpreter.circom";
 include "../../utils/array.circom";
 include "circomlib/circuits/comparators.circom";
+include "@zk-email/circuits/utils/array.circom";
 
 // TODO: should use a MAX_HEADER_NAME_LENGTH and a MAX_HEADER_VALUE_LENGTH
 template LockHeader(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH) {
-    // ------------------------------------------------------------------------------------------------------------------ //
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES + 4; // aes pt/ct + ctr
-    // ------------------------------------------------------------------------------------------------------------------ //
 
-    // ------------------------------------------------------------------------------------------------------------------ //
-    signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
-    signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
+    assert(DATA_BYTES >= MAX_HEADER_NAME_LENGTH + MAX_HEADER_VALUE_LENGTH);
 
-    // get the plaintext
-    signal data[DATA_BYTES];
-    for (var i = 0 ; i < DATA_BYTES ; i++) {
-        data[i] <== step_in[i];
-    }
+    signal input step_in[1];
+    signal output step_out[1];
+
+    // Authenticate the plaintext we are passing in
+    signal input data[DATA_BYTES];
+    signal dataHash <== DataHasher(DATA_BYTES)(data);
+    dataHash === step_in[0];
+    step_out[0] <== step_in[0];
     
     // ------------------------------------------------------------------------------------------------------------------ //
     // PARSE
@@ -74,7 +73,11 @@ template LockHeader(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH)
     // find header location
     signal headerNameLocation <== FirstStringMatch(DATA_BYTES, MAX_HEADER_NAME_LENGTH)(data, header);
 
+    // TODO (autoparallel): This could probably be optimized by selecting a subarray of length `MAX_HEADER_NAME_LENGTH + MAX_HEADER_VALUE_LENGTH` at `headerNameLocation`
     // This is the assertion that we have locked down the correct header
+
+    // signal dataSubArray[MAX_HEADER_NAME_LENGTH + MAX_HEADER_VALUE_LENGTH] <== SelectSubArray(DATA_BYTES, MAX_HEADER_NAME_LENGTH + MAX_HEADER_VALUE_LENGTH)(data, headerNameLocation, MAX_HEADER_NAME_LENGTH + MAX_HEADER_VALUE_LENGTH);
+    // signal headerFieldNameValueMatch <==  HeaderFieldNameValueMatchPadded(MAX_HEADER_NAME_LENGTH + MAX_HEADER_VALUE_LENGTH, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH)(dataSubArray, header, headerNameLength, value, headerValueLength, headerNameLocation);
     signal headerFieldNameValueMatch <==  HeaderFieldNameValueMatchPadded(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH)(data, header, headerNameLength, value, headerValueLength, headerNameLocation);
     headerFieldNameValueMatch === 1;
 
@@ -82,18 +85,6 @@ template LockHeader(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH)
     signal isParsingHeader <== IndexSelector(DATA_BYTES * 5)(httpParserState, headerNameLocation * 5 + 1);
     signal parsingHeader <== GreaterThan(10)([isParsingHeader, 0]);
     parsingHeader === 1;
-
-    // ------------------------------------------------------------------------------------------------------------------ //
-    // write out the pt again
-    for (var i = 0 ; i < TOTAL_BYTES_ACROSS_NIVC ; i++) {
-        // add plaintext http input to step_out and ignore the ciphertext
-        if(i < DATA_BYTES) {
-            step_out[i] <== step_in[i];
-        } else {
-            step_out[i] <== 0;
-        }
-    }
-
 }
 
 // TODO: Handrolled template that I haven't tested YOLO.

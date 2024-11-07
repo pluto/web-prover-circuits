@@ -10,12 +10,14 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENG
 
     signal input step_in[1];
     signal output step_out[1];
-
+    log("step_in: ", step_in[0]);
     // Authenticate the plaintext we are passing in
     signal input data[DATA_BYTES];
     signal dataHash <== DataHasher(DATA_BYTES)(data);
     dataHash === step_in[0];
     step_out[0] <== step_in[0];
+
+    log("step_out: ", step_out[0]);
 
     signal dataToParse[MINIMUM_PARSE_LENGTH];
     for(var i = 0 ; i < MINIMUM_PARSE_LENGTH ; i++) {

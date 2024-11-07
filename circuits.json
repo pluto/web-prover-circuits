@@ -226,5 +226,14 @@
       200,
       50
     ]
+  },
+  "nivc_lock_header": {
+    "file": "http/nivc/lock_header",
+    "template": "LockHeader",
+    "params": [
+      1024,
+      50,
+      100
+    ]
   }
 }

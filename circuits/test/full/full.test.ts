@@ -40,7 +40,7 @@ let http_response_plaintext = [
 describe("NIVC_FULL", async () => {
     let aesCircuit: WitnessTester<["key", "iv", "aad", "ctr", "plainText", "step_in"], ["step_out"]>;
     let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "data", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
-    // let lockHeaderCircuit: WitnessTester<["step_in", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
+    let lockHeaderCircuit: WitnessTester<["step_in", "data", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
     // let bodyMaskCircuit: WitnessTester<["step_in"], ["step_out"]>;
     // let parse_circuit: WitnessTester<["step_in"], ["step_out"]>;
     // let json_mask_object_circuit: WitnessTester<["step_in", "key", "keyLen"], ["step_out"]>;
@@ -65,11 +65,11 @@ describe("NIVC_FULL", async () => {
     const MAX_VALUE_LENGTH = 35;
 
     before(async () => {
-        aesCircuit = await circomkit.WitnessTester("AESGCTRFOLD", {
-            file: "aes-gcm/nivc/aes-gctr-nivc",
-            template: "AESGCTRFOLD",
-        });
-        console.log("#constraints (AES-GCTR):", await aesCircuit.getConstraintCount());
+        // aesCircuit = await circomkit.WitnessTester("AESGCTRFOLD", {
+        //     file: "aes-gcm/nivc/aes-gctr-nivc",
+        //     template: "AESGCTRFOLD",
+        // });
+        // console.log("#constraints (AES-GCTR):", await aesCircuit.getConstraintCount());
 
         httpParseAndLockStartLineCircuit = await circomkit.WitnessTester(`ParseAndLockStartLine`, {
             file: "http/nivc/parse_and_lock_start_line",
@@ -78,12 +78,12 @@ describe("NIVC_FULL", async () => {
         });
         console.log("#constraints (HTTP-PARSE-AND-LOCK-START-LINE):", await httpParseAndLockStartLineCircuit.getConstraintCount());
 
-        // lockHeaderCircuit = await circomkit.WitnessTester(`LockHeader`, {
-        //     file: "http/nivc/lock_header",
-        //     template: "LockHeader",
-        //     params: [DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH],
-        // });
-        // console.log("#constraints (HTTP-LOCK-HEADER):", await lockHeaderCircuit.getConstraintCount());
+        lockHeaderCircuit = await circomkit.WitnessTester(`LockHeader`, {
+            file: "http/nivc/lock_header",
+            template: "LockHeader",
+            params: [DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH],
+        });
+        console.log("#constraints (HTTP-LOCK-HEADER):", await lockHeaderCircuit.getConstraintCount());
 
         // bodyMaskCircuit = await circomkit.WitnessTester(`BodyMask`, {
         //     file: "http/nivc/body_mask",
@@ -124,27 +124,42 @@ describe("NIVC_FULL", async () => {
     let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
     let finalPadded = final.concat(Array(MAX_FINAL_LENGTH - final.length).fill(0));
     it("NIVC_CHAIN", async () => {
-        // fold 16 bytes at a time
-        let aes_gcm: CircuitSignals = { step_out: [] };
-        // console.log("DATA_BYTES", DATA_BYTES);
-
         // Run the 0th chunk of plaintext
-        let ctr = [0x00, 0x00, 0x00, 0x01];
-        const init_nivc_input = 0;
+        // let ctr = [0x00, 0x00, 0x00, 0x01];
+        // const init_nivc_input = 0;
 
-        let pt = http_response_plaintext.slice(0, 16);
-        aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), step_in: init_nivc_input }, ["step_out"]);
-        let i = 0;
-        console.log("AES step_out[", i, "]: ", i, aes_gcm.step_out);
-        for (i = 1; i < (DATA_BYTES / 16); i++) {
-            ctr[3] += 1; // This will work since we don't run a test that overlows a byte
-            let pt = http_response_plaintext.slice(i * 16, i * 16 + 16);
-            aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), step_in: aes_gcm.step_out }, ["step_out"]);
-            console.log("AES step_out[", i, "]: ", i, aes_gcm.step_out);
-        }
-        let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: aes_gcm.step_out, data: http_response_plaintext, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
+        // let pt = http_response_plaintext.slice(0, 16);
+        // let aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), step_in: init_nivc_input }, ["step_out"]);
+        // let i = 0;
+        // console.log("AES step_out[", i, "]: ", i, aes_gcm.step_out);
+        // for (i = 1; i < (DATA_BYTES / 16); i++) {
+        //     ctr[3] += 1; // This will work since we don't run a test that overlows a byte
+        //     let pt = http_response_plaintext.slice(i * 16, i * 16 + 16);
+        //     aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), step_in: aes_gcm.step_out }, ["step_out"]);
+        //     console.log("AES step_out[", i, "]: ", i, aes_gcm.step_out);
+        // }
+        // temp
+        let temp_step_in = [BigInt("2195365663909569734943279727560535141179588918483111718403427949138562480675")];
 
-        // let lockHeader = await lockHeaderCircuit.compute({ step_in: parseAndLockStartLine.step_out, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length }, ["step_out"]);
+        // console.log(temp_step_in);
+        let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: temp_step_in, data: http_response_plaintext, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
+        // let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: aes_gcm.step_out, data: http_response_plaintext, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
+        // let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.calculateWitness
+        //     ({ step_in: temp_step_in, data: http_response_plaintext, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length });
+        // console.log(parseAndLockStartLine.entries);
+        // const entriesArray = Array.from(parseAndLockStartLine.entries());
+        // entriesArray.slice(0, 20).forEach(([index, value]) => {
+        //     console.log(`Index ${index}: ${value.toString()}`);
+        // });
+        // console.log(await httpParseAndLockStartLineCircuit.readWitnessSignals(parseAndLockStartLine, ["step_in"]));
+        // readWitnessSignals(witness: Readonly<WitnessType>, signals: string[] | OUT): Promise<CircuitSignals>;
+        // console.log("Start Line step_out: ", parseAndLockStartLine);
+        // let lockHeader = await lockHeaderCircuit.compute({ step_in: parseAndLockStartLine.step_out, data: http_response_plaintext, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length }, ["step_out"]);
+        // let lockHeader = await lockHeaderCircuit.compute({
+        //     step_in: temp_step_in, data: http_response_plaintext, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length
+        // }, ["step_out"]);
+
+        // console.log("Lock Header step_out: ", lockHeader.step_out);
 
         // let bodyMask = await bodyMaskCircuit.compute({ step_in: lockHeader.step_out }, ["step_out"]);
 
