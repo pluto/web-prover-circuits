@@ -58,3 +58,10 @@ template PoseidonModular(numElements) {
 
     out <== _out;
 }
+
+template PoseidonChainer() {
+    signal input in[2];
+    signal output out;
+
+    out <== Poseidon(2)(in);
+}

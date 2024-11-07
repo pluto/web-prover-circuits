@@ -47,4 +47,25 @@ describe("hash", () => {
             );
         });
     });
+
+    describe("PoseidonChainer", () => {
+        let circuit: WitnessTester<["in"], ["out"]>;
+
+        before(async () => {
+            circuit = await circomkit.WitnessTester(`PoseidonChainer`, {
+                file: "utils/hash",
+                template: "PoseidonChainer",
+            });
+            console.log("#constraints:", await circuit.getConstraintCount());
+        });
+
+        it("witness: in = [69,420]", async () => {
+            const input = [69, 420];
+
+            await circuit.expectPass(
+                { in: input },
+                { out: "1151215739047799093319595745775265667199521703808900505592836422736499172874" }
+            );
+        });
+    });
 });
