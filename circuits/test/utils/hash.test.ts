@@ -61,10 +61,10 @@ describe("hash", () => {
 
         it("witness: in = [69,420]", async () => {
             const input = [69, 420];
-
+            const hash = PoseidonModular(input);
             await circuit.expectPass(
                 { in: input },
-                { out: "1151215739047799093319595745775265667199521703808900505592836422736499172874" }
+                { out: hash }
             );
         });
     });

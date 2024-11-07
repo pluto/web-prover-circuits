@@ -4,11 +4,10 @@ include "gctr-nivc.circom";
 include "../../utils/array.circom";
 include "../../utils/hash.circom";
 
-
 // Compute AES-GCTR
 template AESGCTRFOLD(DATA_BYTES) {
     assert(DATA_BYTES % 16 == 0);
-    
+
     signal input key[16];
     signal input iv[12];
     signal input aad[16];
@@ -27,7 +26,7 @@ template AESGCTRFOLD(DATA_BYTES) {
 
     var packedPlaintext = 0;
     for(var i = 0 ; i < 16 ; i++) {
-        packedPlaintext += plainText[i] * 2**i;
+        packedPlaintext += plainText[i] * 2**(8*i);
     }
     step_out[0] <== PoseidonChainer()([step_in[0],packedPlaintext]);
 }
