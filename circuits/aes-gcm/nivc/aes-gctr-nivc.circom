@@ -28,5 +28,3 @@ template AESGCTRFOLD() {
     }
     step_out[0] <== PoseidonChainer()([step_in[0],packedPlaintext]);
 }
-
-component main { public [step_in] } = AESGCTRFOLD();

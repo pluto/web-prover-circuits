@@ -10,8 +10,11 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENG
     signal input step_in[1];
     signal output step_out[1];
 
-    // Get the plaintext
+    // Authenticate the plaintext we are passing in
     signal input data[DATA_BYTES];
+    signal dataHash <== DataHasher(DATA_BYTES)(data);
+    dataHash === step_in[0];
+    step_out[0] <== step_in[0];
 
     signal input beginning[MAX_BEGINNING_LENGTH];
     signal input beginning_length;
@@ -85,15 +88,5 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENG
     finalMatch === 1;
     // -2 here for the CRLF
     final_length === final_end_counter - middle_end_counter - 2;
-
-    // ------------------------------------------------------------------------------------------------------------------ //
-    // write out the pt again
-    for (var i = 0 ; i < TOTAL_BYTES_ACROSS_NIVC ; i++) {
-        // add plaintext http input to step_out and ignore the ciphertext
-        if(i < DATA_BYTES) {
-            step_out[i] <== data[i]; // PASS OUT JUST THE PLAINTEXT DATA
-        } else {
-            step_out[i] <== 0;
-        }
-    }
 }
+

@@ -212,5 +212,19 @@
       12,
       16
     ]
+  },
+  "nivc_aes": {
+    "file": "aes-gcm/nivc/aes-gctr-nivc",
+    "template": "AESGCTRFOLD"
+  },
+  "nivc_start_line": {
+    "file": "http/nivc/parse_and_lock_start_line",
+    "template": "ParseAndLockStartLine",
+    "params": [
+      1024,
+      50,
+      200,
+      50
+    ]
   }
 }
