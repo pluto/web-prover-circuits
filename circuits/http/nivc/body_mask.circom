@@ -45,7 +45,6 @@ template HTTPMaskBodyNIVC(DATA_BYTES) {
     }
 
     // Hash the new data so this can now be used in the chain later
-    signal body_mask_hash <== DataHasher(DATA_BYTES)(bodyMasked);
-    step_out[0] <== body_mask_hash;
+    step_out[0] <== DataHasher(DATA_BYTES)(bodyMasked);
 }
 

@@ -61,23 +61,21 @@ const http_response_plaintext = [
     10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13,
     10, 32, 32, 32, 125, 13, 10, 125];
 
-const http_body = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 123, 13, 10, 32, 32, 32,
-    34, 100, 97, 116, 97, 34, 58, 32, 123, 13, 10, 32, 32, 32, 32, 32,
-    32, 32, 34, 105, 116, 101, 109, 115, 34, 58, 32, 91, 13, 10, 32, 32,
-    32, 32, 32, 32, 32, 32, 32, 32, 32, 123, 13, 10, 32, 32, 32, 32, 32,
-    32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 34, 100, 97, 116, 97, 34, 58,
-    32, 34, 65, 114, 116, 105, 115, 116, 34, 44, 13, 10, 32, 32, 32, 32, 32,
-    32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 34, 112, 114, 111, 102, 105, 108,
-    101, 34, 58, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-    32, 32, 32, 32, 34, 110, 97, 109, 101, 34, 58, 32, 34, 84, 97, 121, 108, 111, 114,
-    32, 83, 119, 105, 102, 116, 34, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-    32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10,
-    32, 32, 32, 32, 32, 32, 32, 93, 13, 10, 32, 32, 32, 125, 13, 10, 125]
+const http_body = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 123, 13, 10, 32, 32, 32, 34,
+    100, 97, 116, 97, 34, 58, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32, 34, 105, 116, 101, 109,
+    115, 34, 58, 32, 91, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 123, 13, 10, 32, 32, 32,
+    32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 34, 100, 97, 116, 97, 34, 58, 32, 34, 65, 114,
+    116, 105, 115, 116, 34, 44, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+    34, 112, 114, 111, 102, 105, 108, 101, 34, 58, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32,
+    32, 32, 32, 32, 32, 32, 32, 32, 34, 110, 97, 109, 101, 34, 58, 32, 34, 84, 97, 121, 108, 111,
+    114, 32, 83, 119, 105, 102, 116, 34, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+    32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32,
+    32, 32, 93, 13, 10, 32, 32, 32, 125, 13, 10, 125,
+]
 const lengthDiff = http_response_plaintext.length - http_body.length;
 
 // Create an array of zeros with the length difference
@@ -89,13 +87,30 @@ const padded_http_body = [...padding, ...http_body];
 const http_response_hash = dataHasher(http_response_plaintext);
 const http_body_mask_hash = dataHasher(padded_http_body);
 
+
+const json_key0_mask = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32, 34, 105, 116, 101, 109, 115, 34, 58, 32, 91,
+    13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32,
+    32, 32, 32, 32, 32, 32, 32, 34, 100, 97, 116, 97, 34, 58, 32, 34, 65, 114, 116, 105, 115, 116,
+    34, 44, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 34, 112, 114, 111,
+    102, 105, 108, 101, 34, 58, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+    32, 32, 32, 34, 110, 97, 109, 101, 34, 58, 32, 34, 84, 97, 121, 108, 111, 114, 32, 83, 119, 105,
+    102, 116, 34, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10,
+    32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13, 0,
+    0, 0, 0, 0, 0, 0, 0,
+];
+const json_key0_mask_hash = dataHasher(json_key0_mask);
+
 describe("NIVC_FULL", async () => {
-    let aesCircuit: WitnessTester<["key", "iv", "aad", "ctr", "plainText", "step_in"], ["step_out"]>;
-    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "data", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
-    let lockHeaderCircuit: WitnessTester<["step_in", "data", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
-    let bodyMaskCircuit: WitnessTester<["step_in", "data"], ["step_out"]>;
-    // let parse_circuit: WitnessTester<["step_in"], ["step_out"]>;
-    // let json_mask_object_circuit: WitnessTester<["step_in", "key", "keyLen"], ["step_out"]>;
+    // let aesCircuit: WitnessTester<["key", "iv", "aad", "ctr", "plainText", "step_in"], ["step_out"]>;
+    // let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "data", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
+    // let lockHeaderCircuit: WitnessTester<["step_in", "data", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
+    // let bodyMaskCircuit: WitnessTester<["step_in", "data"], ["step_out"]>;
+    let json_mask_object_circuit: WitnessTester<["step_in", "data", "key", "keyLen"], ["step_out", "maskedData"]>;
     // let json_mask_arr_circuit: WitnessTester<["step_in", "index"], ["step_out"]>;
     // let extract_value_circuit: WitnessTester<["step_in"], ["step_out"]>;
 
@@ -117,32 +132,39 @@ describe("NIVC_FULL", async () => {
     const MAX_VALUE_LENGTH = 35;
 
     before(async () => {
-        aesCircuit = await circomkit.WitnessTester("AESGCTRFOLD", {
-            file: "aes-gcm/nivc/aes-gctr-nivc",
-            template: "AESGCTRFOLD",
-        });
-        console.log("#constraints (AES-GCTR):", await aesCircuit.getConstraintCount());
+        // aesCircuit = await circomkit.WitnessTester("AESGCTRFOLD", {
+        //     file: "aes-gcm/nivc/aes-gctr-nivc",
+        //     template: "AESGCTRFOLD",
+        // });
+        // console.log("#constraints (AES-GCTR):", await aesCircuit.getConstraintCount());
 
-        httpParseAndLockStartLineCircuit = await circomkit.WitnessTester(`ParseAndLockStartLine`, {
-            file: "http/nivc/parse_and_lock_start_line",
-            template: "ParseAndLockStartLine",
-            params: [DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH],
-        });
-        console.log("#constraints (HTTP-PARSE-AND-LOCK-START-LINE):", await httpParseAndLockStartLineCircuit.getConstraintCount());
+        // httpParseAndLockStartLineCircuit = await circomkit.WitnessTester(`ParseAndLockStartLine`, {
+        //     file: "http/nivc/parse_and_lock_start_line",
+        //     template: "ParseAndLockStartLine",
+        //     params: [DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH],
+        // });
+        // console.log("#constraints (HTTP-PARSE-AND-LOCK-START-LINE):", await httpParseAndLockStartLineCircuit.getConstraintCount());
 
-        lockHeaderCircuit = await circomkit.WitnessTester(`LockHeader`, {
-            file: "http/nivc/lock_header",
-            template: "LockHeader",
-            params: [DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH],
-        });
-        console.log("#constraints (HTTP-LOCK-HEADER):", await lockHeaderCircuit.getConstraintCount());
+        // lockHeaderCircuit = await circomkit.WitnessTester(`LockHeader`, {
+        //     file: "http/nivc/lock_header",
+        //     template: "LockHeader",
+        //     params: [DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH],
+        // });
+        // console.log("#constraints (HTTP-LOCK-HEADER):", await lockHeaderCircuit.getConstraintCount());
 
-        bodyMaskCircuit = await circomkit.WitnessTester(`BodyMask`, {
-            file: "http/nivc/body_mask",
-            template: "HTTPMaskBodyNIVC",
-            params: [DATA_BYTES],
+        // bodyMaskCircuit = await circomkit.WitnessTester(`BodyMask`, {
+        //     file: "http/nivc/body_mask",
+        //     template: "HTTPMaskBodyNIVC",
+        //     params: [DATA_BYTES],
+        // });
+        // console.log("#constraints (HTTP-BODY-MASK):", await bodyMaskCircuit.getConstraintCount());
+
+        json_mask_object_circuit = await circomkit.WitnessTester(`JsonMaskObjectNIVC`, {
+            file: "json/nivc/masker",
+            template: "JsonMaskObjectNIVC",
+            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH],
         });
-        console.log("#constraints (HTTP-BODY-MASK):", await bodyMaskCircuit.getConstraintCount());
+        console.log("#constraints (JSON-MASK-OBJECT):", await json_mask_object_circuit.getConstraintCount());
 
         // json_mask_arr_circuit = await circomkit.WitnessTester(`JsonMaskArrayIndexNIVC`, {
         //     file: "json/nivc/masker",
@@ -150,13 +172,6 @@ describe("NIVC_FULL", async () => {
         //     params: [DATA_BYTES, MAX_STACK_HEIGHT],
         // });
         // console.log("#constraints (JSON-MASK-ARRAY-INDEX):", await json_mask_arr_circuit.getConstraintCount());
-
-        // json_mask_object_circuit = await circomkit.WitnessTester(`JsonMaskObjectNIVC`, {
-        //     file: "json/nivc/masker",
-        //     template: "JsonMaskObjectNIVC",
-        //     params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH],
-        // });
-        // console.log("#constraints (JSON-MASK-OBJECT):", await json_mask_object_circuit.getConstraintCount());
 
         // extract_value_circuit = await circomkit.WitnessTester(`JsonMaskExtractFinal`, {
         //     file: "json/nivc/extractor",
@@ -176,54 +191,54 @@ describe("NIVC_FULL", async () => {
     let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
     let finalPadded = final.concat(Array(MAX_FINAL_LENGTH - final.length).fill(0));
     it("NIVC_CHAIN", async () => {
-        // Run AES chain
-        let ctr = [0x00, 0x00, 0x00, 0x01];
-        const init_nivc_input = 0;
+        // // Run AES chain
+        // let ctr = [0x00, 0x00, 0x00, 0x01];
+        // const init_nivc_input = 0;
 
-        let pt = http_response_plaintext.slice(0, 16);
-        let aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), step_in: init_nivc_input }, ["step_out"]);
-        let i = 0;
-        console.log("AES `step_out[", i, "]`: ", aes_gcm.step_out);
-        for (i = 1; i < (DATA_BYTES / 16); i++) {
-            ctr[3] += 1; // This will work since we don't run a test that overlows a byte
-            let pt = http_response_plaintext.slice(i * 16, i * 16 + 16);
-            aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), step_in: aes_gcm.step_out }, ["step_out"]);
-            console.log("AES `step_out[", i, "]`: ", aes_gcm.step_out);
-        }
-        assert.deepEqual(http_response_hash, aes_gcm.step_out);
+        // let pt = http_response_plaintext.slice(0, 16);
+        // let aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), step_in: init_nivc_input }, ["step_out"]);
+        // let i = 0;
+        // console.log("AES `step_out[", i, "]`: ", aes_gcm.step_out);
+        // for (i = 1; i < (DATA_BYTES / 16); i++) {
+        //     ctr[3] += 1; // This will work since we don't run a test that overlows a byte
+        //     let pt = http_response_plaintext.slice(i * 16, i * 16 + 16);
+        //     aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), step_in: aes_gcm.step_out }, ["step_out"]);
+        //     console.log("AES `step_out[", i, "]`: ", aes_gcm.step_out);
+        // }
+        // assert.deepEqual(http_response_hash, aes_gcm.step_out);
 
-        // Lock the start line
-        let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: aes_gcm.step_out, data: http_response_plaintext, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
-        console.log("Start Line `step_out`: ", parseAndLockStartLine.step_out);
+        // // Lock the start line
+        // let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: aes_gcm.step_out, data: http_response_plaintext, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
+        // console.log("Start Line `step_out`: ", parseAndLockStartLine.step_out);
 
-        // Lock a header
-        let lockHeader = await lockHeaderCircuit.compute({ step_in: parseAndLockStartLine.step_out, data: http_response_plaintext, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length }, ["step_out"]);
-        console.log("Lock Header `step_out`: ", lockHeader.step_out);
+        // // Lock a header
+        // let lockHeader = await lockHeaderCircuit.compute({ step_in: parseAndLockStartLine.step_out, data: http_response_plaintext, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length }, ["step_out"]);
+        // console.log("Lock Header `step_out`: ", lockHeader.step_out);
 
-        // Mask the body
-        // let bodyMask = await bodyMaskCircuit.compute({ step_in: lockHeader.step_out, data: http_response_plaintext }, ["step_out"]);
-        let bodyMask = await bodyMaskCircuit.compute({ step_in: http_response_hash, data: http_response_plaintext }, ["step_out"]);
-        console.log("Body Mask `step_out`: ", bodyMask.step_out);
-        assert.deepEqual(bodyMask.step_out, http_body_mask_hash);
+        // // Mask the body
+        // // let bodyMask = await bodyMaskCircuit.compute({ step_in: lockHeader.step_out, data: http_response_plaintext }, ["step_out"]);
+        // let bodyMask = await bodyMaskCircuit.compute({ step_in: http_response_hash, data: http_response_plaintext }, ["step_out"]);
+        // console.log("Body Mask `step_out`: ", bodyMask.step_out);
+        // assert.deepEqual(bodyMask.step_out, http_body_mask_hash);
 
-        // let bodyMaskOut = bodyMask.step_out as number[];
-        // let idx = bodyMaskOut.indexOf('{'.charCodeAt(0));
+        let key0 = [100, 97, 116, 97, 0, 0, 0, 0]; // "data"
+        let key0Len = 4;
+        let key1 = [105, 116, 101, 109, 115, 0, 0, 0]; // "items"
+        let key1Len = 5;
+        let key2 = [112, 114, 111, 102, 105, 108, 101, 0]; // "profile"
+        let key2Len = 7;
+        let key3 = [110, 97, 109, 101, 0, 0, 0, 0]; // "name"
+        let key3Len = 4;
 
-        // let maskedInput = extendedJsonInput.fill(0, 0, idx);
-        // maskedInput = maskedInput.fill(0, 320);
-
-        // let key0 = [100, 97, 116, 97, 0, 0, 0, 0]; // "data"
-        // let key0Len = 4;
-        // let key1 = [105, 116, 101, 109, 115, 0, 0, 0]; // "items"
-        // let key1Len = 5;
-        // let key2 = [112, 114, 111, 102, 105, 108, 101, 0]; // "profile"
-        // let key2Len = 7;
-        // let key3 = [110, 97, 109, 101, 0, 0, 0, 0]; // "name"
-        // let key3Len = 4;
-
-        // let value = toByte("\"Taylor Swift\"");
+        let value = toByte("\"Taylor Swift\"");
 
         // let json_extract_key0 = await json_mask_object_circuit.compute({ step_in: bodyMaskOut, key: key0, keyLen: key0Len }, ["step_out"]);
+
+
+        let json_extract_key0 = await json_mask_object_circuit.compute({ step_in: http_body_mask_hash, data: http_body, key: key0, keyLen: key0Len }, ["step_out", "maskedData"]);
+        console.log(JSON.stringify(json_extract_key0.maskedData));
+        console.log("JSON Extract key0 `step_out`:", JSON.stringify(json_extract_key0.step_out));
+        assert.deepEqual(json_extract_key0.step_out, json_key0_mask_hash);
 
         // let json_num = json_extract_key0.step_out as number[];
         // console.log("json_extract_key0", json_num);

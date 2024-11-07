@@ -242,5 +242,14 @@
     "params": [
       1024
     ]
+  },
+  "nivc_json_object": {
+    "file": "json/nivc/masker",
+    "template": "JsonMaskObjectNIVC",
+    "params": [
+      1024,
+      10,
+      10
+    ]
   }
 }
