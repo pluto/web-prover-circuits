@@ -16,7 +16,7 @@ all: build
 build:
 	@for circuit in $(CIRCOM_FILES); do \
 		echo "Processing $${circuit}..."; \
-		circom "$${circuit}" --r1cs -o "$$(dirname $${circuit})/artifacts" -l node_modules; \
+		circom "$${circuit}" --r1cs --wasm -o "$$(dirname $${circuit})/artifacts" -l node_modules; \
 		build-circuit "$${circuit}" "$$(dirname $${circuit})/artifacts/$$(basename $${circuit} .circom).bin" -l node_modules; \
 	done
 

@@ -7,7 +7,7 @@ describe("aes-gctr-nivc", () => {
 
 
     const DATA_BYTES_0 = 16;
-    const TOTAL_BYTES_ACROSS_NIVC_0 = 2 * DATA_BYTES_0 + 4;
+    const TOTAL_BYTES_ACROSS_NIVC_0 = DATA_BYTES_0 + 4;
 
     it("all correct for self generated single zero pt block case", async () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
@@ -25,12 +25,13 @@ describe("aes-gctr-nivc", () => {
         const counter = [0x00, 0x00, 0x00, 0x01];
         const step_in = new Array(TOTAL_BYTES_ACROSS_NIVC_0).fill(0x00);
         counter.forEach((value, index) => {
-            step_in[2 * DATA_BYTES_0 + index] = value;
+            step_in[DATA_BYTES_0 + index] = value;
         });
 
-        let expected = plainText.concat(ct).concat([0x00, 0x00, 0x00, 0x02]);
-        expected = expected.concat(new Array(TOTAL_BYTES_ACROSS_NIVC_0 - expected.length).fill(0));
         const witness = await circuit_one_block.compute({ key: key, iv: iv, plainText: plainText, aad: aad, step_in: step_in }, ["step_out"])
+
+        let packed = plainText.map((x, i) => x + (ct[i] * 256));
+        let expected = [...packed, 0x00, 0x00, 0x00, 0x02];
         assert.deepEqual(witness.step_out, expected.map(BigInt));
     });
 
@@ -50,18 +51,18 @@ describe("aes-gctr-nivc", () => {
         const counter = [0x00, 0x00, 0x00, 0x01];
         const step_in = new Array(TOTAL_BYTES_ACROSS_NIVC_0).fill(0x00);
         counter.forEach((value, index) => {
-            step_in[2 * DATA_BYTES_0 + index] = value;
+            step_in[DATA_BYTES_0 + index] = value;
         });
 
-        let expected = plainText.concat(ct).concat([0x00, 0x00, 0x00, 0x02]);
-        expected = expected.concat(new Array(TOTAL_BYTES_ACROSS_NIVC_0 - expected.length).fill(0));
-
         const witness = await circuit_one_block.compute({ key: key, iv: iv, plainText: plainText, aad: aad, step_in: step_in }, ["step_out"])
+
+        let packed = plainText.map((x, i) => x + (ct[i] * 256));
+        let expected = [...packed, 0x00, 0x00, 0x00, 0x02];
         assert.deepEqual(witness.step_out, expected.map(BigInt));
     });
 
     const DATA_BYTES_1 = 32;
-    const TOTAL_BYTES_ACROSS_NIVC_1 = DATA_BYTES_1 * 2 + 4;
+    const TOTAL_BYTES_ACROSS_NIVC_1 = DATA_BYTES_1 + 4;
 
 
     let zero_block = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
@@ -83,12 +84,13 @@ describe("aes-gctr-nivc", () => {
         const counter = [0x00, 0x00, 0x00, 0x01];
         const step_in = new Array(TOTAL_BYTES_ACROSS_NIVC_1).fill(0x00);
         counter.forEach((value, index) => {
-            step_in[2 * DATA_BYTES_1 + index] = value;
+            step_in[DATA_BYTES_1 + index] = value;
         });
-        let expected = plainText1.concat(zero_block).concat(ct_part1).concat(zero_block).concat([0x00, 0x00, 0x00, 0x02]);
-        expected = expected.concat(new Array(TOTAL_BYTES_ACROSS_NIVC_1 - expected.length).fill(0));
 
         const witness = await circuit_one_block.compute({ key: key, iv: iv, plainText: plainText1, aad: aad, step_in: step_in }, ["step_out"])
+
+        let packed1 = plainText1.map((x, i) => x + (ct_part1[i] * 256));
+        let expected = packed1.concat(zero_block).concat([0x00, 0x00, 0x00, 0x02]);
         assert.deepEqual(witness.step_out, expected.map(BigInt));
     });
 
@@ -99,12 +101,13 @@ describe("aes-gctr-nivc", () => {
             params: [DATA_BYTES_1], // input len is 32 bytes
         });
 
-        const counter = [0x00, 0x00, 0x00, 0x02];
-        let step_in = plainText1.concat(zero_block).concat(ct_part1).concat(zero_block).concat(counter);
+        let packed1 = plainText1.map((x, i) => x + (ct_part1[i] * 256));
+        let packed2 = plainText2.map((x, i) => x + (ct_part2[i] * 256));
+        let step_in = packed1.concat(zero_block).concat([0x00, 0x00, 0x00, 0x02]);
         step_in = step_in.concat(new Array(TOTAL_BYTES_ACROSS_NIVC_1 - step_in.length).fill(0));
 
-        let expected = plainText1.concat(plainText2).concat(ct_part1).concat(ct_part2).concat([0x00, 0x00, 0x00, 0x03]);
-        expected = expected.concat(new Array(TOTAL_BYTES_ACROSS_NIVC_1 - expected.length).fill(0));
+
+        let expected = packed1.concat(packed2).concat([0x00, 0x00, 0x00, 0x03]);
 
         const witness = await circuit_one_block.compute({ key: key, iv: iv, plainText: plainText2, aad: aad, step_in: step_in }, ["step_out"])
         assert.deepEqual(witness.step_out, expected.map(BigInt));

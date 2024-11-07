@@ -8,7 +8,7 @@ include "circomlib/circuits/comparators.circom";
 // TODO: should use a MAX_HEADER_NAME_LENGTH and a MAX_HEADER_VALUE_LENGTH
 template LockHeader(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH) {
     // ------------------------------------------------------------------------------------------------------------------ //
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES * 2 + 4; // aes pt/ct + ctr
+    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES + 4; // aes pt/ct + ctr
     // ------------------------------------------------------------------------------------------------------------------ //
 
     // ------------------------------------------------------------------------------------------------------------------ //

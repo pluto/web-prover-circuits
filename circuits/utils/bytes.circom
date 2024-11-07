@@ -188,3 +188,71 @@ template BitwiseXor(n) {
         out[k] <== a[k] + b[k] - 2*mid[k];
     }
 }
+
+template DoubleBytePackArray(n) {
+    signal input lower[n];
+    signal input upper[n];
+    signal output out[n];
+
+    for(var i = 0 ; i < n ; i++) {
+        out[i] <== lower[i] + 2**8 * upper[i];
+    }
+}
+
+template UnpackDoubleByteArray(n) {
+    signal input in[n];
+    signal output lower[n];
+    signal output upper[n];
+
+    signal inBits[n][16];
+    var lowerAccum[n];
+    var upperAccum[n];
+    for(var i = 0 ; i < n ; i ++) {
+        inBits[i] <== Num2Bits(16)(in[i]);
+        lowerAccum[i] = 0;
+        upperAccum[i] = 0;
+        for(var j = 0 ; j < 16 ; j++) {
+            var selector = j \ 8;
+            if(selector == 0) {
+                lowerAccum[i] += inBits[i][j] * 2**(j%8);
+            } else if(selector == 1) {
+                upperAccum[i] += inBits[i][j] * 2**(j%8);
+            }
+        }
+    }
+    lower <== lowerAccum;
+    upper <== upperAccum;
+}
+
+template GenericBytePackArray(n,p) {
+    assert(p<=16);
+    signal input in[n][p];
+    signal output out[n];
+
+    var accum[n];
+    for(var i = 0 ; i < n ; i++) {
+        for(var j = 0 ; j < p ; j++) {
+            accum[i] += 2**(8*j)*in[i][j];
+        }
+    }
+    out <== accum;
+}
+
+template GenericByteUnpackArray(n,p) {
+    assert(p<=16);
+    signal input in[n];
+    signal output out[n][p];
+    
+    signal inBits[n][8 * p]; 
+    var accum[n][p];
+    for(var i = 0 ; i < n ; i++) {
+        inBits[i] <== Num2Bits(8 * p)(in[i]);
+        for(var j = 0 ; j < p ; j++) {
+            accum[i][j] = 0;
+        }
+        for(var j = 0 ; j < 8 * p ; j++) {
+            accum[i][j\8] += inBits[i][j] * 2**(j%8);
+        }
+    }
+    out <== accum;
+}
