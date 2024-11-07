@@ -7,23 +7,11 @@ include "../../utils/bytes.circom";
 // TODO: Note that TOTAL_BYTES will match what we have for AESGCMFOLD step_out
 // I have not gone through to double check the sizes of everything yet.
 template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH) {
-    // ------------------------------------------------------------------------------------------------------------------ //
-    // ~~ Set sizes at compile time ~~
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES + 4; // AES ct/pt + ctr
-    // ------------------------------------------------------------------------------------------------------------------ //
-
-    // ------------------------------------------------------------------------------------------------------------------ //
-    signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
-    signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
+    signal input step_in[1];
+    signal output step_out[1];
 
     // Get the plaintext
-    signal packedData[DATA_BYTES];
-    for (var i = 0 ; i < DATA_BYTES ; i++) {
-        packedData[i] <== step_in[i];
-    }
-    component unpackData = UnpackDoubleByteArray(DATA_BYTES);
-    unpackData.in <== packedData;
-    signal data[DATA_BYTES] <== unpackData.lower;
+    signal input data[DATA_BYTES];
 
     signal input beginning[MAX_BEGINNING_LENGTH];
     signal input beginning_length;
