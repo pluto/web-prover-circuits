@@ -251,5 +251,13 @@
       10,
       10
     ]
+  },
+  "nivc_json_array": {
+    "file": "json/nivc/masker",
+    "template": "JsonMaskArrayIndexNIVC",
+    "params": [
+      1024,
+      10
+    ]
   }
 }

@@ -48,7 +48,6 @@ template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
     is_value_match[0] <== parsing_value[0] * is_key_match_for_value[1];
 
     signal masked[DATA_BYTES];
-    signal output maskedData[DATA_BYTES]; // TODO temp
     masked[0] <== data[0] * is_value_match[0];
 
     // TODO (autoparallel): it might be dumb to do this with the max key length but fuck it
@@ -77,7 +76,11 @@ template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
             // - key matches at current index and depth of key is as specified
             // - whether next KV pair starts
             // - whether key matched for a value (propogate key match until new KV pair of lower depth starts)
+
+            // TODO (autoparallel): this can be optimized i'm sure of it, running without it saves 110k constraints on 1024b (553k with it)
             is_key_match[data_idx] <== KeyMatchAtIndex(DATA_BYTES, MAX_KEY_LENGTH, data_idx)(data, key, keyLen, parsing_key[data_idx]);
+
+            // TODO (autoparallel): this could also likely be optimized, costs like 140k constraints itself
             is_next_pair_at_depth[data_idx] <== NextKVPairAtDepth(MAX_STACK_HEIGHT)(State[data_idx].next_stack, data[data_idx], 0);
             is_key_match_for_value[data_idx+1] <== Mux1()([is_key_match_for_value[data_idx] * (1-is_next_pair_at_depth[data_idx]), is_key_match[data_idx] * (1-is_next_pair_at_depth[data_idx])], is_key_match[data_idx]);
             is_value_match[data_idx] <== is_key_match_for_value[data_idx+1] * parsing_value[data_idx];
@@ -90,25 +93,21 @@ template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
             masked[data_idx] <== 0;
         }
     }
-    maskedData <== masked;
     step_out[0] <== DataHasher(DATA_BYTES)(masked);
 }
 
 template JsonMaskArrayIndexNIVC(DATA_BYTES, MAX_STACK_HEIGHT) {
-    // ------------------------------------------------------------------------------------------------------------------ //
     assert(MAX_STACK_HEIGHT >= 2); // TODO (autoparallel): idk if we need this now
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES + 4; // aes ct/pt + ctr
-    // ------------------------------------------------------------------------------------------------------------------ //
-    signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
-    signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
-
-    // Declaration of signals.
-    signal data[DATA_BYTES];
+    
+    signal input step_in[1];
     signal input index;
 
-    for(var i = 0 ; i < DATA_BYTES ; i++) {
-        data[i] <== step_in[i];
-    }
+    signal output step_out[1];
+
+    // Authenticate the (potentially further masked) plaintext we are passing in
+    signal input data[DATA_BYTES];
+    signal data_hash <== DataHasher(DATA_BYTES)(data);
+    data_hash === step_in[0];
 
     component State[DATA_BYTES];
     State[0] = StateUpdate(MAX_STACK_HEIGHT);
@@ -123,9 +122,8 @@ template JsonMaskArrayIndexNIVC(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal or[DATA_BYTES - 1];
 
     parsing_array[0] <== InsideArrayIndexObject()(State[0].next_stack[0], State[0].next_stack[1], State[0].next_parsing_string, State[0].next_parsing_number, index);
-    step_out[0] <== data[0] * parsing_array[0]; // TODO (autoparallel): is this totally correcot or do we need an or, i think it's right
-
-
+    signal masked[DATA_BYTES];
+    masked[0] <== data[0] * parsing_array[0];
     for(var data_idx = 1; data_idx < DATA_BYTES; data_idx++) {
         State[data_idx]                  = StateUpdate(MAX_STACK_HEIGHT);
         State[data_idx].byte           <== data[data_idx];
@@ -136,9 +134,7 @@ template JsonMaskArrayIndexNIVC(DATA_BYTES, MAX_STACK_HEIGHT) {
         parsing_array[data_idx] <== InsideArrayIndexObject()(State[data_idx].next_stack[0], State[data_idx].next_stack[1], State[data_idx].next_parsing_string, State[data_idx].next_parsing_number, index);
 
         or[data_idx - 1] <== OR()(parsing_array[data_idx], parsing_array[data_idx - 1]);
-        step_out[data_idx] <== data[data_idx] * or[data_idx - 1];
+        masked[data_idx] <== data[data_idx] * or[data_idx - 1];
     }
-    for(var i = DATA_BYTES ; i < TOTAL_BYTES_ACROSS_NIVC; i++) {
-        step_out[i] <== 0;
-    }
+    step_out[0] <== DataHasher(DATA_BYTES)(masked);
 }
