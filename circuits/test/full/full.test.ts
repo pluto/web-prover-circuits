@@ -200,7 +200,6 @@ describe("NIVC_FULL", async () => {
 
     const DATA_BYTES = 320;
     const MAX_STACK_HEIGHT = 5;
-    const TOTAL_BYTES_ACROSS_NIVC = 1;
 
     const MAX_HEADER_NAME_LENGTH = 20;
     const MAX_HEADER_VALUE_LENGTH = 35;

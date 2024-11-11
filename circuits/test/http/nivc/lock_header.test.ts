@@ -1,12 +1,12 @@
 import { circomkit, WitnessTester, toByte } from "../../common";
 import { readHTTPInputFile } from "../../common/http";
+import { dataHasher } from "../../full/full.test";
 
 describe("HTTPLockHeader", async () => {
-    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
-    let lockHeaderCircuit: WitnessTester<["step_in", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
+    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "data", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
+    let lockHeaderCircuit: WitnessTester<["step_in", "data", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
 
-    const DATA_BYTES = 320;
-    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES + 4;
+    const DATA_BYTES = 336;
 
     const MAX_BEGINNING_LENGTH = 10;
     const MAX_MIDDLE_LENGTH = 50;
@@ -32,7 +32,8 @@ describe("HTTPLockHeader", async () => {
 
     function generatePassCase(input: number[], beginning: number[], middle: number[], final: number[], headerName: number[], headerValue: number[], desc: string) {
         it(`should pass: \"${headerName}: ${headerValue}\", ${desc}`, async () => {
-            let extendedInput = input.concat(Array(Math.max(0, TOTAL_BYTES_ACROSS_NIVC - input.length)).fill(0));
+            let extendedInput = input.concat(Array(Math.max(0, DATA_BYTES - input.length)).fill(0));
+            const http_response_hash = dataHasher(extendedInput);
 
             let beginningPadded = beginning.concat(Array(MAX_BEGINNING_LENGTH - beginning.length).fill(0));
             let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
@@ -41,15 +42,16 @@ describe("HTTPLockHeader", async () => {
             let headerNamePadded = headerName.concat(Array(MAX_HEADER_NAME_LENGTH - headerName.length).fill(0));
             let headerValuePadded = headerValue.concat(Array(MAX_HEADER_VALUE_LENGTH - headerValue.length).fill(0));
 
-            let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
+            let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: http_response_hash, data: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
 
-            await lockHeaderCircuit.expectPass({ step_in: parseAndLockStartLine.step_out, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length });
+            await lockHeaderCircuit.expectPass({ step_in: parseAndLockStartLine.step_out, data: extendedInput, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length });
         });
     }
 
     function generateFailCase(input: number[], beginning: number[], middle: number[], final: number[], headerName: number[], headerValue: number[], desc: string) {
         it(`should fail: ${desc}`, async () => {
-            let extendedInput = input.concat(Array(Math.max(0, TOTAL_BYTES_ACROSS_NIVC - input.length)).fill(0));
+            let extendedInput = input.concat(Array(Math.max(0, DATA_BYTES - input.length)).fill(0));
+            const http_response_hash = dataHasher(extendedInput);
 
             let beginningPadded = beginning.concat(Array(MAX_BEGINNING_LENGTH - beginning.length).fill(0));
             let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
@@ -58,9 +60,9 @@ describe("HTTPLockHeader", async () => {
             let headerNamePadded = headerName.concat(Array(MAX_HEADER_NAME_LENGTH - headerName.length).fill(0));
             let headerValuePadded = headerValue.concat(Array(MAX_HEADER_VALUE_LENGTH - headerValue.length).fill(0));
 
-            let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
+            let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: http_response_hash, data: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
 
-            await lockHeaderCircuit.expectFail({ step_in: parseAndLockStartLine.step_out, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length });
+            await lockHeaderCircuit.expectFail({ step_in: parseAndLockStartLine.step_out, data: extendedInput, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length });
         });
     }
 

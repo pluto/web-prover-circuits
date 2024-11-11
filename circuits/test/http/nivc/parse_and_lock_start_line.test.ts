@@ -1,11 +1,11 @@
 import { circomkit, WitnessTester, toByte } from "../../common";
 import { readHTTPInputFile } from "../../common/http";
+import { dataHasher } from "../../full/full.test";
 
 describe("HTTPParseAndLockStartLine", async () => {
-    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
+    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "data", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
 
-    const DATA_BYTES = 320;
-    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES + 4;
+    const DATA_BYTES = 336;
 
     const MAX_BEGINNING_LENGTH = 10;
     const MAX_MIDDLE_LENGTH = 50;
@@ -22,25 +22,28 @@ describe("HTTPParseAndLockStartLine", async () => {
 
     function generatePassCase(input: number[], beginning: number[], middle: number[], final: number[], desc: string) {
         it(`(valid) witness: ${desc}`, async () => {
-            let extendedInput = input.concat(Array(Math.max(0, TOTAL_BYTES_ACROSS_NIVC - input.length)).fill(0));
+            let extendedInput = input.concat(Array(Math.max(0, DATA_BYTES - input.length)).fill(0));
+            const http_response_hash = dataHasher(extendedInput);
 
             let beginningPadded = beginning.concat(Array(MAX_BEGINNING_LENGTH - beginning.length).fill(0));
             let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
             let finalPadded = final.concat(Array(MAX_FINAL_LENGTH - final.length).fill(0));
 
-            await httpParseAndLockStartLineCircuit.expectPass({ step_in: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length });
+            await httpParseAndLockStartLineCircuit.expectPass({ step_in: [http_response_hash], data: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length });
         });
     }
 
     function generateFailCase(input: number[], beginning: number[], middle: number[], final: number[], desc: string) {
         it(`(valid) witness: ${desc}`, async () => {
-            let extendedInput = input.concat(Array(Math.max(0, TOTAL_BYTES_ACROSS_NIVC - input.length)).fill(0));
+            let extendedInput = input.concat(Array(Math.max(0, DATA_BYTES - input.length)).fill(0));
+            const http_response_hash = dataHasher(extendedInput);
+
 
             let beginningPadded = beginning.concat(Array(MAX_BEGINNING_LENGTH - beginning.length).fill(0));
             let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
             let finalPadded = final.concat(Array(MAX_FINAL_LENGTH - final.length).fill(0));
 
-            await httpParseAndLockStartLineCircuit.expectFail({ step_in: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length });
+            await httpParseAndLockStartLineCircuit.expectFail({ step_in: [http_response_hash], data: extendedInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length });
         });
     }
 
