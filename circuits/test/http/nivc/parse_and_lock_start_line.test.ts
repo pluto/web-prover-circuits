@@ -1,6 +1,6 @@
 import { circomkit, WitnessTester, toByte } from "../../common";
 import { readHTTPInputFile } from "../../common/http";
-import { dataHasher } from "../../full/full.test";
+import { DataHasher } from "../../common/poseidon";
 
 describe("HTTPParseAndLockStartLine", async () => {
     let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "data", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
@@ -23,7 +23,7 @@ describe("HTTPParseAndLockStartLine", async () => {
     function generatePassCase(input: number[], beginning: number[], middle: number[], final: number[], desc: string) {
         it(`(valid) witness: ${desc}`, async () => {
             let extendedInput = input.concat(Array(Math.max(0, DATA_BYTES - input.length)).fill(0));
-            const http_response_hash = dataHasher(extendedInput);
+            const http_response_hash = DataHasher(extendedInput);
 
             let beginningPadded = beginning.concat(Array(MAX_BEGINNING_LENGTH - beginning.length).fill(0));
             let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
@@ -36,7 +36,7 @@ describe("HTTPParseAndLockStartLine", async () => {
     function generateFailCase(input: number[], beginning: number[], middle: number[], final: number[], desc: string) {
         it(`(valid) witness: ${desc}`, async () => {
             let extendedInput = input.concat(Array(Math.max(0, DATA_BYTES - input.length)).fill(0));
-            const http_response_hash = dataHasher(extendedInput);
+            const http_response_hash = DataHasher(extendedInput);
 
 
             let beginningPadded = beginning.concat(Array(MAX_BEGINNING_LENGTH - beginning.length).fill(0));

@@ -1,29 +1,8 @@
 import { assert } from "chai";
 import { circomkit, WitnessTester, toByte } from "../common";
-import { PoseidonModular } from "../common/poseidon";
+import { DataHasher } from "../common/poseidon";
 
-export function dataHasher(input: number[]): bigint {
-    if (input.length % 16 !== 0) {
-        throw new Error("DATA_BYTES must be divisible by 16");
-    }
 
-    let hashes: bigint[] = [BigInt(0)];  // Initialize first hash as 0
-
-    for (let i = 0; i < Math.floor(input.length / 16); i++) {
-        let packedInput = BigInt(0);
-
-        // Pack 16 bytes into a single number
-        for (let j = 0; j < 16; j++) {
-            packedInput += BigInt(input[16 * i + j]) * BigInt(2 ** (8 * j));
-        }
-
-        // Compute next hash using previous hash and packed input
-        hashes.push(PoseidonModular([hashes[i], packedInput]));
-    }
-
-    // Return the last hash
-    return hashes[Math.floor(input.length / 16)];
-}
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
@@ -97,7 +76,7 @@ const http_body = [
     114, 32, 83, 119, 105, 102, 116, 34, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
     32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32,
     32, 32, 93, 13, 10, 32, 32, 32, 125, 13, 10, 125,
-]
+];
 const lengthDiff = http_response_plaintext.length - http_body.length;
 
 // Create an array of zeros with the length difference
@@ -106,8 +85,8 @@ const padding = new Array(lengthDiff).fill(0);
 // Concatenate the padding with http_body
 const padded_http_body = [...padding, ...http_body];
 
-const http_response_hash = dataHasher(http_response_plaintext);
-const http_body_mask_hash = dataHasher(padded_http_body);
+const http_response_hash = DataHasher(http_response_plaintext);
+const http_body_mask_hash = DataHasher(padded_http_body);
 
 
 const json_key0_mask = [
@@ -125,7 +104,7 @@ const json_key0_mask = [
     32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13, 0,
     0, 0, 0, 0, 0, 0, 0,
 ];
-const json_key0_mask_hash = dataHasher(json_key0_mask);
+const json_key0_mask_hash = DataHasher(json_key0_mask);
 
 const json_key1_mask = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -141,7 +120,7 @@ const json_key1_mask = [
     32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32,
     32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
-const json_key1_mask_hash = dataHasher(json_key1_mask);
+const json_key1_mask_hash = DataHasher(json_key1_mask);
 
 const json_arr_mask = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -157,7 +136,7 @@ const json_arr_mask = [
     32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
     32, 125, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
-const json_arr_mask_hash = dataHasher(json_arr_mask);
+const json_arr_mask_hash = DataHasher(json_arr_mask);
 
 const json_key2_mask = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -172,7 +151,7 @@ const json_key2_mask = [
     32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
-const json_key2_mask_hash = dataHasher(json_key2_mask);
+const json_key2_mask_hash = DataHasher(json_key2_mask);
 
 const json_key3_mask = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -187,7 +166,7 @@ const json_key3_mask = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0,
 ];
-const json_key3_mask_hash = dataHasher(json_key3_mask);
+const json_key3_mask_hash = DataHasher(json_key3_mask);
 
 describe("NIVC_FULL", async () => {
     let aesCircuit: WitnessTester<["key", "iv", "aad", "ctr", "plainText", "cipherText", "step_in"], ["step_out"]>;
@@ -212,7 +191,6 @@ describe("NIVC_FULL", async () => {
     const final = [79, 75]; // OK
 
     const MAX_KEY_LENGTH = 8;
-    // TODO (Sambhav): max value length has to be divisible to 16
     const MAX_VALUE_LENGTH = 32;
 
     before(async () => {
@@ -341,8 +319,7 @@ describe("NIVC_FULL", async () => {
         // TODO (autoparallel): we need to rethink extraction here.
         let finalOutput = toByte("\"Taylor Swift\"");
         let finalOutputPadded = finalOutput.concat(Array(Math.max(0, MAX_VALUE_LENGTH - finalOutput.length)).fill(0));
-        let final_value_hash = dataHasher(finalOutputPadded);
-        // await extract_value_circuit.expectPass({ step_in: json_extract_key3.step_out, data: json_key3_mask }, { step_out: final_value_hash });
+        let final_value_hash = DataHasher(finalOutputPadded);
         let extractValue = await extract_value_circuit.compute({ step_in: json_extract_key3.step_out, data: json_key3_mask }, ["step_out"]);
         console.log("finalValue", extractValue.step_out);
         assert.deepEqual(extractValue.step_out, final_value_hash);

@@ -1,6 +1,6 @@
 import { circomkit, WitnessTester, toByte } from "../../common";
 import { assert } from "chai";
-import { dataHasher } from "../../full/full.test";
+import { DataHasher } from "../../common/poseidon";
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
@@ -62,8 +62,8 @@ const padding = new Array(lengthDiff).fill(0);
 // Concatenate the padding with http_body
 const padded_http_body = [...padding, ...http_body];
 
-const http_response_hash = dataHasher(http_response_plaintext);
-const http_body_mask_hash = dataHasher(padded_http_body);
+const http_response_hash = DataHasher(http_response_plaintext);
+const http_body_mask_hash = DataHasher(padded_http_body);
 
 describe("NIVC_HTTP", async () => {
     let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "data", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
@@ -123,7 +123,5 @@ describe("NIVC_HTTP", async () => {
         console.log("GOT TRHOUGH THIRD CIRCUIT");
 
         assert.deepEqual(bodyMask.step_out, http_body_mask_hash);
-
-        // bodyMask.step_out === PoseidonModular(maskedInput);
     });
 });
