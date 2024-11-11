@@ -1,4 +1,6 @@
 import { circomkit, WitnessTester, toByte } from "../../common";
+import { assert } from "chai";
+import { dataHasher } from "../../full/full.test";
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
@@ -36,13 +38,40 @@ let http_response_plaintext = [
     10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13,
     10, 32, 32, 32, 125, 13, 10, 125];
 
+const http_body = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 123, 13, 10, 32, 32, 32, 34,
+    100, 97, 116, 97, 34, 58, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32, 34, 105, 116, 101, 109,
+    115, 34, 58, 32, 91, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 123, 13, 10, 32, 32, 32,
+    32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 34, 100, 97, 116, 97, 34, 58, 32, 34, 65, 114,
+    116, 105, 115, 116, 34, 44, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+    34, 112, 114, 111, 102, 105, 108, 101, 34, 58, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32,
+    32, 32, 32, 32, 32, 32, 32, 32, 34, 110, 97, 109, 101, 34, 58, 32, 34, 84, 97, 121, 108, 111,
+    114, 32, 83, 119, 105, 102, 116, 34, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+    32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32,
+    32, 32, 93, 13, 10, 32, 32, 32, 125, 13, 10, 125,
+];
+
+const lengthDiff = http_response_plaintext.length - http_body.length;
+
+// Create an array of zeros with the length difference
+const padding = new Array(lengthDiff).fill(0);
+
+// Concatenate the padding with http_body
+const padded_http_body = [...padding, ...http_body];
+
+const http_response_hash = dataHasher(http_response_plaintext);
+const http_body_mask_hash = dataHasher(padded_http_body);
+
 describe("NIVC_HTTP", async () => {
-    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
-    let lockHeaderCircuit: WitnessTester<["step_in", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
-    let bodyMaskCircuit: WitnessTester<["step_in"], ["step_out"]>;
+    let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "data", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
+    let lockHeaderCircuit: WitnessTester<["step_in", "data", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
+    let bodyMaskCircuit: WitnessTester<["step_in", "data"], ["step_out"]>;
 
     const DATA_BYTES = 320;
-    const TOTAL_BYTES_ACROSS_NIVC = DATA_BYTES + 4;
+    const TOTAL_BYTES_ACROSS_NIVC = 1;
 
     const MAX_HEADER_NAME_LENGTH = 20;
     const MAX_HEADER_VALUE_LENGTH = 35;
@@ -88,18 +117,13 @@ describe("NIVC_HTTP", async () => {
     let middlePadded = middle.concat(Array(MAX_MIDDLE_LENGTH - middle.length).fill(0));
     let finalPadded = final.concat(Array(MAX_FINAL_LENGTH - final.length).fill(0));
     it("HTTPParseAndExtract", async () => {
-        let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: extendedJsonInput, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
+        let parseAndLockStartLine = await httpParseAndLockStartLineCircuit.compute({ step_in: http_response_hash, data: http_response_plaintext, beginning: beginningPadded, beginning_length: beginning.length, middle: middlePadded, middle_length: middle.length, final: finalPadded, final_length: final.length }, ["step_out"]);
+        let lockHeader = await lockHeaderCircuit.compute({ step_in: parseAndLockStartLine.step_out, data: http_response_plaintext, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length }, ["step_out"]);
+        let bodyMask = await bodyMaskCircuit.compute({ step_in: lockHeader.step_out, data: http_response_plaintext }, ["step_out"]);
+        console.log("GOT TRHOUGH THIRD CIRCUIT");
 
-        let lockHeader = await lockHeaderCircuit.compute({ step_in: parseAndLockStartLine.step_out, header: headerNamePadded, headerNameLength: headerName.length, value: headerValuePadded, headerValueLength: headerValue.length }, ["step_out"]);
+        assert.deepEqual(bodyMask.step_out, http_body_mask_hash);
 
-        let bodyMask = await bodyMaskCircuit.compute({ step_in: lockHeader.step_out }, ["step_out"]);
-
-        let bodyMaskOut = bodyMask.step_out as number[];
-        let idx = bodyMaskOut.indexOf('{'.charCodeAt(0));
-
-        let maskedInput = extendedJsonInput.fill(0, 0, idx);
-        maskedInput = maskedInput.fill(0, 320);
-
-        bodyMaskOut === maskedInput;
+        // bodyMask.step_out === PoseidonModular(maskedInput);
     });
 });

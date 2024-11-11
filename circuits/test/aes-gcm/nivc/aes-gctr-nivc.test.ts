@@ -16,13 +16,11 @@ function bytesToBigInt(bytes: number[] | Uint8Array): bigint {
 describe("aes-gctr-nivc", () => {
     let circuit_one_block: WitnessTester<["key", "iv", "plainText", "aad", "ctr", "step_in"], ["step_out"]>;
 
-    const DATA_BYTES_0 = 16;
 
     it("all correct for self generated single zero pt block case", async () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [DATA_BYTES_0], // input len is 16 bytes
         });
 
         let key = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
@@ -42,7 +40,6 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [DATA_BYTES_0], // input len is 16 bytes
         });
 
         let key = [0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31];
@@ -58,8 +55,6 @@ describe("aes-gctr-nivc", () => {
         assert.deepEqual(witness.step_out, PoseidonModular([step_in, bytesToBigInt(plainText)]));
     });
 
-    const DATA_BYTES_1 = 32;
-
     let key = [0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31];
     let plainText1 = [0x74, 0x65, 0x73, 0x74, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30];
     let plainText2 = [0x74, 0x65, 0x73, 0x74, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30];
@@ -72,7 +67,6 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [DATA_BYTES_1], // input len is 32 bytes
         });
 
         const ctr = [0x00, 0x00, 0x00, 0x01];
@@ -86,7 +80,6 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
-            params: [DATA_BYTES_1], // input len is 32 bytes
         });
 
         const ctr_0 = [0x00, 0x00, 0x00, 0x01];

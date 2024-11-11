@@ -2,7 +2,7 @@ import { assert } from "chai";
 import { circomkit, WitnessTester, toByte } from "../common";
 import { PoseidonModular } from "../common/poseidon";
 
-function dataHasher(input: number[]): bigint {
+export function dataHasher(input: number[]): bigint {
     if (input.length % 16 !== 0) {
         throw new Error("DATA_BYTES must be divisible by 16");
     }
