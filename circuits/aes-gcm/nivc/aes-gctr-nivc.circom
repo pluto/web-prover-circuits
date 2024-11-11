@@ -12,6 +12,8 @@ template AESGCTRFOLD() {
     signal input ctr[4];
     signal input plainText[16];
 
+    signal input cipherText[16];
+
     signal input step_in[1];
     signal output step_out[1];
 
@@ -22,6 +24,7 @@ template AESGCTRFOLD() {
     aes.plainText   <== plainText;
     aes.lastCounter <== ctr;
 
+    aes.cipherText === cipherText;
     var packedPlaintext = 0;
     for(var i = 0 ; i < 16 ; i++) {
         packedPlaintext += plainText[i] * 2**(8*i);

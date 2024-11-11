@@ -61,6 +61,28 @@ const http_response_plaintext = [
     10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13,
     10, 32, 32, 32, 125, 13, 10, 125];
 
+const http_response_ciphertext = [
+    75, 220, 142, 158, 79, 135, 141, 163, 211, 26, 242, 137, 81, 253, 181, 117,
+    253, 246, 197, 197, 61, 46, 55, 87, 218, 137, 240, 143, 241, 177, 225, 129,
+    80, 114, 125, 72, 45, 18, 224, 179, 79, 231, 153, 198, 163, 252, 197, 219,
+    233, 46, 202, 120, 99, 253, 76, 9, 70, 11, 200, 218, 228, 251, 133, 248,
+    233, 177, 19, 241, 205, 128, 65, 76, 10, 31, 71, 198, 177, 78, 108, 246,
+    175, 152, 42, 97, 255, 182, 157, 245, 123, 95, 130, 101, 129, 138, 236, 146,
+    47, 22, 22, 13, 125, 1, 109, 158, 189, 131, 44, 43, 203, 118, 79, 181,
+    86, 33, 235, 186, 75, 20, 7, 147, 102, 75, 90, 222, 255, 140, 94, 52,
+    191, 145, 192, 71, 239, 245, 247, 175, 117, 136, 173, 235, 250, 189, 74, 155,
+    103, 25, 164, 187, 22, 26, 39, 37, 113, 248, 170, 146, 73, 75, 45, 208,
+    125, 49, 101, 11, 120, 215, 93, 160, 14, 147, 129, 181, 150, 59, 167, 197,
+    230, 122, 77, 245, 247, 215, 136, 98, 1, 180, 213, 30, 214, 88, 83, 42,
+    33, 112, 61, 4, 197, 75, 134, 149, 22, 228, 24, 95, 131, 35, 44, 181,
+    135, 31, 173, 36, 23, 192, 177, 127, 156, 199, 167, 212, 66, 235, 194, 102,
+    61, 144, 121, 59, 187, 179, 212, 34, 117, 47, 96, 3, 169, 73, 204, 88,
+    36, 48, 158, 220, 237, 198, 180, 105, 7, 188, 109, 24, 201, 217, 186, 191,
+    232, 63, 93, 153, 118, 214, 157, 167, 15, 216, 191, 152, 41, 106, 24, 127,
+    8, 144, 78, 218, 133, 125, 89, 97, 10, 246, 8, 244, 112, 169, 190, 206,
+    14, 217, 109, 147, 130, 61, 214, 237, 143, 77, 14, 14, 70, 56, 94, 97,
+    207, 214, 106, 249, 37, 7, 186, 95, 174, 146, 203, 148, 173, 172, 13, 113
+];
 const http_body = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -168,7 +190,7 @@ const json_key3_mask = [
 const json_key3_mask_hash = dataHasher(json_key3_mask);
 
 describe("NIVC_FULL", async () => {
-    let aesCircuit: WitnessTester<["key", "iv", "aad", "ctr", "plainText", "step_in"], ["step_out"]>;
+    let aesCircuit: WitnessTester<["key", "iv", "aad", "ctr", "plainText", "cipherText", "step_in"], ["step_out"]>;
     let httpParseAndLockStartLineCircuit: WitnessTester<["step_in", "data", "beginning", "beginning_length", "middle", "middle_length", "final", "final_length"], ["step_out"]>;
     let lockHeaderCircuit: WitnessTester<["step_in", "data", "header", "headerNameLength", "value", "headerValueLength"], ["step_out"]>;
     let bodyMaskCircuit: WitnessTester<["step_in", "data"], ["step_out"]>;
@@ -258,13 +280,15 @@ describe("NIVC_FULL", async () => {
         const init_nivc_input = 0;
 
         let pt = http_response_plaintext.slice(0, 16);
-        let aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), step_in: init_nivc_input }, ["step_out"]);
+        let ct = http_response_ciphertext.slice(0, 16);
+        let aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), cipherText: ct, step_in: init_nivc_input }, ["step_out"]);
         let i = 0;
         console.log("AES `step_out[", i, "]`: ", aes_gcm.step_out);
         for (i = 1; i < (DATA_BYTES / 16); i++) {
             ctr[3] += 1; // This will work since we don't run a test that overlows a byte
             let pt = http_response_plaintext.slice(i * 16, i * 16 + 16);
-            aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), step_in: aes_gcm.step_out }, ["step_out"]);
+            let ct = http_response_ciphertext.slice(i * 16, i * 16 + 16);
+            aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), cipherText: ct, step_in: aes_gcm.step_out }, ["step_out"]);
             console.log("AES `step_out[", i, "]`: ", aes_gcm.step_out);
         }
         assert.deepEqual(http_response_hash, aes_gcm.step_out);
