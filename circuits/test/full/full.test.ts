@@ -196,7 +196,7 @@ describe("NIVC_FULL", async () => {
     let bodyMaskCircuit: WitnessTester<["step_in", "data"], ["step_out"]>;
     let json_mask_object_circuit: WitnessTester<["step_in", "data", "key", "keyLen"], ["step_out"]>;
     let json_mask_arr_circuit: WitnessTester<["step_in", "data", "index"], ["step_out"]>;
-    // let extract_value_circuit: WitnessTester<["step_in"], ["step_out"]>;
+    let extract_value_circuit: WitnessTester<["step_in", "data"], ["step_out"]>;
 
     const DATA_BYTES = 320;
     const MAX_STACK_HEIGHT = 5;
@@ -212,7 +212,8 @@ describe("NIVC_FULL", async () => {
     const final = [79, 75]; // OK
 
     const MAX_KEY_LENGTH = 8;
-    const MAX_VALUE_LENGTH = 35;
+    // TODO (Sambhav): max value length has to be divisible to 16
+    const MAX_VALUE_LENGTH = 32;
 
     before(async () => {
         aesCircuit = await circomkit.WitnessTester("AESGCTRFOLD", {
@@ -256,12 +257,12 @@ describe("NIVC_FULL", async () => {
         });
         console.log("#constraints (JSON-MASK-ARRAY-INDEX):", await json_mask_arr_circuit.getConstraintCount());
 
-        // extract_value_circuit = await circomkit.WitnessTester(`JsonMaskExtractFinal`, {
-        //     file: "json/nivc/extractor",
-        //     template: "MaskExtractFinal",
-        //     params: [DATA_BYTES, MAX_VALUE_LENGTH],
-        // });
-        // console.log("#constraints (JSON-MASK-EXTRACT-FINAL):", await extract_value_circuit.getConstraintCount());
+        extract_value_circuit = await circomkit.WitnessTester(`JsonMaskExtractFinal`, {
+            file: "json/nivc/extractor",
+            template: "MaskExtractFinal",
+            params: [DATA_BYTES, MAX_VALUE_LENGTH],
+        });
+        console.log("#constraints (JSON-MASK-EXTRACT-FINAL):", await extract_value_circuit.getConstraintCount());
     });
 
 
@@ -338,6 +339,12 @@ describe("NIVC_FULL", async () => {
         console.log("JSON Extract key3 `step_out`:", json_extract_key3.step_out);
 
         // TODO (autoparallel): we need to rethink extraction here.
-        // await extract_value_circuit.expectPass({ step_in: json_extract_key3.step_out }, { step_out: value });
+        let finalOutput = toByte("\"Taylor Swift\"");
+        let finalOutputPadded = finalOutput.concat(Array(Math.max(0, MAX_VALUE_LENGTH - finalOutput.length)).fill(0));
+        let final_value_hash = dataHasher(finalOutputPadded);
+        // await extract_value_circuit.expectPass({ step_in: json_extract_key3.step_out, data: json_key3_mask }, { step_out: final_value_hash });
+        let extractValue = await extract_value_circuit.compute({ step_in: json_extract_key3.step_out, data: json_key3_mask }, ["step_out"]);
+        console.log("finalValue", extractValue.step_out);
+        assert.deepEqual(extractValue.step_out, final_value_hash);
     });
 });
