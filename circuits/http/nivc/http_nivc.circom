@@ -41,18 +41,10 @@ template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
 
     // Get the start line shit
     signal start_line[DATA_BYTES];
-    signal is_after_start_line_return[DATA_BYTES]; // Buffer +2 here for the CRLF
-    signal is_cr[DATA_BYTES];
-    signal is_lf[DATA_BYTES];
-    signal is_cr_or_is_lf[DATA_BYTES];
-    signal start_line_mask[DATA_BYTES];
+    signal not_start_line_mask[DATA_BYTES];
     for(var i = 0 ; i < DATA_BYTES ; i++) {
-        is_cr[i] <== IsEqual()([data[i],10]);
-        is_lf[i] <== IsEqual()([data[i],13]);
-        is_cr_or_is_lf[i] <== is_cr[i] + is_lf[i];
-        is_after_start_line_return[i] <== IsZero()(State[i].parsing_start);
-        start_line_mask[i] <== (1 - is_after_start_line_return[i]) * (1 - is_cr_or_is_lf[i]);
-        start_line[i] <== data[i] * start_line_mask[i];
+        not_start_line_mask[i] <== IsZero()(State[i].parsing_start);
+        start_line[i] <== data[i] * (1 - not_start_line_mask[i]);
     }
     signal inner_start_line_hash <== DataHasher(DATA_BYTES)(start_line);
     inner_start_line_hash        === start_line_hash;
@@ -64,7 +56,6 @@ template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         for(var j = 0 ; j < DATA_BYTES ; j++) {
             header_masks[i][j] <== IsEqual()([State[j].parsing_header, i + 1]);
             header[i][j]       <== data[j] * header_masks[i][j];
-            log(",",header[0][j]); //header[i][",j,"]
         }
     }
     signal inner_header_hashes[MAX_NUMBER_OF_HEADERS];
@@ -76,7 +67,7 @@ template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     // Get the body shit
     signal body[DATA_BYTES];
     for(var i = 0 ; i < DATA_BYTES ; i++) {
-        body[i]       <== data[i] * State[i].next_parsing_body; // TODO: WE HAD AN OFF BY ONE BEFORE, SO I AM TRYING THIS. MAY NEED TO FIX EVERYTHING ELSE EVER AFTER THIS OH NO
+        body[i]       <== data[i] * State[i].parsing_body;
     }
     signal inner_body_hash <== DataHasher(DATA_BYTES)(body);
     inner_body_hash === body_hash;
