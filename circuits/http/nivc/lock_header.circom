@@ -5,6 +5,7 @@ include "../interpreter.circom";
 include "../../utils/array.circom";
 include "circomlib/circuits/comparators.circom";
 include "@zk-email/circuits/utils/array.circom";
+include "../../utils/search.circom";
 
 // TODO: should use a MAX_HEADER_NAME_LENGTH and a MAX_HEADER_VALUE_LENGTH
 template LockHeader(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH) {
@@ -19,7 +20,9 @@ template LockHeader(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH)
     signal data_hash <== DataHasher(DATA_BYTES)(data);
     data_hash === step_in[0];
     step_out[0] <== step_in[0];
-    
+
+
+
     // ------------------------------------------------------------------------------------------------------------------ //
     // PARSE
     // Initialze the parser
@@ -52,7 +55,7 @@ template LockHeader(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH)
     }
     // ------------------------------------------------------------------------------------------------------------------ //
 
-    
+
     // TODO (autoparallel): again bad
     // Get those redundant variables
     for(var i = 0 ; i < DATA_BYTES ; i++) {
@@ -70,8 +73,19 @@ template LockHeader(DATA_BYTES, MAX_HEADER_NAME_LENGTH, MAX_HEADER_VALUE_LENGTH)
     signal input value[MAX_HEADER_VALUE_LENGTH];
     signal input headerValueLength;
 
+    signal input dataAndHeader[DATA_BYTES+MAX_HEADER_NAME_LENGTH];
+    for (var i = 0 ; i < DATA_BYTES ; i++) {
+        dataAndHeader[i] <== data[i];
+    }
+    for (var i = 0 ; i < MAX_HEADER_NAME_LENGTH ; i++) {
+        dataAndHeader[i + DATA_BYTES] <== header[i];
+    }
+    signal data_header_hash <== DataHasher(DATA_BYTES + MAX_HEADER_NAME_LENGTH)(dataAndHeader);
+
     // find header location
-    signal headerNameLocation <== FirstStringMatch(DATA_BYTES, MAX_HEADER_NAME_LENGTH)(data, header);
+    signal headerNameLocation <== SubstringSearch(DATA_BYTES, MAX_HEADER_NAME_LENGTH)(data, header, data_hash);
+    signal isMatch <== SubstringMatchWithHasher(DATA_BYTES, MAX_HEADER_NAME_LENGTH)(data, header, data_header_hash, headerNameLocation);
+    isMatch === 1;
 
     // TODO (autoparallel): This could probably be optimized by selecting a subarray of length `MAX_HEADER_NAME_LENGTH + MAX_HEADER_VALUE_LENGTH` at `headerNameLocation`
     // This is the assertion that we have locked down the correct header
