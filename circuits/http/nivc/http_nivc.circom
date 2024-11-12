@@ -59,9 +59,11 @@ template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         }
     }
     signal inner_header_hashes[MAX_NUMBER_OF_HEADERS];
+    signal header_is_unused[MAX_NUMBER_OF_HEADERS]; // If a header hash is passed in as 0, it is not used (no way to compute preimage of 0) 
     for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS ; i++) {
+        header_is_unused[i]    <== IsZero()(header_hashes[i]);
         inner_header_hashes[i] <== DataHasher(DATA_BYTES)(header[i]);
-        inner_header_hashes[i] === header_hashes[i];
+        (1 - header_is_unused[i]) * inner_header_hashes[i] === header_hashes[i];
     }
 
     // Get the body shit

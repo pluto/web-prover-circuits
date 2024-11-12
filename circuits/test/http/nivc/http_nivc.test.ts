@@ -112,11 +112,11 @@ describe("HTTP_NIVC", async () => {
         httpNivc = await circomkit.WitnessTester("http_nivc", {
             file: "http/nivc/http_nivc",
             template: "HttpNIVC",
-            params: [320, 1]
+            params: [320, 2]
         });
     });
 
-    it("witness: TEST_HTTP", async () => {
+    it("witness: TEST_HTTP, single header", async () => {
         // Get all the hashes we need
         // Get the data hash
         let data_hash = await dataHasher.compute({ in: TEST_HTTP }, ["out"]);
@@ -133,7 +133,32 @@ describe("HTTP_NIVC", async () => {
             step_in: data_hash.out,
             data: TEST_HTTP,
             start_line_hash: start_line_hash.out,
-            header_hashes: [header_hash.out],
+            header_hashes: [header_hash.out, 0],
+            body_hash: body_hash.out,
+        }, ["step_out"]);
+
+        assert.deepEqual(http_nivc_compute.step_out, body_hash.out);
+    });
+
+    it("witness: TEST_HTTP, two headers", async () => {
+        // Get all the hashes we need
+        // Get the data hash
+        let data_hash = await dataHasher.compute({ in: TEST_HTTP }, ["out"]);
+        // Get the start line hash
+        let start_line_hash = await dataHasher.compute({ in: TEST_HTTP_START_LINE }, ["out"])
+        // Get the header hashes
+        let header_0_hash = await dataHasher.compute({ in: TEST_HTTP_HEADER_0 }, ["out"]);
+        let header_1_hash = await dataHasher.compute({ in: TEST_HTTP_HEADER_1 }, ["out"]);
+        // Get the body hash
+        let body_hash = await dataHasher.compute({ in: TEST_HTTP_BODY }, ["out"]);
+
+        // Run the HTTP circuit
+        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
+        let http_nivc_compute = await httpNivc.compute({
+            step_in: data_hash.out,
+            data: TEST_HTTP,
+            start_line_hash: start_line_hash.out,
+            header_hashes: [header_0_hash.out, header_1_hash.out],
             body_hash: body_hash.out,
         }, ["step_out"]);
 
