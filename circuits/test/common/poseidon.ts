@@ -72,3 +72,26 @@ export function PoseidonModular(input: Array<number | string | bigint>): bigint 
 
     return result;
 }
+
+export function DataHasher(input: number[]): bigint {
+    if (input.length % 16 !== 0) {
+        throw new Error("DATA_BYTES must be divisible by 16");
+    }
+
+    let hashes: bigint[] = [BigInt(0)];  // Initialize first hash as 0
+
+    for (let i = 0; i < Math.floor(input.length / 16); i++) {
+        let packedInput = BigInt(0);
+
+        // Pack 16 bytes into a single number
+        for (let j = 0; j < 16; j++) {
+            packedInput += BigInt(input[16 * i + j]) * BigInt(2 ** (8 * j));
+        }
+
+        // Compute next hash using previous hash and packed input
+        hashes.push(PoseidonModular([hashes[i], packedInput]));
+    }
+
+    // Return the last hash
+    return hashes[Math.floor(input.length / 16)];
+}

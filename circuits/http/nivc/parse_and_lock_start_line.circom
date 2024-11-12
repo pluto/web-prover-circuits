@@ -4,26 +4,23 @@ include "../parser/machine.circom";
 include "../interpreter.circom";
 include "../../utils/bytes.circom";
 
-// TODO: Note that TOTAL_BYTES will match what we have for AESGCMFOLD step_out
-// I have not gone through to double check the sizes of everything yet.
 template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENGTH, MAX_FINAL_LENGTH) {
-    // ------------------------------------------------------------------------------------------------------------------ //
-    // ~~ Set sizes at compile time ~~
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES + 4; // AES ct/pt + ctr
-    // ------------------------------------------------------------------------------------------------------------------ //
+    var MINIMUM_PARSE_LENGTH = MAX_BEGINNING_LENGTH + MAX_MIDDLE_LENGTH + MAX_FINAL_LENGTH;
+    assert(DATA_BYTES >= MINIMUM_PARSE_LENGTH);
 
-    // ------------------------------------------------------------------------------------------------------------------ //
-    signal input step_in[TOTAL_BYTES_ACROSS_NIVC];
-    signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
+    signal input step_in[1];
+    signal output step_out[1];
 
-    // Get the plaintext
-    signal packedData[DATA_BYTES];
-    for (var i = 0 ; i < DATA_BYTES ; i++) {
-        packedData[i] <== step_in[i];
+    // Authenticate the plaintext we are passing in
+    signal input data[DATA_BYTES];
+    signal data_hash <== DataHasher(DATA_BYTES)(data);
+    data_hash === step_in[0];
+    step_out[0] <== step_in[0];
+
+    signal dataToParse[MINIMUM_PARSE_LENGTH];
+    for(var i = 0 ; i < MINIMUM_PARSE_LENGTH ; i++) {
+        dataToParse[i] <== data[i];
     }
-    component unpackData = UnpackDoubleByteArray(DATA_BYTES);
-    unpackData.in <== packedData;
-    signal data[DATA_BYTES] <== unpackData.lower;
 
     signal input beginning[MAX_BEGINNING_LENGTH];
     signal input beginning_length;
@@ -32,10 +29,11 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENG
     signal input final[MAX_FINAL_LENGTH];
     signal input final_length;
 
-    // Initialze the parser
-    component State[DATA_BYTES];
+    // Initialze the parser, note that we only need to parse as much as the `MINIMUM_PARSE_LENGTH` 
+    // since the start line could not possibly go past this point, or else this would fail anyway
+    component State[MINIMUM_PARSE_LENGTH];
     State[0]                     = HttpStateUpdate();
-    State[0].byte                <== data[0];
+    State[0].byte                <== dataToParse[0];
     State[0].parsing_start       <== 1;
     State[0].parsing_header      <== 0;
     State[0].parsing_field_name  <== 0;
@@ -50,9 +48,9 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENG
     */
 
     // Setup to check middle bytes
-    signal startLineMask[DATA_BYTES];
-    signal middleMask[DATA_BYTES];
-    signal finalMask[DATA_BYTES];
+    signal startLineMask[MINIMUM_PARSE_LENGTH];
+    signal middleMask[MINIMUM_PARSE_LENGTH];
+    signal finalMask[MINIMUM_PARSE_LENGTH];
     startLineMask[0] <== inStartLine()(State[0].parsing_start);
     middleMask[0]    <== inStartMiddle()(State[0].parsing_start);
     finalMask[0]     <== inStartEnd()(State[0].parsing_start);
@@ -61,9 +59,9 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENG
     var middle_start_counter = 1;
     var middle_end_counter = 1;
     var final_end_counter = 1;
-    for(var data_idx = 1; data_idx < DATA_BYTES; data_idx++) {
+    for(var data_idx = 1; data_idx < MINIMUM_PARSE_LENGTH; data_idx++) {
         State[data_idx]                     = HttpStateUpdate();
-        State[data_idx].byte                <== data[data_idx];
+        State[data_idx].byte                <== dataToParse[data_idx];
         State[data_idx].parsing_start       <== State[data_idx - 1].next_parsing_start;
         State[data_idx].parsing_header      <== State[data_idx - 1].next_parsing_header;
         State[data_idx].parsing_field_name  <== State[data_idx - 1].next_parsing_field_name;
@@ -85,27 +83,17 @@ template ParseAndLockStartLine(DATA_BYTES, MAX_BEGINNING_LENGTH, MAX_MIDDLE_LENG
     // Additionally verify beginning had correct length
     beginning_length === middle_start_counter - 1;
 
-    signal beginningMatch <== SubstringMatchWithIndexPadded(DATA_BYTES, MAX_BEGINNING_LENGTH)(data, beginning, beginning_length, 0);
+    signal beginningMatch <== SubstringMatchWithIndexPadded(MINIMUM_PARSE_LENGTH, MAX_BEGINNING_LENGTH)(dataToParse, beginning, beginning_length, 0);
 
     // Check middle is correct by substring match and length check
-    signal middleMatch <== SubstringMatchWithIndexPadded(DATA_BYTES, MAX_MIDDLE_LENGTH)(data, middle, middle_length, middle_start_counter);
+    signal middleMatch <== SubstringMatchWithIndexPadded(MINIMUM_PARSE_LENGTH, MAX_MIDDLE_LENGTH)(dataToParse, middle, middle_length, middle_start_counter);
     middleMatch === 1;
     middle_length === middle_end_counter - middle_start_counter - 1;
 
     // Check final is correct by substring match and length check
-    signal finalMatch <== SubstringMatchWithIndexPadded(DATA_BYTES, MAX_FINAL_LENGTH)(data, final, final_length, middle_end_counter);
+    signal finalMatch <== SubstringMatchWithIndexPadded(MINIMUM_PARSE_LENGTH, MAX_FINAL_LENGTH)(dataToParse, final, final_length, middle_end_counter);
     finalMatch === 1;
     // -2 here for the CRLF
     final_length === final_end_counter - middle_end_counter - 2;
-
-    // ------------------------------------------------------------------------------------------------------------------ //
-    // write out the pt again
-    for (var i = 0 ; i < TOTAL_BYTES_ACROSS_NIVC ; i++) {
-        // add plaintext http input to step_out and ignore the ciphertext
-        if(i < DATA_BYTES) {
-            step_out[i] <== data[i]; // PASS OUT JUST THE PLAINTEXT DATA
-        } else {
-            step_out[i] <== 0;
-        }
-    }
 }
+

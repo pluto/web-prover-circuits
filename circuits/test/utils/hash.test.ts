@@ -47,4 +47,68 @@ describe("hash", () => {
             );
         });
     });
+
+    describe("PoseidonChainer", () => {
+        let circuit: WitnessTester<["in"], ["out"]>;
+
+        before(async () => {
+            circuit = await circomkit.WitnessTester(`PoseidonChainer`, {
+                file: "utils/hash",
+                template: "PoseidonChainer",
+            });
+            console.log("#constraints:", await circuit.getConstraintCount());
+        });
+
+        it("witness: in = [69,420]", async () => {
+            const input = [69, 420];
+            const hash = PoseidonModular(input);
+            await circuit.expectPass(
+                { in: input },
+                { out: hash }
+            );
+        });
+    });
+
+    describe("DataHasher", () => {
+        let circuit: WitnessTester<["in"], ["out"]>;
+
+        before(async () => {
+            circuit = await circomkit.WitnessTester(`DataHasher`, {
+                file: "utils/hash",
+                template: "DataHasher",
+                params: [16],
+            });
+            console.log("#constraints:", await circuit.getConstraintCount());
+        });
+
+        it("witness: in = [0,...x16]", async () => {
+            const input = Array(16).fill(0);
+            const hash = PoseidonModular([0, 0]);
+            await circuit.expectPass(
+                { in: input },
+                { out: hash }
+            );
+        });
+
+        it("witness: in = [1,0,...x15]", async () => {
+            let input = Array(16).fill(0);
+            input[0] = 1;
+            const hash = PoseidonModular([0, 1]);
+            await circuit.expectPass(
+                { in: input },
+                { out: hash }
+            );
+        });
+
+        it("witness: in = [0,0,...x15,1]", async () => {
+            let input = Array(16).fill(0);
+            input[15] = 1;
+            const hash = PoseidonModular([0, "1329227995784915872903807060280344576"]);
+            await circuit.expectPass(
+                { in: input },
+                { out: hash }
+            );
+        });
+
+    });
 });

@@ -1,24 +1,16 @@
 pragma circom 2.1.9;
 
 include "../parser/machine.circom";
+include "../../utils/hash.circom";
 
 template HTTPMaskBodyNIVC(DATA_BYTES) {
-    // ------------------------------------------------------------------------------------------------------------------ //
-    var TOTAL_BYTES_ACROSS_NIVC   = DATA_BYTES + 4; // aes ct/pt + ctr
-    // ------------------------------------------------------------------------------------------------------------------ //
-
-    // ------------------------------------------------------------------------------------------------------------------ //
-    // ~ Unravel from previous NIVC step ~
-    // Read in from previous NIVC step (HttpParseAndLockStartLine or HTTPLockHeader)
-    signal input step_in[TOTAL_BYTES_ACROSS_NIVC]; 
-    signal output step_out[TOTAL_BYTES_ACROSS_NIVC];
-
-    signal data[DATA_BYTES];
-    // signal parsing_body[DATA_BYTES];
-    for (var i = 0 ; i < DATA_BYTES ; i++) {
-        data[i]         <== step_in[i];
-        // parsing_body[i] <== step_in[DATA_BYTES + i * 5 + 4]; // `parsing_body` stored in every 5th slot of step_in/out
-    }
+    signal input step_in[1];
+    signal output step_out[1];
+    
+    // Authenticate the plaintext we are passing in
+    signal input data[DATA_BYTES];
+    signal data_hash <== DataHasher(DATA_BYTES)(data);
+    data_hash === step_in[0];
 
     // ------------------------------------------------------------------------------------------------------------------ //
     // PARSE
@@ -46,13 +38,13 @@ template HTTPMaskBodyNIVC(DATA_BYTES) {
     // ------------------------------------------------------------------------------------------------------------------ //
 
     // ------------------------------------------------------------------------------------------------------------------ //
-    // ~ Write out to next NIVC step
-    for (var i = 0 ; i < TOTAL_BYTES_ACROSS_NIVC ; i++) {
-        if(i < DATA_BYTES) {
-            step_out[i] <== data[i] * State[i].next_parsing_body;
-        } else {
-            step_out[i] <== 0;
-        }
+    // Mask out just the JSON body
+    signal bodyMasked[DATA_BYTES];
+    for (var i = 0 ; i < DATA_BYTES ; i++) {
+            bodyMasked[i] <== data[i] * State[i].next_parsing_body;
     }
+
+    // Hash the new data so this can now be used in the chain later
+    step_out[0] <== DataHasher(DATA_BYTES)(bodyMasked);
 }
 

@@ -58,3 +58,29 @@ template PoseidonModular(numElements) {
 
     out <== _out;
 }
+
+template PoseidonChainer() {
+    signal input in[2];
+    signal output out;
+
+    out <== Poseidon(2)(in);
+}
+
+template DataHasher(DATA_BYTES) {
+    assert(DATA_BYTES % 16 == 0);
+    signal input in[DATA_BYTES];
+    signal output out;
+
+    signal hashes[DATA_BYTES \ 16 + 1];
+    hashes[0] <== 0;
+
+    for(var i = 0 ; i < DATA_BYTES \ 16 ; i++) {
+        var packedInput = 0;
+        for(var j = 0 ; j < 16 ; j++) {
+            packedInput += in[16 * i + j] * 2**(8*j);
+        }
+        hashes[i+1] <== PoseidonChainer()([hashes[i],packedInput]);
+    }
+
+    out <== hashes[DATA_BYTES \ 16];
+}
