@@ -14,10 +14,12 @@ all: build
 # Build target
 .PHONY: build
 build:
+	@set -e;
 	@for circuit in $(CIRCOM_FILES); do \
 		echo "Processing $${circuit}..."; \
 		circom "$${circuit}" --r1cs --wasm -o "$$(dirname $${circuit})/artifacts" -l node_modules; \
 		build-circuit "$${circuit}" "$$(dirname $${circuit})/artifacts/$$(basename $${circuit} .circom).bin" -l node_modules; \
+		echo "====================xxxxxxxxxx===================="; \
 	done
 
 # Clean target
