@@ -217,12 +217,11 @@
     "file": "aes-gcm/nivc/aes-gctr-nivc",
     "template": "AESGCTRFOLD"
   },
-  "nivc_http": {
+  "http_nivc": {
     "file": "http/nivc/http_nivc",
     "template": "HttpNIVC",
     "params": [
       1024,
-      320,
       10
     ]
   },
