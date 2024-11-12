@@ -67,7 +67,8 @@ template PoseidonChainer() {
 }
 
 template DataHasher(DATA_BYTES) {
-    assert(DATA_BYTES % 16 == 0);
+    // TODO: add this assert back after witnesscalc supports
+    // assert(DATA_BYTES % 16 == 0);
     signal input in[DATA_BYTES];
     signal output out;
 
