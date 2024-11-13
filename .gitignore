@@ -17,5 +17,4 @@ ir_log/*
 log_input_signals.txt
 *.bin
 *.r1cs
-builds/**/*.bin
-builds/**/*.r1cs
+builds/**/artifacts/
