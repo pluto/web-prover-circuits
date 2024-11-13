@@ -232,6 +232,7 @@ describe("NIVC_FULL", async () => {
         aesCircuit = await circomkit.WitnessTester("AESGCTRFOLD", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
+            params: [1]
         });
         console.log("#constraints (AES-GCTR):", await aesCircuit.getConstraintCount());
 
