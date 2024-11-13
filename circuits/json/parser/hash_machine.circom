@@ -356,6 +356,7 @@ template RewriteStack(n) {
     signal input readComma;
 
     signal output next_stack[n][2];
+    signal output next_tree_hasher[n][2]
 
     //--------------------------------------------------------------------------------------------//
     // * scan value on top of stack *

@@ -4,7 +4,7 @@ import { PoseidonModular } from "../../common/poseidon";
 describe("hash_machine", () => {
     let circuit: WitnessTester<["data"]>;
 
-    it(`array only input`, async () => {
+    it(`array_only_input`, async () => {
         let filename = "array_only";
         let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, [0]);
 
@@ -31,22 +31,36 @@ describe("hash_machine", () => {
 
     // TODO: Check that the hash of the packedState.in getting the next_state_hash is correct, the stack hashes are correct.
 
-    // it(`example input`, async () => {
-    //     let filename = "example";
-    //     let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, ["a"]);
+    it(`example_input`, async () => {
+        let filename = "example";
+        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, ["a"]);
 
-    //     circuit = await circomkit.WitnessTester(`Parser`, {
-    //         file: "json/parser/hash_parser",
-    //         template: "ParserHasher",
-    //         params: [input.length, 7],
-    //     });
-    //     console.log("#constraints:", await circuit.getConstraintCount());
+        circuit = await circomkit.WitnessTester(`Parser`, {
+            file: "json/parser/hash_parser",
+            template: "ParserHasher",
+            params: [input.length, 7],
+        });
+        console.log("#constraints:", await circuit.getConstraintCount());
 
-    //     await circuit.expectPass({
-    //         data: input
-    //     });
-    // });
+        await circuit.expectPass({
+            data: input
+        });
+    });
 
 
+    it(`spotify_input`, async () => {
+        let filename = "spotify";
+        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, ["data"]);
 
+        circuit = await circomkit.WitnessTester(`Parser`, {
+            file: "json/parser/hash_parser",
+            template: "ParserHasher",
+            params: [input.length, 7],
+        });
+        console.log("#constraints:", await circuit.getConstraintCount());
+
+        await circuit.expectPass({
+            data: input
+        });
+    });
 })
