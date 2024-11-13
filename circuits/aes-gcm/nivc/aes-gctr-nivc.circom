@@ -20,7 +20,7 @@ template AESGCTRFOLD(NUM_CHUNKS) {
 
     component aes[NUM_CHUNKS];
     for(var i = 0 ; i < NUM_CHUNKS ; i++) {
-        aes[i]            = AESGCTRFOLDABLE();
+        aes[i] = AESGCTRFOLDABLE();
         if( i == 0) {
             aes[i].plainText   <== plainText[i];
             aes[i].lastCounter <== ctr;
