@@ -49,7 +49,13 @@ template AESGCTRFOLD(NUM_CHUNKS) {
             packedPlaintext[i] += plainText[i][j] * 2**(8*j);
         }
     }
-    var hash = 0;
+    signal hash[NUM_CHUNKS];
+    for(var i = 0 ; i < NUM_CHUNKS ; i++) {
+        if(i == 0) {
+            hash[i] <== PoseidonChainer()([step_in[0],packedPlaintext[i]]);
+        } else {
+            hash[i] <== PoseidonChainer()([hash[i-1], packedPlaintext[i]]);
+        }
     for(var i = 0 ; i < NUM_CHUNKS ; i++) {
         if(i == 0) {
             hash = PoseidonChainer()([step_in[0],packedPlaintext[i]]);
