@@ -144,12 +144,20 @@ describe("hash", () => {
 
     describe("DataHasherHTTP", () => {
         let circuit: WitnessTester<["in"], ["out"]>;
+        let circuit_small: WitnessTester<["in"], ["out"]>;
 
         before(async () => {
             circuit = await circomkit.WitnessTester(`DataHasher`, {
                 file: "utils/hash",
                 template: "DataHasher",
                 params: [320],
+            });
+            console.log("#constraints:", await circuit.getConstraintCount());
+
+            circuit_small = await circomkit.WitnessTester(`DataHasher`, {
+                file: "utils/hash",
+                template: "DataHasher",
+                params: [32],
             });
             console.log("#constraints:", await circuit.getConstraintCount());
         });
@@ -160,10 +168,13 @@ describe("hash", () => {
             await circuit.expectPass({ in: TEST_HTTP_BYTES }, { out: "2195365663909569734943279727560535141179588918483111718403427949138562480675" });
         });
 
+        let hash = DataHasher(http_start_line);
         it("witness: TEST HTTP START LINE MASK", async () => {
-            let hash = DataHasher(http_start_line);
-            // assert.deepEqual(String(hash), "2195365663909569734943279727560535141179588918483111718403427949138562480675");
             await circuit.expectPass({ in: http_start_line }, { out: hash });
+        });
+
+        it("witness: TEST HTTP START LINE MASK TRUNCATED", async () => {
+            await circuit_small.expectPass({ in: http_start_line.slice(0, 32) }, { out: hash });
         });
     });
 });
