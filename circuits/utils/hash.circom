@@ -83,7 +83,7 @@ template DataHasher(DATA_BYTES) {
         }
         not_to_hash[i] <== IsZero()(packedInput);
         option_hash[i] <== PoseidonChainer()([hashes[i],packedInput]);
-        hashes[i+1]    <== (1 - not_to_hash[i]) * option_hash[i];
+        hashes[i+1]    <== not_to_hash[i] * (hashes[i] - option_hash[i]) + option_hash[i]; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
     }
     out <== hashes[DATA_BYTES \ 16];
 }
