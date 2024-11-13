@@ -24,7 +24,13 @@ template AESGCTRFOLD() {
     aes.plainText   <== plainText;
     aes.lastCounter <== ctr;
 
-    aes.cipherText === cipherText;
+    signal equalCheck[16];
+    for(var i = 0 ; i < 16 ; i++) {
+        equalCheck[i] <== IsEqual()([aes.cipherText[i], cipherText[i]]);
+        equalCheck[i] === 1;
+    }
+
+    
     var packedPlaintext = 0;
     for(var i = 0 ; i < 16 ; i++) {
         packedPlaintext += plainText[i] * 2**(8*i);
