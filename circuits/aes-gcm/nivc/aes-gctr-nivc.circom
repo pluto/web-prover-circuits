@@ -24,10 +24,10 @@ template AESGCTRFOLD() {
     aes.plainText   <== plainText;
     aes.lastCounter <== ctr;
 
-    signal equalCheck[16];
+    signal ciphertext_equal_check[16];
     for(var i = 0 ; i < 16 ; i++) {
-        equalCheck[i] <== IsEqual()([aes.cipherText[i], cipherText[i]]);
-        equalCheck[i] === 1;
+        ciphertext_equal_check[i] <== IsEqual()([aes.cipherText[i], cipherText[i]]);
+        ciphertext_equal_check[i] === 1;
     }
 
     

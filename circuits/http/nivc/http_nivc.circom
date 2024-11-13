@@ -47,7 +47,8 @@ template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         start_line[i] <== data[i] * (1 - not_start_line_mask[i]);
     }
     signal inner_start_line_hash <== DataHasher(DATA_BYTES)(start_line);
-    inner_start_line_hash        === start_line_hash;
+    signal start_line_hash_equal_check <== IsEqual()([inner_start_line_hash, start_line_hash]);
+    start_line_hash_equal_check === 1;
 
     // Get the header shit
     signal header[MAX_NUMBER_OF_HEADERS][DATA_BYTES];
@@ -60,10 +61,12 @@ template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     }
     signal inner_header_hashes[MAX_NUMBER_OF_HEADERS];
     signal header_is_unused[MAX_NUMBER_OF_HEADERS]; // If a header hash is passed in as 0, it is not used (no way to compute preimage of 0) 
+    signal header_hashes_equal_check[MAX_NUMBER_OF_HEADERS];
     for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS ; i++) {
         header_is_unused[i]    <== IsZero()(header_hashes[i]);
         inner_header_hashes[i] <== DataHasher(DATA_BYTES)(header[i]);
-        (1 - header_is_unused[i]) * inner_header_hashes[i] === header_hashes[i];
+        header_hashes_equal_check[i] <== IsEqual()([(1 - header_is_unused[i]) * inner_header_hashes[i], header_hashes[i]]);
+        header_hashes_equal_check[i] === 1;
     }
 
     // Get the body shit
@@ -72,6 +75,9 @@ template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         body[i]       <== data[i] * State[i].parsing_body;
     }
     signal inner_body_hash <== DataHasher(DATA_BYTES)(body);
-    inner_body_hash === body_hash;
+    signal body_hash_equal_check <== IsEqual()([inner_body_hash, body_hash]);
+    body_hash_equal_check === 1;
+
+
     step_out[0] <== inner_body_hash;
 }
