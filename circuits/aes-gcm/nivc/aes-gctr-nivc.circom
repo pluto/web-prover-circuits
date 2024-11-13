@@ -56,12 +56,6 @@ template AESGCTRFOLD(NUM_CHUNKS) {
         } else {
             hash[i] <== PoseidonChainer()([hash[i-1], packedPlaintext[i]]);
         }
-    for(var i = 0 ; i < NUM_CHUNKS ; i++) {
-        if(i == 0) {
-            hash = PoseidonChainer()([step_in[0],packedPlaintext[i]]);
-        } else {
-            hash = PoseidonChainer()([hash, packedPlaintext[i]]);
-        }
     }
-    step_out[0] <== hash;
+    step_out[0] <== hash[NUM_CHUNKS - 1];
 }
