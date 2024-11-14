@@ -42,14 +42,25 @@ template AESGCTRFOLD(NUM_CHUNKS) {
     }
 
     signal packedPlaintext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(plainText);
+    step_out[0] <== AESHasher(NUM_CHUNKS)(packedPlaintext, step_in[0]);
+}
 
-    signal hash[NUM_CHUNKS];
+// TODO (autoparallel): Could probably just have datahasher take in an initial hash as an input, but this was quicker to try first.
+template AESHasher(NUM_CHUNKS) {
+    // TODO: add this assert back after witnesscalc supports
+    // assert(DATA_BYTES % 16 == 0);
+    signal input in[NUM_CHUNKS];
+    signal input initial_hash;
+    signal output out;
+
+    signal not_to_hash[NUM_CHUNKS];
+    signal option_hash[NUM_CHUNKS];
+    signal hashes[NUM_CHUNKS + 1];
+    hashes[0] <== initial_hash;
     for(var i = 0 ; i < NUM_CHUNKS ; i++) {
-        if(i == 0) {
-            hash[i] <== PoseidonChainer()([step_in[0],packedPlaintext[i]]);
-        } else {
-            hash[i] <== PoseidonChainer()([hash[i-1], packedPlaintext[i]]);
-        }
+        not_to_hash[i] <== IsZero()(in[i]);
+        option_hash[i] <== PoseidonChainer()([hashes[i],in[i]]);
+        hashes[i+1]    <== not_to_hash[i] * (hashes[i] - option_hash[i]) + option_hash[i]; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
     }
-    step_out[0] <== hash[NUM_CHUNKS - 1];
+    out <== hashes[NUM_CHUNKS];
 }
