@@ -21,6 +21,7 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
+            params: [1]
         });
 
         let key = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
@@ -40,6 +41,7 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
+            params: [1]
         });
 
         let key = [0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31];
@@ -67,6 +69,7 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
+            params: [1]
         });
 
         const ctr = [0x00, 0x00, 0x00, 0x01];
@@ -80,6 +83,7 @@ describe("aes-gctr-nivc", () => {
         circuit_one_block = await circomkit.WitnessTester("aes-gcm-fold", {
             file: "aes-gcm/nivc/aes-gctr-nivc",
             template: "AESGCTRFOLD",
+            params: [1]
         });
 
         const ctr_0 = [0x00, 0x00, 0x00, 0x01];
@@ -89,5 +93,21 @@ describe("aes-gctr-nivc", () => {
         const witness_0 = await circuit_one_block.compute({ key: key, iv: iv, plainText: plainText1, aad: aad, ctr: ctr_0, cipherText: ct_part1, step_in: step_in_0 }, ["step_out"])
         const witness_1 = await circuit_one_block.compute({ key: key, iv: iv, plainText: plainText2, aad: aad, ctr: ctr_1, cipherText: ct_part2, step_in: witness_0.step_out }, ["step_out"])
         assert.deepEqual(witness_1.step_out, PoseidonModular([BigInt(witness_0.step_out.toString()), bytesToBigInt(plainText2)]));
+    });
+
+    let circuit_two_block: WitnessTester<["key", "iv", "plainText", "aad", "ctr", "cipherText", "step_in"], ["step_out"]>;
+    it("all correct for two folds at once", async () => {
+        circuit_two_block = await circomkit.WitnessTester("aes-gcm-fold", {
+            file: "aes-gcm/nivc/aes-gctr-nivc",
+            template: "AESGCTRFOLD",
+            params: [2]
+        });
+
+        const ctr_0 = [0x00, 0x00, 0x00, 0x01];
+        const step_in_0 = 0;
+
+        const witness = await circuit_two_block.compute({ key: key, iv: iv, aad: aad, ctr: ctr_0, plainText: [plainText1, plainText2], cipherText: [ct_part1, ct_part2], step_in: step_in_0 }, ["step_out"])
+        let hash_0 = PoseidonModular([step_in_0, bytesToBigInt(plainText1)]);
+        assert.deepEqual(witness.step_out, PoseidonModular([hash_0, bytesToBigInt(plainText2)]));
     });
 });
