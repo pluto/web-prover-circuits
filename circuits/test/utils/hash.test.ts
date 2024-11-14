@@ -1,5 +1,6 @@
+import assert from "assert";
 import { circomkit, WitnessTester } from "../common";
-import { PoseidonModular } from "../common/poseidon";
+import { DataHasher, PoseidonModular } from "../common/poseidon";
 
 describe("hash", () => {
     describe("PoseidonModular_16", () => {
@@ -83,10 +84,9 @@ describe("hash", () => {
 
         it("witness: in = [0,...x16]", async () => {
             const input = Array(16).fill(0);
-            const hash = PoseidonModular([0, 0]);
             await circuit.expectPass(
                 { in: input },
-                { out: hash }
+                { out: 0 }
             );
         });
 
@@ -128,8 +128,23 @@ describe("hash", () => {
         10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13,
         10, 32, 32, 32, 125, 13, 10, 125]
 
+    const http_start_line = [
+        72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75, 13, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0,
+    ];
+
     describe("DataHasherHTTP", () => {
         let circuit: WitnessTester<["in"], ["out"]>;
+        let circuit_small: WitnessTester<["in"], ["out"]>;
 
         before(async () => {
             circuit = await circomkit.WitnessTester(`DataHasher`, {
@@ -138,13 +153,28 @@ describe("hash", () => {
                 params: [320],
             });
             console.log("#constraints:", await circuit.getConstraintCount());
+
+            circuit_small = await circomkit.WitnessTester(`DataHasher`, {
+                file: "utils/hash",
+                template: "DataHasher",
+                params: [32],
+            });
+            console.log("#constraints:", await circuit.getConstraintCount());
         });
 
         it("witness: TEST HTTP BYTES", async () => {
-
+            let hash = DataHasher(TEST_HTTP_BYTES);
+            assert.deepEqual(String(hash), "2195365663909569734943279727560535141179588918483111718403427949138562480675");
             await circuit.expectPass({ in: TEST_HTTP_BYTES }, { out: "2195365663909569734943279727560535141179588918483111718403427949138562480675" });
         });
 
+        let hash = DataHasher(http_start_line);
+        it("witness: TEST HTTP START LINE MASK", async () => {
+            await circuit.expectPass({ in: http_start_line }, { out: hash });
+        });
 
+        it("witness: TEST HTTP START LINE MASK TRUNCATED", async () => {
+            await circuit_small.expectPass({ in: http_start_line.slice(0, 32) }, { out: hash });
+        });
     });
 });

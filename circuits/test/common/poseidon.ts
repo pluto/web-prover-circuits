@@ -88,8 +88,12 @@ export function DataHasher(input: number[]): bigint {
             packedInput += BigInt(input[16 * i + j]) * BigInt(2 ** (8 * j));
         }
 
-        // Compute next hash using previous hash and packed input
-        hashes.push(PoseidonModular([hashes[i], packedInput]));
+        // Compute next hash using previous hash and packed input, but if packed input is zero, don't hash it.
+        if (packedInput == BigInt(0)) {
+            hashes.push(hashes[i]);
+        } else {
+            hashes.push(PoseidonModular([hashes[i], packedInput]));
+        }
     }
 
     // Return the last hash

@@ -72,16 +72,18 @@ template DataHasher(DATA_BYTES) {
     signal input in[DATA_BYTES];
     signal output out;
 
+    signal not_to_hash[DATA_BYTES \ 16];
+    signal option_hash[DATA_BYTES \ 16];
     signal hashes[DATA_BYTES \ 16 + 1];
     hashes[0] <== 0;
-
     for(var i = 0 ; i < DATA_BYTES \ 16 ; i++) {
         var packedInput = 0;
         for(var j = 0 ; j < 16 ; j++) {
             packedInput += in[16 * i + j] * 2**(8*j);
         }
-        hashes[i+1] <== PoseidonChainer()([hashes[i],packedInput]);
+        not_to_hash[i] <== IsZero()(packedInput);
+        option_hash[i] <== PoseidonChainer()([hashes[i],packedInput]);
+        hashes[i+1]    <== not_to_hash[i] * (hashes[i] - option_hash[i]) + option_hash[i]; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
     }
-
     out <== hashes[DATA_BYTES \ 16];
 }

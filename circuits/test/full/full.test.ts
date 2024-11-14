@@ -2,8 +2,6 @@ import { assert } from "chai";
 import { circomkit, WitnessTester, toByte } from "../common";
 import { DataHasher } from "../common/poseidon";
 
-
-
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
 // content-encoding: gzip
