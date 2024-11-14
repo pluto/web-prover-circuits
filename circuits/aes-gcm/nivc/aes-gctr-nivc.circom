@@ -41,14 +41,8 @@ template AESGCTRFOLD(NUM_CHUNKS) {
         }
     }
 
-    
-    var packedPlaintext[NUM_CHUNKS];
-    for(var i = 0 ; i < NUM_CHUNKS ; i++) {
-        packedPlaintext[i] = 0;
-        for(var j = 0 ; j < 16 ; j++) {
-            packedPlaintext[i] += plainText[i][j] * 2**(8*j);
-        }
-    }
+    signal packedPlaintext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(plainText);
+
     signal hash[NUM_CHUNKS];
     for(var i = 0 ; i < NUM_CHUNKS ; i++) {
         if(i == 0) {
