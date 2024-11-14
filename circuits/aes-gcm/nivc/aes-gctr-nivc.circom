@@ -40,18 +40,21 @@ template AESGCTRFOLD(NUM_CHUNKS) {
     }
     signal packedCiphertext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(cipherText);
     signal packedComputedCiphertext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(computedCipherText);
+    signal packedPlaintext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(plainText);
 
+    signal plaintext_input_was_zero_chunk[NUM_CHUNKS];
     signal ciphertext_input_was_zero_chunk[NUM_CHUNKS];
+    signal both_input_chunks_were_zero[NUM_CHUNKS];
     signal ciphertext_option[NUM_CHUNKS];
     signal ciphertext_equal_check[NUM_CHUNKS];
     for(var i = 0 ; i < NUM_CHUNKS; i++) {
+            plaintext_input_was_zero_chunk[i] <== IsZero()(packedPlaintext[i]);   
             ciphertext_input_was_zero_chunk[i] <== IsZero()(packedCiphertext[i]);
-            ciphertext_option[i] <== (1 - ciphertext_input_was_zero_chunk[i]) * packedComputedCiphertext[i];
+            both_input_chunks_were_zero[i] <== plaintext_input_was_zero_chunk[i] * ciphertext_input_was_zero_chunk[i];
+            ciphertext_option[i] <== (1 - both_input_chunks_were_zero[i]) * packedComputedCiphertext[i];
             ciphertext_equal_check[i] <== IsEqual()([packedCiphertext[i], ciphertext_option[i]]);
             ciphertext_equal_check[i] === 1;
     }
-
-    signal packedPlaintext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(plainText);    
     step_out[0] <== AESHasher(NUM_CHUNKS)(packedPlaintext, step_in[0]);
 }
 
