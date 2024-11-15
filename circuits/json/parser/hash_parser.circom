@@ -6,7 +6,6 @@ include "hash_machine.circom";
 template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal input data[DATA_BYTES];
 
-
     //--------------------------------------------------------------------------------------------//
     // Initialze the parser
     component State[DATA_BYTES];
@@ -14,7 +13,7 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
     State[0].byte           <== data[0];
     for(var i = 0; i < MAX_STACK_HEIGHT; i++) {
         State[0].stack[i]       <== [0,0];
-        State[0].tree_hash[i]      <== 0;
+        State[0].tree_hash[i]   <== [0,0];
     }
     State[0].parsing_string <== 0;
     State[0].parsing_number <== 0;
@@ -24,7 +23,7 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
         log("State[", 0, "].next_stack[", i,"]    = [",State[0].next_stack[i][0], "][", State[0].next_stack[i][1],"]" );
     }
     for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-        log("State[", 0, "].next_tree_hash[", i,"] = [",State[0].next_tree_hash[i], "]");
+        log("State[", 0, "].next_tree_hash[", i,"]    = [",State[0].next_tree_hash[i][0], "][", State[0].next_tree_hash[i][1],"]" );
     }
     // log("State[", 0, "].next_tree_hash        =", State[0].next_tree_hash);
     log("State[", 0, "].next_parsing_string   =", State[0].next_parsing_string);
@@ -44,7 +43,7 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
             log("State[", data_idx, "].next_stack[", i,"]    = [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
         }
         for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-            log("State[", data_idx, "].next_tree_hash[", i,"] = [",State[data_idx].next_tree_hash[i], "]");
+            log("State[", data_idx, "].next_tree_hash[", i,"]    = [",State[data_idx].next_tree_hash[i][0], "][", State[data_idx].next_tree_hash[i][1],"]" );
         }
         // log("State[", data_idx, "].next_tree_hash      =", State[data_idx].next_tree_hash);
         log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
