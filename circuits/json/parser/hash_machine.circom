@@ -348,15 +348,21 @@ template RewriteStack(n) {
         stateHash[1].in[i] <== tree_hash[i][1];        
     }
 
+        // TODO: need two signals that say whether to hash into 0 or 1 index of tree hash
+    signal is_object_key <== IsEqualArray(2)([current_value,[1,0]]);
+    signal is_object_value <== IsEqualArray(2)([current_value,[1,1]]);
+    signal is_array <== IsEqual()([current_value[0], 2]);
 
     signal not_to_hash <== IsZero()(parsing_string * next_parsing_string + next_parsing_number);
-    signal option_hash[2];
-    option_hash[0] <== PoseidonChainer()([stateHash[0].out, byte]); // TODO: Trying this now so we just hash the byte stream of KVs
-    option_hash[1] <== PoseidonChainer()([stateHash[1].out, byte]); // TODO: Now we are double hashing, we certainly don't need to do this, so should optimize this out
+    signal hash_0 <== is_object_key * stateHash[0].out;
+    signal hash_1 <== (is_object_value + is_array) * stateHash[1].out; 
+    signal option_hash;
+    option_hash <== PoseidonChainer()([hash_0 + hash_1, byte]); // TODO: Trying this now so we just hash the byte stream of KVs
+    // option_hash <== PoseidonChainer()([stateHash[1].out, byte]); // TODO: Now we are double hashing, we certainly don't need to do this, so should optimize this out
     log("to_hash: ", (1-not_to_hash));
     signal next_state_hash[2];
-    next_state_hash[0] <== not_to_hash * (stateHash[0].out - option_hash[0]) + option_hash[0]; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
-    next_state_hash[1] <== not_to_hash * (stateHash[1].out - option_hash[1]) + option_hash[1];
+    next_state_hash[0] <== not_to_hash * (stateHash[0].out - option_hash) + option_hash; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
+    next_state_hash[1] <== not_to_hash * (stateHash[1].out - option_hash) + option_hash;
     // ^^^^ next_state_hash is the previous value (state_hash) or it is the newly computed value (option_hash)
     //--------------------------------------------------------------------------------------------//
 
@@ -366,10 +372,7 @@ template RewriteStack(n) {
     signal second_index_clear[n];
     signal not_changed[n][2];
 
-    // TODO: need two signals that say whether to hash into 0 or 1 index of tree hash
-    signal is_object_key <== IsEqualArray(2)([current_value,[1,0]]);
-    signal is_object_value <== IsEqualArray(2)([current_value,[1,1]]);
-    signal is_array <== IsEqual()([current_value[0], 2]);
+
 
     signal still_parsing_string <== parsing_string * next_parsing_string;
     signal to_change_zeroth <== still_parsing_string * is_object_key;
