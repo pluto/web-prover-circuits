@@ -371,9 +371,12 @@ template RewriteStack(n) {
     signal is_object_value <== IsEqualArray(2)([current_value,[1,1]]);
     signal is_array <== IsEqual()([current_value[0], 2]);
 
+    signal still_parsing_string <== parsing_string * next_parsing_string;
+    signal to_change_zeroth <== still_parsing_string * is_object_key;
+
     signal end_char_for_first <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
     signal to_change_first <== end_char_for_first * (is_object_value + is_array);
-    signal tree_hash_change_value[2] <== [(1-(isPush + isPop)) * next_state_hash[0], to_change_first * next_state_hash[1]];
+    signal tree_hash_change_value[2] <== [to_change_zeroth * next_state_hash[0], to_change_first * next_state_hash[1]];
     for(var i = 0; i < n; i++) {
         next_stack[i][0]      <== stack[i][0] + indicator[i] * stack_change_value[0];
         second_index_clear[i] <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
@@ -382,7 +385,7 @@ template RewriteStack(n) {
         // Tree hash
         // not_changed[i][0]     <== tree_hash[i][0] * (1 - tree_hash_indicator[i][0]);
         // not_changed[i][1]     <== tree_hash[i][1] * (1 - tree_hash_indicator[i][1]);
-        next_tree_hash[i][0]  <== 0; //tree_hash[i][0] + tree_hash_indicator[i][0] * (tree_hash_change_value[0] - tree_hash[i][1]);
+        next_tree_hash[i][0]  <== tree_hash[i][0] + tree_hash_indicator[i][0] * (tree_hash_change_value[0] - tree_hash[i][0]);
         next_tree_hash[i][1]  <== tree_hash[i][1] + tree_hash_indicator[i][1] * (tree_hash_change_value[1] - tree_hash[i][1]);
     }
     //--------------------------------------------------------------------------------------------//
