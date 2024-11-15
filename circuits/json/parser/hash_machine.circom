@@ -52,12 +52,12 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     signal input stack[MAX_STACK_HEIGHT][2];
     signal input parsing_string;
     signal input parsing_number;
-    signal input tree_hash[MAX_STACK_HEIGHT];
+    signal input tree_hash[MAX_STACK_HEIGHT][2];
 
     signal output next_stack[MAX_STACK_HEIGHT][2];
     signal output next_parsing_string;
     signal output next_parsing_number;
-    signal output next_tree_hash[MAX_STACK_HEIGHT];
+    signal output next_tree_hash[MAX_STACK_HEIGHT][2];
 
     component Command = Command();
 
@@ -151,7 +151,9 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     newStack.readEndBracket   <== readEndBracket.out;
     newStack.readColon        <== readColon.out;
     newStack.readComma        <== readComma.out;
+    newStack.readQuote        <== readQuote.out;
     newStack.parsing_string <== parsing_string;
+    newStack.parsing_number <== parsing_number;
     newStack.next_parsing_string <== next_parsing_string;
     newStack.next_parsing_number <== next_parsing_number;
     newStack.byte <== byte;
@@ -281,7 +283,7 @@ This template is for updating the stack given the current stack and the byte we 
 template RewriteStack(n) {
     assert(n < 2**8);
     signal input stack[n][2];
-    signal input tree_hash[n];
+    signal input tree_hash[n][2];
     signal input read_write_value;
     signal input readStartBrace;
     signal input readStartBracket;
@@ -289,14 +291,16 @@ template RewriteStack(n) {
     signal input readEndBracket;
     signal input readColon;
     signal input readComma;
+    signal input readQuote;
 
+    signal input parsing_number;
     signal input parsing_string;
     signal input next_parsing_string;
     signal input next_parsing_number;
     signal input byte;
 
     signal output next_stack[n][2];
-    signal output next_tree_hash[n];
+    signal output next_tree_hash[n][2];
 
     //--------------------------------------------------------------------------------------------//
     // * scan value on top of stack *
@@ -323,33 +327,63 @@ template RewriteStack(n) {
     signal nextPointer <== pointer + isPush - isPop;
     // // * set an indicator array for where we are pushing to or popping from*
     signal indicator[n];
-    signal tree_hash_indicator[n];
+    signal tree_hash_indicator[n][2];
     for(var i = 0; i < n; i++) {
         indicator[i] <== IsZero()(pointer - isPop - readColon - readComma - i); // Note, pointer points to unallocated region!
-        tree_hash_indicator[i] <== IsZero()(pointer - i - 1); // Note, pointer points to unallocated region!
+        tree_hash_indicator[i][0] <== IsZero()(pointer - i - 1); 
+        tree_hash_indicator[i][1] <== IsZero()(pointer - i - 1); 
     }
     //--------------------------------------------------------------------------------------------//
 
     //--------------------------------------------------------------------------------------------//
     // Hash the next_* states to produce hash we need
-    signal state_hash <== IndexSelector(n)(tree_hash, pointer - 1);
+    // TODO: This could be optimized -- we don't really need to do the index selector, we can just accumulate elsewhere
+    component stateHash[2];
+    stateHash[0] = IndexSelector(n);
+    stateHash[0].index <== pointer - 1;
+    stateHash[1] = IndexSelector(n);
+    stateHash[1].index <== pointer - 1;
+    for(var i = 0 ; i < n ; i++) {
+        stateHash[0].in[i] <== tree_hash[i][0];
+        stateHash[1].in[i] <== tree_hash[i][1];        
+    }
+
+
     signal not_to_hash <== IsZero()(parsing_string * next_parsing_string + next_parsing_number);
-    signal option_hash <== PoseidonChainer()([state_hash, current_value[0] + (2**8)*current_value[1] + (2**16)*byte]);
-    log("not_to_hash: ", not_to_hash);
-    signal next_state_hash <== not_to_hash * (state_hash - option_hash) + option_hash; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
+    signal option_hash[2];
+    option_hash[0] <== PoseidonChainer()([stateHash[0].out, byte]); // TODO: Trying this now so we just hash the byte stream of KVs
+    option_hash[1] <== PoseidonChainer()([stateHash[1].out, byte]); // TODO: Now we are double hashing, we certainly don't need to do this, so should optimize this out
+    log("to_hash: ", (1-not_to_hash));
+    signal next_state_hash[2];
+    next_state_hash[0] <== not_to_hash * (stateHash[0].out - option_hash[0]) + option_hash[0]; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
+    next_state_hash[1] <== not_to_hash * (stateHash[1].out - option_hash[1]) + option_hash[1];
+    // ^^^^ next_state_hash is the previous value (state_hash) or it is the newly computed value (option_hash)
     //--------------------------------------------------------------------------------------------//
 
     //--------------------------------------------------------------------------------------------//
     // * loop to modify the stack and tree hash by rebuilding it *
     signal stack_change_value[2] <== [(isPush + isPop) * read_write_value, readColon + readCommaInArray - readCommaNotInArray];
     signal second_index_clear[n];
-    signal not_changed[n];
+    signal not_changed[n][2];
+
+    // TODO: need two signals that say whether to hash into 0 or 1 index of tree hash
+    signal is_object_key <== IsEqualArray(2)([current_value,[1,0]]);
+    signal is_object_value <== IsEqualArray(2)([current_value,[1,1]]);
+    signal is_array <== IsEqual()([current_value[0], 2]);
+
+    signal end_char_for_first <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
+    signal to_change_first <== end_char_for_first * (is_object_value + is_array);
+    signal tree_hash_change_value[2] <== [(1-(isPush + isPop)) * next_state_hash[0], to_change_first * next_state_hash[1]];
     for(var i = 0; i < n; i++) {
         next_stack[i][0]      <== stack[i][0] + indicator[i] * stack_change_value[0];
         second_index_clear[i] <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
         next_stack[i][1]      <== stack[i][1] + indicator[i] * (stack_change_value[1] - second_index_clear[i]);
-        not_changed[i]        <== tree_hash[i] * (1 - tree_hash_indicator[i]);
-        next_tree_hash[i]     <== not_changed[i] + tree_hash_indicator[i] * next_state_hash;
+
+        // Tree hash
+        // not_changed[i][0]     <== tree_hash[i][0] * (1 - tree_hash_indicator[i][0]);
+        // not_changed[i][1]     <== tree_hash[i][1] * (1 - tree_hash_indicator[i][1]);
+        next_tree_hash[i][0]  <== 0; //tree_hash[i][0] + tree_hash_indicator[i][0] * (tree_hash_change_value[0] - tree_hash[i][1]);
+        next_tree_hash[i][1]  <== tree_hash[i][1] + tree_hash_indicator[i][1] * (tree_hash_change_value[1] - tree_hash[i][1]);
     }
     //--------------------------------------------------------------------------------------------//
 
@@ -358,8 +392,12 @@ template RewriteStack(n) {
     signal isUnderflowOrOverflow <== InRange(8)(pointer - isPop + isPush, [0,n]);
     isUnderflowOrOverflow        === 1;
     //--------------------------------------------------------------------------------------------//
-
-
-
-
 }
+
+
+/*
+    NOTES:
+    Actually, if we check that the stack matches and we get a hash match in all the positions too, then we are good. So we can pass in a target stack and the target hashes and check for the single match (fairly cheap).
+
+    For KV pairs, it may be good to just have the tree hashes hash the k into [i][0] and the v into [i][1]. This is just the most sensible way to do things. Still just one hash per loop
+*/

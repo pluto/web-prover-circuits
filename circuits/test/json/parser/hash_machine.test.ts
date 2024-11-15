@@ -20,7 +20,13 @@ describe("hash_machine", () => {
         });
     });
 
-    // console.log("[0,0] hash: ", PoseidonModular([0, 0]));
+    // Numbers for the 42 read in 0th index
+    console.log("[0,\"4\"] hash: ", PoseidonModular([0, 52]));
+    console.log("[prev,\"2\"] hash: ", PoseidonModular([BigInt("10851631763548351427431043290272583122934382613350600043660274710013149244741"), 50]));
+
+    // Numbers for the "b" read inside object in 1st index
+    console.log("[0,\"b\"] hash: ", PoseidonModular([0, 98]));
+
     // console.log("[2,0] hash: ", PoseidonModular([2, 0]));
     // console.log("[2,1] hash: ", PoseidonModular([2, 1]));
     // console.log("[1,0] hash: ", PoseidonModular([1, 0]));
