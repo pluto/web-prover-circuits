@@ -377,7 +377,7 @@ template RewriteStack(n) {
     signal end_hash0[n];
 
     signal not_end_char_for_first <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
-    signal to_change_first <== not_end_char_for_first * (is_object_value + is_array) + still_parsing_string;
+    signal to_change_first <== (not_end_char_for_first + still_parsing_string) * (is_object_value + is_array);
     signal tree_hash_change_value[2] <== [to_change_zeroth * next_state_hash[0], to_change_first * next_state_hash[1]];
 
     for(var i = 0; i < n; i++) {
