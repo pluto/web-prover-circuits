@@ -21,11 +21,13 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
     
     // Debugging
     for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-        log("State[", 0, "].next_stack[", i,"]     ", "= [",State[0].next_stack[i][0], "][", State[0].next_stack[i][1],"]" );
-        log("State[", 0, "].tree_hasher[", i,"]    ", "= [",State[0].tree_hasher[i][0], "][", State[0].tree_hasher[i][1],"]" );
+        log("State[", 0, "].next_stack[", i,"]      ", "= [",State[0].next_stack[i][0], "][", State[0].next_stack[i][1],"]" );
     }
-    log("State[", 0, "].next_parsing_string", "= ", State[0].next_parsing_string);
-    log("State[", 0, "].next_parsing_number", "= ", State[0].next_parsing_number);
+    for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+        log("State[", 0, "].next_tree_hasher[", i,"] = [",State[0].next_tree_hasher[i][0], "][", State[0].next_tree_hasher[i][1],"]" );
+    }
+    log("State[", 0, "].next_parsing_string   =", State[0].next_parsing_string);
+    log("State[", 0, "].next_parsing_number   =", State[0].next_parsing_number);
     log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
     for(var data_idx = 1; data_idx < DATA_BYTES; data_idx++) {
@@ -38,23 +40,16 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
 
         // Debugging
         for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-            log("State[", data_idx, "].next_stack[", i,"]     ", "= [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
-            log("State[", data_idx, "].tree_hasher[", i,"]    ", "= [",State[data_idx].tree_hasher[i][0], "][", State[data_idx].tree_hasher[i][1],"]" );
+            log("State[", data_idx, "].next_stack[", i,"]      ", "= [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
         }
-        log("State[", data_idx, "].next_parsing_string", "= ", State[data_idx].next_parsing_string);
-        log("State[", data_idx, "].next_parsing_number", "= ", State[data_idx].next_parsing_number);
+        for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+            log("State[", data_idx, "].next_tree_hasher[", i,"] = [",State[data_idx].next_tree_hasher[i][0], "][", State[data_idx].next_tree_hasher[i][1],"]" );
+        }
+        log("State[", data_idx, "].next_parsing_string   =", State[data_idx].next_parsing_string);
+        log("State[", data_idx, "].next_parsing_number   =", State[data_idx].next_parsing_number);
         log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     }
 
     // TODO: Constrain to have valid JSON 
     // State[DATA_BYTES - 1].next_tree_depth === 0;
-
-        // Debugging
-        for(var i = 0; i < MAX_STACK_HEIGHT; i++) {
-            log("State[", DATA_BYTES -1, "].next_stack[", i,"]    ", "= [",State[DATA_BYTES -1].next_stack[i][0], "][", State[DATA_BYTES - 1].next_stack[i][1],"]" );
-            log("State[", DATA_BYTES -1, "].tree_hasher[", i,"]   ", "= [",State[DATA_BYTES -1].tree_hasher[i][0], "][", State[DATA_BYTES -1].tree_hasher[i][1],"]" );
-        }
-        log("State[", DATA_BYTES - 1, "].next_parsing_string", "= ", State[DATA_BYTES-1].next_parsing_string);
-        log("State[", DATA_BYTES -1 , "].next_parsing_number", "= ", State[DATA_BYTES-1].next_parsing_number);
-        log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 }
