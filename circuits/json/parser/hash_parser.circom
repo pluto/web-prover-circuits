@@ -14,9 +14,8 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
     State[0].byte           <== data[0];
     for(var i = 0; i < MAX_STACK_HEIGHT; i++) {
         State[0].stack[i]       <== [0,0];
-        
+        State[0].tree_hash[i]      <== 0;
     }
-    State[0].tree_hash      <== 0;
     State[0].parsing_string <== 0;
     State[0].parsing_number <== 0;
     
@@ -24,10 +23,10 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
     for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
         log("State[", 0, "].next_stack[", i,"]    = [",State[0].next_stack[i][0], "][", State[0].next_stack[i][1],"]" );
     }
-    // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-    //     log("State[", 0, "].next_tree_hasher[", i,"] = [",State[0].next_tree_hasher[i][0], "][", State[0].next_tree_hasher[i][1],"]" );
-    // }
-    log("State[", 0, "].next_tree_hash        =", State[0].next_tree_hash);
+    for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+        log("State[", 0, "].next_tree_hash[", i,"] = [",State[0].next_tree_hash[i], "]");
+    }
+    // log("State[", 0, "].next_tree_hash        =", State[0].next_tree_hash);
     log("State[", 0, "].next_parsing_string   =", State[0].next_parsing_string);
     log("State[", 0, "].next_parsing_number   =", State[0].next_parsing_number);
     log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
@@ -44,10 +43,10 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
         for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
             log("State[", data_idx, "].next_stack[", i,"]    = [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
         }
-        // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-        //     log("State[", data_idx, "].next_tree_hasher[", i,"] = [",State[data_idx].next_tree_hasher[i][0], "][", State[data_idx].next_tree_hasher[i][1],"]" );
-        // }
-        log("State[", data_idx, "].next_tree_hash      =", State[data_idx].next_tree_hash);
+        for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+            log("State[", data_idx, "].next_tree_hash[", i,"] = [",State[data_idx].next_tree_hash[i], "]");
+        }
+        // log("State[", data_idx, "].next_tree_hash      =", State[data_idx].next_tree_hash);
         log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
         log("State[", data_idx, "].next_parsing_number =", State[data_idx].next_parsing_number);
         log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");

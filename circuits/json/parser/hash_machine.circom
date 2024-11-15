@@ -52,12 +52,12 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     signal input stack[MAX_STACK_HEIGHT][2];
     signal input parsing_string;
     signal input parsing_number;
-    signal input tree_hash;
+    signal input tree_hash[MAX_STACK_HEIGHT];
 
     signal output next_stack[MAX_STACK_HEIGHT][2];
     signal output next_parsing_string;
     signal output next_parsing_number;
-    signal output next_tree_hash;
+    signal output next_tree_hash[MAX_STACK_HEIGHT];
 
     component Command = Command();
 
@@ -137,8 +137,13 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     component mulMaskAndOut    = ArrayMul(3);
     mulMaskAndOut.lhs        <== mask.out;
     mulMaskAndOut.rhs        <== [Instruction.out[0], Instruction.out[1], Instruction.out[2]  - readOther.out];
+
+    next_parsing_string       <== parsing_string + mulMaskAndOut.out[1];
+    next_parsing_number       <== parsing_number + mulMaskAndOut.out[2];
+
     component newStack          = RewriteStack(MAX_STACK_HEIGHT);
     newStack.stack            <== stack;
+    newStack.tree_hash        <== tree_hash;
     newStack.read_write_value <== mulMaskAndOut.out[0];
     newStack.readStartBrace   <== readStartBrace.out;
     newStack.readStartBracket <== readStartBracket.out;
@@ -146,23 +151,15 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     newStack.readEndBracket   <== readEndBracket.out;
     newStack.readColon        <== readColon.out;
     newStack.readComma        <== readComma.out;
+    newStack.parsing_string <== parsing_string;
+    newStack.next_parsing_string <== next_parsing_string;
+    newStack.next_parsing_number <== next_parsing_number;
+    newStack.byte <== byte;
     // * set all the next state of the parser *
     next_stack                <== newStack.next_stack;
-    next_parsing_string       <== parsing_string + mulMaskAndOut.out[1];
-    next_parsing_number       <== parsing_number + mulMaskAndOut.out[2];
-    //--------------------------------------------------------------------------------------------//
-    // Hash the next_* states to produce hash we need
-    signal not_to_hash <== IsZero()(parsing_string * next_parsing_string + next_parsing_number);
-    signal option_hash[MAX_STACK_HEIGHT];
-    signal hashes[MAX_STACK_HEIGHT + 1];
-    hashes[0] <== tree_hash;
-    for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++) {
-        option_hash[i] <== PoseidonChainer()([hashes[i],stack[i][0] + (2**8)*stack[i][1] + (2**16)*byte]);
-        hashes[i+1]    <== not_to_hash * (hashes[i] - option_hash[i]) + option_hash[i]; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
-    }
-    next_tree_hash <== hashes[MAX_STACK_HEIGHT];
+    next_tree_hash            <== newStack.next_tree_hash;
 
-    //--------------------------------------------------------------------------------------------//
+
 
     log("--------------------------------");
     log("byte:         ", byte);
@@ -284,6 +281,7 @@ This template is for updating the stack given the current stack and the byte we 
 template RewriteStack(n) {
     assert(n < 2**8);
     signal input stack[n][2];
+    signal input tree_hash[n];
     signal input read_write_value;
     signal input readStartBrace;
     signal input readStartBracket;
@@ -292,7 +290,13 @@ template RewriteStack(n) {
     signal input readColon;
     signal input readComma;
 
+    signal input parsing_string;
+    signal input next_parsing_string;
+    signal input next_parsing_number;
+    signal input byte;
+
     signal output next_stack[n][2];
+    signal output next_tree_hash[n];
 
     //--------------------------------------------------------------------------------------------//
     // * scan value on top of stack *
@@ -319,20 +323,33 @@ template RewriteStack(n) {
     signal nextPointer <== pointer + isPush - isPop;
     // // * set an indicator array for where we are pushing to or popping from*
     signal indicator[n];
+    signal tree_hash_indicator[n];
     for(var i = 0; i < n; i++) {
         indicator[i] <== IsZero()(pointer - isPop - readColon - readComma - i); // Note, pointer points to unallocated region!
+        tree_hash_indicator[i] <== IsZero()(pointer - i - 1); // Note, pointer points to unallocated region!
     }
     //--------------------------------------------------------------------------------------------//
 
     //--------------------------------------------------------------------------------------------//
-    // * loop to modify the stack by rebuilding it *
+    // Hash the next_* states to produce hash we need
+    signal state_hash <== IndexSelector(n)(tree_hash, pointer - 1);
+    signal not_to_hash <== IsZero()(parsing_string * next_parsing_string + next_parsing_number);
+    signal option_hash <== PoseidonChainer()([state_hash, current_value[0] + (2**8)*current_value[1] + (2**16)*byte]);
+    log("not_to_hash: ", not_to_hash);
+    signal next_state_hash <== not_to_hash * (state_hash - option_hash) + option_hash; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
+    //--------------------------------------------------------------------------------------------//
 
+    //--------------------------------------------------------------------------------------------//
+    // * loop to modify the stack and tree hash by rebuilding it *
     signal stack_change_value[2] <== [(isPush + isPop) * read_write_value, readColon + readCommaInArray - readCommaNotInArray];
     signal second_index_clear[n];
+    signal not_changed[n];
     for(var i = 0; i < n; i++) {
-        next_stack[i][0]         <== stack[i][0] + indicator[i] * stack_change_value[0];
-        second_index_clear[i]    <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
-        next_stack[i][1]         <== stack[i][1] + indicator[i] * (stack_change_value[1] - second_index_clear[i]);
+        next_stack[i][0]      <== stack[i][0] + indicator[i] * stack_change_value[0];
+        second_index_clear[i] <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
+        next_stack[i][1]      <== stack[i][1] + indicator[i] * (stack_change_value[1] - second_index_clear[i]);
+        not_changed[i]        <== tree_hash[i] * (1 - tree_hash_indicator[i]);
+        next_tree_hash[i]     <== not_changed[i] + tree_hash_indicator[i] * next_state_hash;
     }
     //--------------------------------------------------------------------------------------------//
 
@@ -341,4 +358,8 @@ template RewriteStack(n) {
     signal isUnderflowOrOverflow <== InRange(8)(pointer - isPop + isPush, [0,n]);
     isUnderflowOrOverflow        === 1;
     //--------------------------------------------------------------------------------------------//
+
+
+
+
 }
