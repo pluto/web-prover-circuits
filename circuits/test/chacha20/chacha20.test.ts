@@ -97,13 +97,13 @@ describe("chacha20", () => {
             const ciphertextBits = BytesToInput(ciphertextBytes)
             const plaintextBits = BytesToInput(plaintextBytes)
             const counterBits = uintArray32ToBits([counter])[0]
-			let w = await circuit.compute({
+			let w = await circuit.calculateWitness({
 				key: ketBits,
 				nonce: nonceBits,
 				counter: counterBits,
 				in: plaintextBits,
-			}, ["out"]);
-            console.log(w.out)
+			});
+            console.log(w.toLocaleString())
         });
     });
 });
