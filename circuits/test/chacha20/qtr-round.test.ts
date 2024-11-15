@@ -50,4 +50,90 @@ describe("chacha20", () => {
             const witness = await circuit.expectPass({ in: input }, { out: expected });
         });
     });
+
+    describe("2 block test", () => {
+        let circuit: WitnessTester<["key", "nonce", "counter", "in"], ["out"]>;
+        it("should perform encryption", async () => {
+            circuit = await circomkit.WitnessTester(`QR`, {
+                file: "chacha20/chacha20",
+                template: "ChaCha20",
+            });
+            // Test case from RCF https://www.rfc-editor.org/rfc/rfc7539.html#section-2.4.2
+            let keyBytes = Buffer.from(
+                [
+                    0x00, 0x01, 0x02, 0x03,
+                    0x04, 0x05, 0x06, 0x07,
+                    0x08, 0x09, 0x0a, 0x0b,
+                    0x0c, 0x0d, 0x0e, 0x0f,
+                    0x10, 0x11, 0x12, 0x13,
+                    0x14, 0x15, 0x16, 0x17,
+                    0x18, 0x19, 0x1a, 0x1b,
+                    0x1c, 0x1d, 0x1e, 0x1f
+                ]
+            );
+            let nonceBytes = Buffer.from(
+                [
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x4a,
+                    0x00, 0x00, 0x00, 0x00
+                ]
+            );
+            let counter = 1;
+            let plaintextBytes = Buffer.from(
+                [
+                    0x4c, 0x61, 0x64, 0x69, 0x65, 0x73, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x47, 0x65, 0x6e, 0x74, 0x6c,
+                    0x65, 0x6d, 0x65, 0x6e, 0x20, 0x6f, 0x66, 0x20, 0x74, 0x68, 0x65, 0x20, 0x63, 0x6c, 0x61, 0x73,
+                    0x73, 0x20, 0x6f, 0x66, 0x20, 0x27, 0x39, 0x39, 0x3a, 0x20, 0x49, 0x66, 0x20, 0x49, 0x20, 0x63,
+                    0x6f, 0x75, 0x6c, 0x64, 0x20, 0x6f, 0x66, 0x66, 0x65, 0x72, 0x20, 0x79, 0x6f, 0x75, 0x20, 0x6f,
+                ]);
+            
+            let ciphertextBytes =  Buffer.from(
+					[
+						0x6e, 0x2e, 0x35, 0x9a, 0x25, 0x68, 0xf9, 0x80, 0x41, 0xba, 0x07, 0x28, 0xdd, 0x0d, 0x69, 0x81,
+						0xe9, 0x7e, 0x7a, 0xec, 0x1d, 0x43, 0x60, 0xc2, 0x0a, 0x27, 0xaf, 0xcc, 0xfd, 0x9f, 0xae, 0x0b,
+						0xf9, 0x1b, 0x65, 0xc5, 0x52, 0x47, 0x33, 0xab, 0x8f, 0x59, 0x3d, 0xab, 0xcd, 0x62, 0xb3, 0x57,
+						0x16, 0x39, 0xd6, 0x24, 0xe6, 0x51, 0x52, 0xab, 0x8f, 0x53, 0x0c, 0x35, 0x9f, 0x08, 0x61, 0xd8
+					]
+				);
+            const ciphertextBits = uintArray32ToBits(toUint32Array(ciphertextBytes))
+            const plaintextBits = uintArray32ToBits(toUint32Array(plaintextBytes))
+            const counterBits = uintArray32ToBits([counter])[0]
+			const w = await circuit.expectPass({
+				key: uintArray32ToBits(toUint32Array(keyBytes)),
+				nonce: uintArray32ToBits(toUint32Array(nonceBytes)),
+				counter: counterBits,
+				in: plaintextBits,
+			}, { out: ciphertextBits });
+        });
+    });
 });
+
+export function toUint32Array(buf: Uint8Array) {
+	const arr = new Uint32Array(buf.length / 4)
+	const arrView = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
+	for(let i = 0;i < arr.length;i++) {
+		arr[i] = arrView.getUint32(i * 4, true)
+	}
+	return arr
+}
+
+export function uintArray32ToBits(uintArray: Uint32Array | number[]) {
+	const bits: number[][] = []
+	for (let i = 0; i < uintArray.length; i++) {
+		const uint = uintArray[i]
+		bits.push(numToBitsNumerical(uint))
+	}
+
+	return bits
+}
+
+function numToBitsNumerical(num: number, bitCount = 32) {
+	const bits: number[] = []
+	for(let i = 2 ** (bitCount - 1);i >= 1;i /= 2) {
+		const bit = num >= i ? 1 : 0
+		bits.push(bit)
+		num -= bit * i
+	}
+
+	return bits
+}
