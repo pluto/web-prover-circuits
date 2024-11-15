@@ -365,6 +365,7 @@ template RewriteStack(n) {
 
     //--------------------------------------------------------------------------------------------//
     // * scan value on top of stack *
+    // TODO: We do this outside rn
     // component topOfStack      = GetTopOfStack(n);
     // topOfStack.stack        <== stack;
     // signal pointer          <== topOfStack.pointer;
@@ -374,6 +375,12 @@ template RewriteStack(n) {
     component inArray         = IsEqual();
     inArray.in[0]           <== current_value[0];
     inArray.in[1]           <== 2;
+
+
+    // TODO: doing the same now for tree hasher
+    component topOfTreeHasher = GetTopOfStack(n);
+    topOfTreeHasher.stack <== tree_hasher;
+    signal tree_hasher_current_value[2] <== topOfTreeHasher.value;
     //--------------------------------------------------------------------------------------------//
 
     //--------------------------------------------------------------------------------------------//
@@ -384,16 +391,13 @@ template RewriteStack(n) {
 
     //--------------------------------------------------------------------------------------------//
     // * determine whether we are pushing or popping from the stack *
-    component isPush       = IsEqual();
-    isPush.in            <== [readStartBrace + readStartBracket, 1];
-    component isPop        = IsEqual();
-    isPop.in             <== [readEndBrace + readEndBracket, 1];
-    // * set an indicator array for where we are pushing to or popping from*
-    component indicator[n];
+    signal isPush      <== IsEqual()([readStartBrace + readStartBracket, 1]);
+    signal isPop       <== IsEqual()([readEndBrace + readEndBracket, 1]);
+    signal nextPointer <== pointer + isPush - isPop;
+    // // * set an indicator array for where we are pushing to or popping from*
+    signal indicator[n];
     for(var i = 0; i < n; i++) {
-        // Points
-        indicator[i]       = IsZero();
-        indicator[i].in  <== pointer - isPop.out - readColon - readComma - i; // Note, pointer points to unallocated region!
+        indicator[i] <== IsZero()(pointer - isPop - readColon - readComma - i); // Note, pointer points to unallocated region!
     }
     //--------------------------------------------------------------------------------------------//
 
@@ -401,29 +405,40 @@ template RewriteStack(n) {
      WriteToIndex here for both the stack and tree hasher. Much more ergonomic and can probably 
      replace a good amount of this.
     */
+    // signal stack0[n];
+    // signal stack1[n];
+    // for(var i = 0 ; i < n ; i++) {
+    //     stack0[i] <== stack[i][0];
+    //     stack1[i] <== stack[i][1];
+    // }
 
+    // signal stack0Change[2] <== [isPush * current_value[0], isPop * 0 + current_value[0]];
+    // signal newStack0[n] <== WriteToIndex(n, 2)(stack0, stack0Change, pointer);
+
+    // signal stack1Change[2] <== [isPush * current_value[1], isPop * 0 + current_value[1]];
+    // signal newStack1[n] <== WriteToIndex(n, 2)(stack1, stack1Change, pointer);
 
     //--------------------------------------------------------------------------------------------//
     // * loop to modify the stack by rebuilding it *
-    signal stack_change_value[2] <== [(isPush.out + isPop.out) * read_write_value, readColon + readCommaInArray - readCommaNotInArray];
-    signal second_index_clear[n];
-    for(var i = 0; i < n; i++) {
-        next_stack[i][0]         <== stack[i][0] + indicator[i].out * stack_change_value[0];
-        second_index_clear[i]    <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
-        next_stack[i][1]         <== stack[i][1] + indicator[i].out * (stack_change_value[1] - second_index_clear[i]);
 
-        next_tree_hasher[i][0]   <== tree_hasher[i][0] + indicator[i].out * (stack_change_value[0] + byte);
-        next_tree_hasher[i][1]   <== tree_hasher[i][1] + indicator[i].out;
+    signal stack_change_value[2] <== [(isPush + isPop) * read_write_value, readColon + readCommaInArray - readCommaNotInArray];
+    // signal tree_hash_change_value[2] <== [(isPush + isPop), readColon + readCommaInArray - readCommaNotInArray];
+    signal second_index_clear[n];
+    signal tree_hash_index_clear[2] <== [tree_hasher_current_value[0] * isPop, tree_hasher_current_value[1] * isPop];
+    signal tree_hash_index_add[2] <== [(isPush + isPop) * byte, (readColon + readCommaInArray - readCommaNotInArray) * byte];
+    for(var i = 0; i < n; i++) {
+        next_stack[i][0]         <== stack[i][0] + indicator[i] * stack_change_value[0];
+        second_index_clear[i]    <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
+        next_stack[i][1]         <== stack[i][1] + indicator[i] * (stack_change_value[1] - second_index_clear[i]);
+
+        next_tree_hasher[i][0]   <== tree_hasher[i][0] + indicator[i] * (tree_hash_index_add[0] - tree_hash_index_clear[0]);
+        next_tree_hasher[i][1]   <== tree_hasher[i][1] + indicator[i] * (tree_hash_index_add[1] - tree_hash_index_clear[1]);
     }
     //--------------------------------------------------------------------------------------------//
 
     //--------------------------------------------------------------------------------------------//
     // * check for under or overflow
-    component isUnderflowOrOverflow = InRange(8);
-    isUnderflowOrOverflow.in     <== pointer - isPop.out + isPush.out;
-    isUnderflowOrOverflow.range  <== [0,n];
-    isUnderflowOrOverflow.out    === 1;
+    signal isUnderflowOrOverflow <== InRange(8)(pointer - isPop + isPush, [0,n]);
+    isUnderflowOrOverflow        === 1;
     //--------------------------------------------------------------------------------------------//
-
-    signal output next_pointer <== pointer - isPop.out + isPush.out;
 }
