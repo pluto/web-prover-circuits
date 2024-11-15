@@ -1,4 +1,6 @@
-pragma circom 2.0.0;
+// initially from https://github.com/reclaimprotocol/zk-symmetric-crypto
+// modified for our needs
+pragma circom 2.1.9;
 
 include "./generics-bits.circom";
 
