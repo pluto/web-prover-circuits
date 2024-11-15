@@ -373,19 +373,20 @@ template RewriteStack(n) {
 
     signal still_parsing_string <== parsing_string * next_parsing_string;
     signal to_change_zeroth <== still_parsing_string * is_object_key;
+    signal end_kv <== readComma + readEndBrace;// TODO: This is true if we hit a comma or an end brace
+    signal end_hash0[n];
 
-    signal end_char_for_first <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
-    signal to_change_first <== end_char_for_first * (is_object_value + is_array);
+    signal not_end_char_for_first <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
+    signal to_change_first <== not_end_char_for_first * (is_object_value + is_array) + still_parsing_string;
     signal tree_hash_change_value[2] <== [to_change_zeroth * next_state_hash[0], to_change_first * next_state_hash[1]];
+
     for(var i = 0; i < n; i++) {
         next_stack[i][0]      <== stack[i][0] + indicator[i] * stack_change_value[0];
         second_index_clear[i] <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
         next_stack[i][1]      <== stack[i][1] + indicator[i] * (stack_change_value[1] - second_index_clear[i]);
 
-        // Tree hash
-        // not_changed[i][0]     <== tree_hash[i][0] * (1 - tree_hash_indicator[i][0]);
-        // not_changed[i][1]     <== tree_hash[i][1] * (1 - tree_hash_indicator[i][1]);
-        next_tree_hash[i][0]  <== tree_hash[i][0] + tree_hash_indicator[i][0] * (tree_hash_change_value[0] - tree_hash[i][0]);
+        end_hash0[i] <== tree_hash[i][0] * end_kv;
+        next_tree_hash[i][0]  <== tree_hash[i][0] + tree_hash_indicator[i][0] * (tree_hash_change_value[0] - end_hash0[i]);
         next_tree_hash[i][1]  <== tree_hash[i][1] + tree_hash_indicator[i][1] * (tree_hash_change_value[1] - tree_hash[i][1]);
     }
     //--------------------------------------------------------------------------------------------//
