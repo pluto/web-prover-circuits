@@ -98,3 +98,29 @@ return hexBytes.map(byte => {
     return n;
 });
 }
+
+export function hexToBits(hex: string): number[] {
+    if (hex.startsWith('0x')) {
+        hex = hex.slice(2);
+    }
+    const bits: number[] = [];
+    for (let i = 0; i < hex.length; i++) {
+        const nibble = parseInt(hex[i], 16);
+        for (let j = 3; j >= 0; j--) {
+            bits.push((nibble >> j) & 1);
+        }
+    }
+    return bits;
+}
+
+export function bitsToHex(bits: number[]): string {
+    let hex = '';
+    for (let i = 0; i < bits.length; i += 4) {
+        let nibble = 0;
+        for (let j = 0; j < 4; j++) {
+            nibble = (nibble << 1) | (bits[i + j] || 0);
+        }
+        hex += nibble.toString(16);
+    }
+    return hex;
+}
