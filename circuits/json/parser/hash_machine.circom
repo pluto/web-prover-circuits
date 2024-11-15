@@ -52,12 +52,12 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     signal input stack[MAX_STACK_HEIGHT][2];
     signal input parsing_string;
     signal input parsing_number;
-    signal input tree_hasher[MAX_STACK_HEIGHT];
+    signal input tree_hasher[MAX_STACK_HEIGHT][2];
 
     signal output next_stack[MAX_STACK_HEIGHT][2];
     signal output next_parsing_string;
     signal output next_parsing_number;
-    signal output next_tree_hasher[MAX_STACK_HEIGHT];
+    signal output next_tree_hasher[MAX_STACK_HEIGHT][2];
 
     component Command = Command();
 
@@ -144,6 +144,8 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     signal current_value[2] <== topOfStack.value;
     component newStack          = RewriteStack(MAX_STACK_HEIGHT);
     newStack.stack            <== stack;
+    newStack.tree_hasher      <== tree_hasher;
+    newStack.byte             <== byte;
     newStack.pointer          <== pointer;
     newStack.current_value    <== current_value;
     newStack.read_write_value <== mulMaskAndOut.out[0];
@@ -157,74 +159,74 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     next_stack                <== newStack.next_stack;
     next_parsing_string       <== parsing_string + mulMaskAndOut.out[1];
     next_parsing_number       <== parsing_number + mulMaskAndOut.out[2];
-    signal next_pointer       <== newStack.next_pointer;
+    next_tree_hasher          <== newStack.next_tree_hasher;
     //--------------------------------------------------------------------------------------------//
 
-    //--------------------------------------------------------------------------------------------//
-    // Get the next tree hasher state
-    /*
-        Idea: 
-        We basically want a hasher that only hashes the KVs in a tree structure, so we have it
-        store a hash array for the KV hash at a given depth. We will have to accumulate bytes
-        into the hasher state while reading a value, so ultimately we want to check the hash array
-        pointer changes right after we get a hash match on the key byte sequence.
+    // //--------------------------------------------------------------------------------------------//
+    // // Get the next tree hasher state
+    // /*
+    //     Idea: 
+    //     We basically want a hasher that only hashes the KVs in a tree structure, so we have it
+    //     store a hash array for the KV hash at a given depth. We will have to accumulate bytes
+    //     into the hasher state while reading a value, so ultimately we want to check the hash array
+    //     pointer changes right after we get a hash match on the key byte sequence.
 
-        To start, let's just get something that hashes into the array like a buffer.
-    */
-    // Get the next state hash
-    component packedState = GenericBytePackArray(4,1);
-    packedState.in <== [ [byte], [pointer], [current_value[0]], [current_value[1]] ];
-    signal state_hash      <== IndexSelector(MAX_STACK_HEIGHT)(tree_hasher, pointer - 1);
-    signal next_state_hash <== PoseidonChainer()([state_hash, packedState.out[0]]);
+    //     To start, let's just get something that hashes into the array like a buffer.
+    // */
+    // // Get the next state hash
+    // component packedState = GenericBytePackArray(4,1);
+    // packedState.in <== [ [byte], [pointer], [current_value[0]], [current_value[1]] ];
+    // signal state_hash      <== IndexSelector(MAX_STACK_HEIGHT)(tree_hasher, pointer - 1);
+    // signal next_state_hash <== PoseidonChainer()([state_hash, packedState.out[0]]);
 
-    // TODO: can probably output these from rewrite stack
-    // Now, use this to know how to modify the tree_hasher
-    signal is_push <== IsZero()(next_pointer - (pointer + 1));
-    signal is_pop <== IsZero()(next_pointer - (pointer - 1));
+    // // TODO: can probably output these from rewrite stack
+    // // Now, use this to know how to modify the tree_hasher
+    // signal is_push <== IsZero()(next_pointer - (pointer + 1));
+    // signal is_pop <== IsZero()(next_pointer - (pointer - 1));
 
 
-    // signal was_write <== parsing_number + parsing_string; // only write to slot if we are parsing a value type 
-    // signal is_next_write <== next_parsing_number + next_parsing_string; // only write to slot if we are parsing a value type
-    // signal is_write <== was_write * is_next_write;
+    // // signal was_write <== parsing_number + parsing_string; // only write to slot if we are parsing a value type 
+    // // signal is_next_write <== next_parsing_number + next_parsing_string; // only write to slot if we are parsing a value type
+    // // signal is_write <== was_write * is_next_write;
 
-    signal was_and_is_parsing_string <== parsing_string * next_parsing_string;
-    signal is_write <== was_and_is_parsing_string + next_parsing_number;
+    // signal was_and_is_parsing_string <== parsing_string * next_parsing_string;
+    // signal is_write <== was_and_is_parsing_string + next_parsing_number;
 
-    // signal what_to_write <== is_write * next_state_hash;
-    // signal where_to_write_at[MAX_STACK_HEIGHT];
-    // signal what_to_write_at[MAX_STACK_HEIGHT];
-    // for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++) {
-    //     what_to_write_at[i] <== what_to_write
-    // }
+    // // signal what_to_write <== is_write * next_state_hash;
+    // // signal where_to_write_at[MAX_STACK_HEIGHT];
+    // // signal what_to_write_at[MAX_STACK_HEIGHT];
+    // // for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++) {
+    // //     what_to_write_at[i] <== what_to_write
+    // // }
 
-    // for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++) {
-    //     next_tree_hasher[i] <== tree_hasher[i] * (1 - is_pop) + what_to_write_at[i]; // Rewrite the array, replacing at `i` 
-    // }
+    // // for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++) {
+    // //     next_tree_hasher[i] <== tree_hasher[i] * (1 - is_pop) + what_to_write_at[i]; // Rewrite the array, replacing at `i` 
+    // // }
     
-    signal stack_hashes[MAX_STACK_HEIGHT];
-    for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++){
-        stack_hashes[i] <== PoseidonChainer()(next_stack[i]);
-    }
-    // signal base_hashes[MAX_STACK_HEIGHT] <== ArrayAdd(MAX_STACK_HEIGHT)(stack_hashes, tree_hasher);
-    component writeTo = WriteToIndex(MAX_STACK_HEIGHT, 1);
-    writeTo.array_to_write_to <== stack_hashes;
-    /* 
-        IDEA:
-        if push, we write `[state_hash, 0]` at pointer
-        if pop, we write `[0,0]` at pointer
-        if neither, we write `[next_state_hash IF is_write ELSE 0, 0 ]
+    // signal stack_hashes[MAX_STACK_HEIGHT];
+    // for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++){
+    //     stack_hashes[i] <== PoseidonChainer()(next_stack[i]);
+    // }
+    // // signal base_hashes[MAX_STACK_HEIGHT] <== ArrayAdd(MAX_STACK_HEIGHT)(stack_hashes, tree_hasher);
+    // component writeTo = WriteToIndex(MAX_STACK_HEIGHT, 1);
+    // writeTo.array_to_write_to <== stack_hashes;
+    // /* 
+    //     IDEA:
+    //     if push, we write `[state_hash, 0]` at pointer
+    //     if pop, we write `[0,0]` at pointer
+    //     if neither, we write `[next_state_hash IF is_write ELSE 0, 0 ]
 
-    */
+    // */
     
-    signal to_write_if_is_write <== next_state_hash * is_write;
-    signal to_write_if_is_push  <== state_hash * is_push;
-    writeTo.array_to_write_at_index <== [to_write_if_is_write + to_write_if_is_push];
-    writeTo.index <== next_pointer;
-    next_tree_hasher <== writeTo.out;
+    // signal to_write_if_is_write <== next_state_hash * is_write;
+    // signal to_write_if_is_push  <== state_hash * is_push;
+    // writeTo.array_to_write_at_index <== [to_write_if_is_write + to_write_if_is_push];
+    // writeTo.index <== next_pointer;
+    // next_tree_hasher <== writeTo.out;
     log("--------------------------------");
-    log("state_hash:   ", state_hash);
-    log("pointer:      ", pointer);
-    log("next_pointer: ", next_pointer);
+    // log("state_hash:   ", state_hash);
+    // log("pointer:      ", pointer);
+    // log("next_pointer: ", next_pointer);
     log("byte:         ", byte);
     log("--------------------------------");
 }
@@ -344,8 +346,11 @@ This template is for updating the stack given the current stack and the byte we 
 template RewriteStack(n) {
     assert(n < 2**8);
     signal input stack[n][2];
+    signal input tree_hasher[n][2];
     signal input pointer;
     signal input current_value[2];
+
+    signal input byte;
 
     signal input read_write_value;
     signal input readStartBrace;
@@ -356,7 +361,7 @@ template RewriteStack(n) {
     signal input readComma;
 
     signal output next_stack[n][2];
-    signal output next_tree_hasher[n][2]
+    signal output next_tree_hasher[n][2];
 
     //--------------------------------------------------------------------------------------------//
     // * scan value on top of stack *
@@ -392,6 +397,12 @@ template RewriteStack(n) {
     }
     //--------------------------------------------------------------------------------------------//
 
+    /* TODO: Okay, for sake of simplicity, it would probably be much easier to just use the
+     WriteToIndex here for both the stack and tree hasher. Much more ergonomic and can probably 
+     replace a good amount of this.
+    */
+
+
     //--------------------------------------------------------------------------------------------//
     // * loop to modify the stack by rebuilding it *
     signal stack_change_value[2] <== [(isPush.out + isPop.out) * read_write_value, readColon + readCommaInArray - readCommaNotInArray];
@@ -400,6 +411,9 @@ template RewriteStack(n) {
         next_stack[i][0]         <== stack[i][0] + indicator[i].out * stack_change_value[0];
         second_index_clear[i]    <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
         next_stack[i][1]         <== stack[i][1] + indicator[i].out * (stack_change_value[1] - second_index_clear[i]);
+
+        next_tree_hasher[i][0]   <== tree_hasher[i][0] + indicator[i].out * (stack_change_value[0] + byte);
+        next_tree_hasher[i][1]   <== tree_hasher[i][1] + indicator[i].out;
     }
     //--------------------------------------------------------------------------------------------//
 
