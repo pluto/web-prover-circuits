@@ -22,7 +22,7 @@ describe("chacha20", () => {
                 hexToBits("0x4581472e"), 
                 hexToBits("0x5881c4bb")
             ];
-            const witness = await circuit.expectPass({ in: input }, { out: expected });
+            await circuit.expectPass({ in: input }, { out: expected });
         });
     });
 
@@ -110,6 +110,14 @@ describe("chacha20", () => {
 				counter: counterBits,
 				in: plaintextBits,
 			}, { out: ciphertextBits });
+
+            /// decryption since symmetric
+			const w2 = await circuit.expectPass({
+				key: uintArray32ToBits(toUint32Array(test.keyBytes)),
+				nonce: uintArray32ToBits(toUint32Array(test.nonceBytes)),
+				counter: counterBits,
+				in: ciphertextBits,
+			}, { out: plaintextBits });
         });
     });
 });
