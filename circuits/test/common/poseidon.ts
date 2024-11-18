@@ -99,3 +99,24 @@ export function DataHasher(input: number[]): bigint {
     // Return the last hash
     return hashes[Math.floor(input.length / 16)];
 }
+
+// takes in plaintext[n][32], packs each 32 bit word and hashes it.
+export function chacha20_packed_hash(Bytes: number[][]): bigint {
+    let hashes: bigint[] = [BigInt(0)];  // Initialize first hash as 0
+
+    for (let i = 0; i < Bytes.length; i++) {
+        let packedInput = BigInt(0);
+        for (let j = 0; j < 32; j++) {
+            packedInput += BigInt(Bytes[i][j]) * BigInt(Math.pow(2, j));
+        }
+        // Compute next hash using previous hash and packed input, but if packed input is zero, don't hash it.
+        if (packedInput == BigInt(0)) {
+            hashes.push(hashes[i]);
+        } else {
+            let hash = PoseidonModular([hashes[i], packedInput]);
+            hashes.push(hash);
+        }
+    }
+    // Return the last hash
+    return hashes[Bytes.length];
+}

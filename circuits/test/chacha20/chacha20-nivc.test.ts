@@ -1,18 +1,17 @@
 import { WitnessTester } from "circomkit";
-import { circomkit, bytesToBigInt, toUint32Array, uintArray32ToBits, bitsToBytes } from "../common";
-import { PoseidonModular } from "../common/poseidon";
+import { circomkit, toUint32Array, uintArray32ToBits } from "../common";
+import { chacha20_packed_hash } from "../common/poseidon";
 import { assert } from "chai";
 
 
 describe("chacha20-nivc", () => {
-    // this is failing right now
     describe("2 block test", () => {
         let circuit: WitnessTester<["key", "nonce", "counter", "plainText", "cipherText", "step_in"], ["step_out"]>;
         it("should perform encryption", async () => {
             circuit = await circomkit.WitnessTester(`ChaCha20`, {
                 file: "chacha20/nivc/chacha20_nivc",
                 template: "ChaCha20_NIVC",
-                params: [16] // number of 32-bit words in the key, 512 / 32 = 16
+                params: [16] // number of 32-bit words in the key, 32 * 16 = 512 bits
             });
             // Test case from RCF https://www.rfc-editor.org/rfc/rfc7539.html#section-2.4.2
             // the input encoding here is not the most intuitive. inputs are serialized as little endian. 
@@ -39,7 +38,6 @@ describe("chacha20-nivc", () => {
                     0x00, 0x00, 0x00, 0x00
                 ]
             ),
-            counter: 1,
             plaintextBytes: Buffer.from(
                 [
                     0x4c, 0x61, 0x64, 0x69, 0x65, 0x73, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x47, 0x65, 0x6e, 0x74, 0x6c,
@@ -58,7 +56,7 @@ describe("chacha20-nivc", () => {
             )}
             const ciphertextBits = uintArray32ToBits(toUint32Array(test.ciphertextBytes))
             const plaintextBits = uintArray32ToBits(toUint32Array(test.plaintextBytes))
-			const counterBits = uintArray32ToBits([test.counter])[0]
+			const counterBits = uintArray32ToBits([1])[0]
 			let w = await circuit.compute({
 				key: uintArray32ToBits(toUint32Array(test.keyBytes)),
 				nonce: uintArray32ToBits(toUint32Array(test.nonceBytes)),
@@ -67,28 +65,25 @@ describe("chacha20-nivc", () => {
                 plainText: plaintextBits,
                 step_in: 0
 			}, (["step_out"]));
-            assert.deepEqual(w.step_out, testing(uintArray32ToBits(toUint32Array(test.plaintextBytes))));
+            assert.deepEqual(w.step_out, chacha20_packed_hash(uintArray32ToBits(toUint32Array(test.plaintextBytes))));
         });
     });
 });
 
 
-function testing(Bytes: number[][]): bigint {
-    let hashes: bigint[] = [BigInt(0)];  // Initialize first hash as 0
-
-    for (let i = 0; i < Bytes.length; i++) {
-        let packedInput = BigInt(0);
-        for (let j = 0; j < 32; j++) {
-            packedInput += BigInt(Bytes[i][j]) * BigInt(Math.pow(2, j));
-        }
-        // Compute next hash using previous hash and packed input, but if packed input is zero, don't hash it.
-        if (packedInput == BigInt(0)) {
-            hashes.push(hashes[i]);
-        } else {
-            let hash = PoseidonModular([hashes[i], packedInput]);
-            hashes.push(hash);
-        }
-    }
-    // Return the last hash
-    return hashes[Bytes.length];
+export function toInput(bytes: Buffer) {
+    return uintArray32ToBits(toUint32Array(bytes))
 }
+
+export function fromInput(bits: number[]) {
+    const uint32Array = new Uint32Array(bits.length / 32);
+    for (let i = 0; i < uint32Array.length; i++) {
+        uint32Array[i] = parseInt(bits.slice(i * 32, (i + 1) * 32).join(''), 2);
+    }
+    const buffer = Buffer.alloc(uint32Array.length * 4);
+    for (let i = 0; i < uint32Array.length; i++) {
+        buffer.writeUInt32LE(uint32Array[i], i * 4);
+    }
+    return buffer;
+}
+
