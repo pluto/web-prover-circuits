@@ -212,3 +212,13 @@ export function numToBitsNumerical(num: number, bitCount = 32) {
 
 	return bits
 }
+
+export function bytesToBigInt(bytes: number[] | Uint8Array): bigint {
+    let result = BigInt(0);
+
+    for (let i = 0; i < 16; i++) {
+        result += BigInt(bytes[i]) * BigInt(2 ** (8 * i));
+    }
+
+    return result;
+}

@@ -4,7 +4,7 @@ pragma circom 2.1.9;
 
 include "./chacha-round.circom";
 include "./chacha-qr.circom";
-include "./generics-bits.circom";
+include "../utils/generics-bits.circom";
 
 /** ChaCha20 in counter mode */
 // Chacha20 opperates a 4x4 matrix of 32-bit words where the first 4 words are constants: C
@@ -27,10 +27,15 @@ template ChaCha20(N) {
 	signal input nonce[3][32];
 	// counter => 32-bit word to apply w nonce
 	signal input counter[32];
+
+	// the below can be both ciphertext or plaintext depending on the direction
 	// in => N 32-bit words => N 4 byte words
-	signal input in[N][32];
+	signal input plainText[N][32];
 	// out => N 32-bit words => N 4 byte words
-	signal output out[N][32];
+	signal input cipherText[N][32];
+
+	signal input step_in[1];
+	signal output step_out[1];
 
 	var tmp[16][32] = [
 		[

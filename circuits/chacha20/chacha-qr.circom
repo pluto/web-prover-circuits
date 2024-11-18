@@ -2,7 +2,7 @@
 // modified for our needs
 pragma circom 2.1.9;
 
-include "./generics-bits.circom";
+include "../utils/generics-bits.circom";
 
 /**
  * Perform ChaCha Quarter Round
