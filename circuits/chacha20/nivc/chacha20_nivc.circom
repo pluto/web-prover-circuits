@@ -2,9 +2,12 @@
 // modified for our needs
 pragma circom 2.1.9;
 
-include "./chacha-round.circom";
-include "./chacha-qr.circom";
-include "../utils/generics-bits.circom";
+include "../chacha-round.circom";
+include "../chacha-qr.circom";
+include "../../utils/generics-bits.circom";
+include "../../utils/hash.circom";
+include "../../utils/array.circom";
+
 
 /** ChaCha20 in counter mode */
 // Chacha20 opperates a 4x4 matrix of 32-bit words where the first 4 words are constants: C
@@ -17,10 +20,10 @@ include "../utils/generics-bits.circom";
 // +---+---+---+---+
 // | K | K | K | K |
 // +---+---+---+---+
-// | # | # | N | N |
+// | # | N | N | N |
 // +---+---+---+---+
 // paramaterized by n which is the number of 32-bit words to encrypt
-template ChaCha20(N) {
+template ChaCha20_NIVC(N) {
 	// key => 8 32-bit words = 32 bytes
 	signal input key[8][32];
 	// nonce => 3 32-bit words = 12 bytes
@@ -30,9 +33,12 @@ template ChaCha20(N) {
 
 	// the below can be both ciphertext or plaintext depending on the direction
 	// in => N 32-bit words => N 4 byte words
-	signal input in[N][32];
+	signal input plainText[N][32];
 	// out => N 32-bit words => N 4 byte words
-	signal output out[N][32];
+	signal input cipherText[N][32];
+
+	signal input step_in[1];
+	signal output step_out[1];
 
 	var tmp[16][32] = [
 		[
@@ -81,9 +87,12 @@ template ChaCha20(N) {
 	var j = 0;
 
 	// do the ChaCha20 rounds
+    // rounds opperates on 4 words at a time
 	component rounds[N/16];
 	component xors[N];
 	component counter_adder[N/16 - 1];
+
+    signal computedCipherText[N][32];
 
 	for(i = 0; i < N/16; i++) {
 		rounds[i] = Round();
@@ -91,9 +100,9 @@ template ChaCha20(N) {
 		// XOR block with input
 		for(j = 0; j < 16; j++) {
 			xors[i*16 + j] = XorBits(32);
-			xors[i*16 + j].a <== in[i*16 + j];
+			xors[i*16 + j].a <== plainText[i*16 + j];
 			xors[i*16 + j].b <== rounds[i].out[j];
-			out[i*16 + j] <== xors[i*16 + j].out;
+			computedCipherText[i*16 + j] <== xors[i*16 + j].out;
 		}
 
 		if(i < N/16 - 1) {
@@ -105,4 +114,27 @@ template ChaCha20(N) {
 			tmp[12] = counter_adder[i].out;
 		}
 	}
+
+	signal ciphertext_equal_check[N][32];
+    for(var i = 0 ; i < N; i++) {
+        for(var j = 0 ; j < 32 ; j++) {
+            ciphertext_equal_check[i][j] <== IsEqual()([computedCipherText[i][j], cipherText[i][j]]);
+            ciphertext_equal_check[i][j] === 1;
+        }
+    }
+
+    var packedPlaintext[N];  // Each element will be a 32-bit word
+    for(var i = 0; i < N; i++) {
+        packedPlaintext[i] = 0;
+        for(var j = 0; j < 32; j++) {  // Loop through all 32 bits
+            packedPlaintext[i] += plainText[i][j] * 2**j;  // Now we shift by single bits
+        }
+    }
+
+    signal hash[N];
+    hash[0] <== PoseidonChainer()([step_in[0], packedPlaintext[0]]);
+    for(var i = 1 ; i < N ; i++) {
+        hash[i] <== PoseidonChainer()([hash[i-1], packedPlaintext[i]]);
+    }
+    step_out[0] <== hash[N-1];
 }

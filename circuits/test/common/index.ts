@@ -125,6 +125,18 @@ export function bitsToHex(bits: number[]): string {
     return hex;
 }
 
+export function bitsToBytes(bits: number[]): number[] {
+    const bytes: number[] = [];
+    for (let i = 0; i < bits.length; i += 8) {
+        let byte = 0;
+        for (let j = 0; j < 8; j++) {
+            byte = (byte << 1) | (bits[i + j] || 0);
+        }
+        bytes.push(byte);
+    }
+    return bytes;
+}
+
 export function BytesToInput(bytes: number[]): number[] {
     const output: number[][] = [];
     let counter = 1;
