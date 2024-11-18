@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { circomkit, WitnessTester, toByte, uintArray32ToBits, toUint32Array } from "../common";
-import { DataHasher, chacha20_packed_hash } from "../common/poseidon";
+import { DataHasher } from "../common/poseidon";
 import { toInput } from "../chacha20/chacha20-nivc.test";
 import { buffer } from "stream/consumers";
 
