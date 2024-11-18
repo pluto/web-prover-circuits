@@ -1,7 +1,8 @@
 import { assert } from "chai";
-import { circomkit, WitnessTester, toByte, uintArray32ToBits } from "../common";
+import { circomkit, WitnessTester, toByte, uintArray32ToBits, toUint32Array } from "../common";
 import { DataHasher, chacha20_packed_hash } from "../common/poseidon";
 import { toInput } from "../chacha20/chacha20-nivc.test";
+import { buffer } from "stream/consumers";
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
@@ -264,10 +265,9 @@ describe("NIVC_FULL", async () => {
         const ctIn = toInput(Buffer.from(http_response_ciphertext));
         const keyIn = toInput(Buffer.from(Array(32).fill(0)));
         const nonceIn = toInput(Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00]));
-
         let chacha20 = await chacha20Circuit.compute({ key: keyIn, nonce: nonceIn, counter: counterBits, plainText: ptIn, cipherText: ctIn, step_in: init_nivc_input }, ["step_out"]);
         console.log("ChaCha20 `step_out`:", chacha20.step_out);
-        assert.deepEqual(chacha20_packed_hash(ptIn), chacha20.step_out);
+        assert.deepEqual(DataHasher(http_response_plaintext), chacha20.step_out);
 
         let http = await httpCircuit.compute({ step_in: chacha20.step_out, data: http_response_plaintext, start_line_hash: http_start_line_hash, header_hashes: [http_header_0_hash, http_header_1_hash], body_hash: http_body_mask_hash }, ["step_out"]);
         console.log("HttpNIVC `step_out`:", http.step_out);
@@ -375,7 +375,7 @@ describe("NIVC_FULL_2", async () => {
 
         let chacha20 = await chacha20Circuit.compute({ key: keyIn, nonce: nonceIn, counter: counterBits, plainText: ptIn, cipherText: ctIn, step_in: init_nivc_input }, ["step_out"]);
         console.log("ChaCha20 `step_out`:", chacha20.step_out);
-        assert.deepEqual(chacha20_packed_hash(ptIn), chacha20.step_out);
+        assert.deepEqual(DataHasher(http_response_plaintext), chacha20.step_out);
 
         let http = await httpCircuit.compute({ step_in: chacha20.step_out, data: http_response_plaintext, start_line_hash: http_start_line_hash, header_hashes: [http_header_0_hash, http_header_1_hash], body_hash: http_body_mask_hash }, ["step_out"]);
         console.log("HttpNIVC `step_out`:", http.step_out);

@@ -123,18 +123,17 @@ template ChaCha20_NIVC(N) {
         }
     }
 
-    var packedPlaintext[N];  // Each element will be a 32-bit word
-    for(var i = 0; i < N; i++) {
-        packedPlaintext[i] = 0;
-        for(var j = 0; j < 32; j++) {  // Loop through all 32 bits
-            packedPlaintext[i] += plainText[i][j] * 2**j;  // Now we shift by single bits
+    component toBytes[N];
+    signal bigEndianPlaintext[N*4];
+    for(var i = 0 ; i < N; i++) {
+        toBytes[i] = fromLittleEndianToWords32();
+        for(var j = 0 ; j < 32 ; j++) {
+            toBytes[i].data[j] <== plainText[i][j];
+        }
+        for(var j = 0; j < 4; j++) {
+            bigEndianPlaintext[i*4 + j] <== toBytes[i].words[j];
         }
     }
-
-    signal hash[N];
-    hash[0] <== PoseidonChainer()([step_in[0], packedPlaintext[0]]);
-    for(var i = 1 ; i < N ; i++) {
-        hash[i] <== PoseidonChainer()([hash[i-1], packedPlaintext[i]]);
-    }
-    step_out[0] <== hash[N-1];
+    signal data_hash <== DataHasher(N*4)(bigEndianPlaintext);
+    step_out[0] <== data_hash;
 }

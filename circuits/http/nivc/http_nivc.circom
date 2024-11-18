@@ -10,9 +10,8 @@ template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
 
     // Authenticate the plaintext we are passing in
     signal input data[DATA_BYTES];
-    // TODO(WJ 2024-11-18): FIX AUTHENTICATION
-    // signal data_hash <== ChaCha20DataHasher(DATA_BYTES)(data);
-    // data_hash        === step_in[0];
+    signal data_hash <== DataHasher(DATA_BYTES)(data);
+    data_hash        === step_in[0];
 
     signal input start_line_hash;
     signal input header_hashes[MAX_NUMBER_OF_HEADERS];

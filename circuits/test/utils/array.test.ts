@@ -462,3 +462,24 @@ describe("ToBlocks", () => {
       );
     });
   });
+
+
+describe("fromLittleEndianToWords32", () => {
+  let circuit: WitnessTester<["data"], ["words"]>;
+    it("fromLittleEndianToWords32", async () => {
+        circuit = await circomkit.WitnessTester(`fromLittleEndianToWords32`, {
+        file: "utils/array",
+        template: "fromLittleEndianToWords32",
+      });
+    console.log("#constraints:", await circuit.getConstraintCount());
+
+    let input = [
+      0, 1, 0, 1, 0, 0, 0, 0, 0,
+      1, 0, 1, 0, 1, 0, 0, 0, 1,
+      0, 1, 0, 1, 0, 0, 0, 1, 0,
+      0, 1, 0, 0, 0
+    ];
+    await circuit.expectPass({data: input}, {words: [72, 84, 84, 80]})
+  });
+});
+
