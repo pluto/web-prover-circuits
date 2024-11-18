@@ -1,6 +1,5 @@
 import { WitnessTester } from "circomkit";
-import { circomkit, hexToBits, bitsToHex } from "../common";
-import { assert } from "chai";
+import { circomkit, hexToBits, toUint32Array, uintArray32ToBits } from "../common";
 
 describe("chacha20", () => {
     describe("qtr-round", () => {
@@ -47,7 +46,7 @@ describe("chacha20", () => {
                 hexToBits("466482d2"),  hexToBits("09aa9f07"),  hexToBits("05d7c214"),  hexToBits("a2028bd9"),
                 hexToBits("d19c12b5"),  hexToBits("b94e16de"),  hexToBits("e883d0cb"),  hexToBits("4e3c50a2")
             ];
-            const witness = await circuit.expectPass({ in: input }, { out: expected });
+            await circuit.expectPass({ in: input }, { out: expected });
         });
     });
 
@@ -61,95 +60,56 @@ describe("chacha20", () => {
                 params: [16] // number of 32-bit words in the key, 512 / 32 = 16
             });
             // Test case from RCF https://www.rfc-editor.org/rfc/rfc7539.html#section-2.4.2
-            let keyBytes = [
-                0x00, 0x01, 0x02, 0x03,
-                0x04, 0x05, 0x06, 0x07,
-                0x08, 0x09, 0x0a, 0x0b,
-                0x0c, 0x0d, 0x0e, 0x0f,
-                0x10, 0x11, 0x12, 0x13,
-                0x14, 0x15, 0x16, 0x17,
-                0x18, 0x19, 0x1a, 0x1b,
-                0x1c, 0x1d, 0x1e, 0x1f
-            ];
-            let nonceBytes = [
-                0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x4a,
-                0x00, 0x00, 0x00, 0x00
-            ]; 
-
-            let counter = 1;
-            let plaintextBytes =[
-                0x4c, 0x61, 0x64, 0x69, 0x65, 0x73, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x47, 0x65, 0x6e, 0x74, 0x6c,
-                0x65, 0x6d, 0x65, 0x6e, 0x20, 0x6f, 0x66, 0x20, 0x74, 0x68, 0x65, 0x20, 0x63, 0x6c, 0x61, 0x73,
-                0x73, 0x20, 0x6f, 0x66, 0x20, 0x27, 0x39, 0x39, 0x3a, 0x20, 0x49, 0x66, 0x20, 0x49, 0x20, 0x63,
-                0x6f, 0x75, 0x6c, 0x64, 0x20, 0x6f, 0x66, 0x66, 0x65, 0x72, 0x20, 0x79, 0x6f, 0x75, 0x20, 0x6f,
-            ];
-
-            
-            let ciphertextBytes = [
-                0x6e, 0x2e, 0x35, 0x9a, 0x25, 0x68, 0xf9, 0x80, 0x41, 0xba, 0x07, 0x28, 0xdd, 0x0d, 0x69, 0x81,
-                0xe9, 0x7e, 0x7a, 0xec, 0x1d, 0x43, 0x60, 0xc2, 0x0a, 0x27, 0xaf, 0xcc, 0xfd, 0x9f, 0xae, 0x0b,
-                0xf9, 0x1b, 0x65, 0xc5, 0x52, 0x47, 0x33, 0xab, 0x8f, 0x59, 0x3d, 0xab, 0xcd, 0x62, 0xb3, 0x57,
-                0x16, 0x39, 0xd6, 0x24, 0xe6, 0x51, 0x52, 0xab, 0x8f, 0x53, 0x0c, 0x35, 0x9f, 0x08, 0x61, 0xd8
-            ];
-            const ketBits = hexArrayToBits(keyBytes)
-            const nonceBits = hexArrayToBits(nonceBytes)
-            const ciphertextBits = BytesToInput(ciphertextBytes)
-            const plaintextBits = BytesToInput(plaintextBytes)
-            const counterBits = uintArray32ToBits([counter])[0]
-			let w = await circuit.calculateWitness({
-				key: ketBits,
-				nonce: nonceBits,
+            // the input encoding here is not the most intuitive. inputs are serialized as little endian. 
+            // i.e. "e4e7f110" is serialized as "10 f1 e7 e4". So the way i am reading in inputs is
+            // to ensure that every 32 bit word is byte reversed before being turned into bits. 
+            // i think this should be easy when we compute witness in rust.
+            let test = {
+            keyBytes: Buffer.from(
+                [
+                    0x00, 0x01, 0x02, 0x03,
+                    0x04, 0x05, 0x06, 0x07,
+                    0x08, 0x09, 0x0a, 0x0b,
+                    0x0c, 0x0d, 0x0e, 0x0f,
+                    0x10, 0x11, 0x12, 0x13,
+                    0x14, 0x15, 0x16, 0x17,
+                    0x18, 0x19, 0x1a, 0x1b,
+                    0x1c, 0x1d, 0x1e, 0x1f
+                ]
+            ),
+            nonceBytes: Buffer.from(
+                [
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x4a,
+                    0x00, 0x00, 0x00, 0x00
+                ]
+            ),
+            counter: 1,
+            plaintextBytes: Buffer.from(
+                [
+                    0x4c, 0x61, 0x64, 0x69, 0x65, 0x73, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x47, 0x65, 0x6e, 0x74, 0x6c,
+                    0x65, 0x6d, 0x65, 0x6e, 0x20, 0x6f, 0x66, 0x20, 0x74, 0x68, 0x65, 0x20, 0x63, 0x6c, 0x61, 0x73,
+                    0x73, 0x20, 0x6f, 0x66, 0x20, 0x27, 0x39, 0x39, 0x3a, 0x20, 0x49, 0x66, 0x20, 0x49, 0x20, 0x63,
+                    0x6f, 0x75, 0x6c, 0x64, 0x20, 0x6f, 0x66, 0x66, 0x65, 0x72, 0x20, 0x79, 0x6f, 0x75, 0x20, 0x6f,
+                ]
+            ),
+            ciphertextBytes: Buffer.from(
+                [
+                    0x6e, 0x2e, 0x35, 0x9a, 0x25, 0x68, 0xf9, 0x80, 0x41, 0xba, 0x07, 0x28, 0xdd, 0x0d, 0x69, 0x81,
+                    0xe9, 0x7e, 0x7a, 0xec, 0x1d, 0x43, 0x60, 0xc2, 0x0a, 0x27, 0xaf, 0xcc, 0xfd, 0x9f, 0xae, 0x0b,
+                    0xf9, 0x1b, 0x65, 0xc5, 0x52, 0x47, 0x33, 0xab, 0x8f, 0x59, 0x3d, 0xab, 0xcd, 0x62, 0xb3, 0x57,
+                    0x16, 0x39, 0xd6, 0x24, 0xe6, 0x51, 0x52, 0xab, 0x8f, 0x53, 0x0c, 0x35, 0x9f, 0x08, 0x61, 0xd8
+                ]
+            )}
+            const ciphertextBits = uintArray32ToBits(toUint32Array(test.ciphertextBytes))
+            const plaintextBits = uintArray32ToBits(toUint32Array(test.plaintextBytes))
+			const counterBits = uintArray32ToBits([test.counter])[0]
+			await circuit.expectPass({
+				key: uintArray32ToBits(toUint32Array(test.keyBytes)),
+				nonce: uintArray32ToBits(toUint32Array(test.nonceBytes)),
 				counter: counterBits,
 				in: plaintextBits,
-			});
-            console.log(w.toLocaleString())
+			}, { out: ciphertextBits });
         });
     });
 });
-
-export function BytesToInput(bytes: number[]): number[] {
-    const output: number[][] = [];
-    let counter = 1;
-    let bits: number[] = [];
-    for (const byte of bytes) {
-        for (let i = 7; i >= 0; i--) {
-            bits.push((byte >> i) & 1);
-        }
-        if (counter % 4 == 0) {
-            output.push(bits);
-            bits = [];
-        }
-
-    }
-    return bits;
-}
-export function hexArrayToBits(bytes: number[]): number[] {
-    const bits: number[] = [];
-    for (const byte of bytes) {
-        for (let i = 7; i >= 0; i--) {
-            bits.push((byte >> i) & 1);
-        }
-    }
-    return bits;
-}
-
-export function uintArray32ToBits(uintArray: Uint32Array | number[]) {
-	const bits: number[][] = []
-	for (let i = 0; i < uintArray.length; i++) {
-		const uint = uintArray[i]
-		bits.push(numToBitsNumerical(uint))
-	}
-
-	return bits
-}
-function numToBitsNumerical(num: number, bitCount = 32) {
-	const bits: number[] = []
-	for(let i = 2 ** (bitCount - 1);i >= 1;i /= 2) {
-		const bit = num >= i ? 1 : 0
-		bits.push(bit)
-		num -= bit * i
-	}
-
-	return bits
-}
