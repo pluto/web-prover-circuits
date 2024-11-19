@@ -1,7 +1,17 @@
 import { assert } from "chai";
 import { WitnessTester } from "circomkit";
-import { circomkit, bytesToBigInt } from "../../common";
+import { circomkit } from "../../common";
 import { PoseidonModular } from "../../common/poseidon";
+
+function bytesToBigInt(bytes: number[] | Uint8Array): bigint {
+    let result = BigInt(0);
+
+    for (let i = 0; i < 16; i++) {
+        result += BigInt(bytes[i]) * BigInt(2 ** (8 * i));
+    }
+
+    return result;
+}
 
 describe("aes-gctr-nivc", () => {
     let circuit_one_block: WitnessTester<["key", "iv", "plainText", "aad", "ctr", "cipherText", "step_in"], ["step_out"]>;
