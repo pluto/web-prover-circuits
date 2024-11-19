@@ -512,3 +512,24 @@ template IncrementWord() {
         }
     }
 }
+
+// // from little endian to 32 bit words
+// // example:   
+//   0, 1, 0, 1, 0, 0, 0, 0, => 80
+//   0, 1, 0, 1, 0, 1, 0, 0, => 84
+//   0, 1, 0, 1, 0, 1, 0, 0, => 84
+//   0, 1, 0, 0, 1, 0, 0, 0, => 72 // getting ten here
+// shoud be encoded as
+// 72, 84, 84, 80
+template fromLittleEndianToWords32() {
+    signal input data[32];
+    signal output words[4];
+    component Bits2Num[4];
+    for(var i = 3; i >= 0; i--) {
+        Bits2Num[i] = Bits2Num(8);
+        for(var j = 7; j >= 0; j--) {
+            Bits2Num[i].in[7-j] <== data[i*8 + j];
+        }
+        words[3-i] <== Bits2Num[i].out;
+    }
+}
