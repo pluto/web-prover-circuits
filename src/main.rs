@@ -25,13 +25,13 @@ fn read_binary_file(path: &Path) -> Result<Vec<u8>> {
     fs::read(path).with_context(|| format!("Failed to read file: {}", path.display()))
 }
 
-fn load_circuit_files(base_path: &Path, target_size: &str) -> Result<Vec<CircuitFiles>> {
+fn load_circuit_files(artifacts_dir: &Path, target_size: &str) -> Result<Vec<CircuitFiles>> {
     BASE_CIRCUIT_NAMES
         .iter()
         .map(|name| {
             let circuit_name = format!("{}_{}", name, target_size);
-            let r1cs_path = base_path.join(format!("{}.r1cs", circuit_name));
-            let graph_path = base_path.join(format!("{}.graph", circuit_name));
+            let r1cs_path = artifacts_dir.join(format!("{}.r1cs", circuit_name));
+            let graph_path = artifacts_dir.join(format!("{}.graph", circuit_name));
 
             // Verify files exist before proceeding
             if !r1cs_path.exists() {
@@ -49,10 +49,14 @@ fn load_circuit_files(base_path: &Path, target_size: &str) -> Result<Vec<Circuit
         .collect()
 }
 
-fn process_target_size(builds_dir: &Path, target_size: &str) -> Result<()> {
-    let artifacts_dir = builds_dir
-        .join(format!("target_{}", target_size))
-        .join("artifacts");
+fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() != 3 {
+        anyhow::bail!("Usage: {} <artifacts_directory> <target_size>", args[0]);
+    }
+
+    let artifacts_dir = PathBuf::from(&args[1]);
+    let target_size = &args[2];
 
     println!("Processing circuits for target size: {}", target_size);
     println!("Loading circuit files from: {}", artifacts_dir.display());
@@ -98,23 +102,5 @@ fn process_target_size(builds_dir: &Path, target_size: &str) -> Result<()> {
         "Successfully completed setup for target size: {}",
         target_size
     );
-    Ok(())
-}
-
-fn main() -> Result<()> {
-    let args: Vec<String> = std::env::args().collect();
-    let builds_dir = args
-        .get(1)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("builds"));
-
-    // Process each target size
-    for target_size in &["512b", "1024b"] {
-        if let Err(e) = process_target_size(&builds_dir, target_size) {
-            eprintln!("Error processing target size {}: {}", target_size, e);
-            return Err(e);
-        }
-    }
-
     Ok(())
 }
