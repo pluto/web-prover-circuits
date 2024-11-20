@@ -17,7 +17,7 @@ include "../utils/generics-bits.circom";
 // +---+---+---+---+
 // | K | K | K | K |
 // +---+---+---+---+
-// | # | # | N | N |
+// | # | N | N | N |
 // +---+---+---+---+
 // paramaterized by n which is the number of 32-bit words to encrypt
 template ChaCha20(N) {
