@@ -21,6 +21,8 @@ const BASE_CIRCUIT_NAMES: &[&str] = &[
     "json_mask_object",
 ];
 
+const MAX_ROM_LENGTH: usize = 45;
+
 fn read_binary_file(path: &Path) -> Result<Vec<u8>> {
     fs::read(path).with_context(|| format!("Failed to read file: {}", path.display()))
 }
@@ -68,7 +70,7 @@ fn main() -> Result<()> {
             .iter()
             .map(|cf| {
                 let data = read_binary_file(&cf.r1cs_path)?;
-                Ok(R1CSType::Raw(data))
+                Ok(program::data::R1CSType::Raw(data))
             })
             .collect::<Result<Vec<_>>>()?,
 
@@ -76,11 +78,11 @@ fn main() -> Result<()> {
             .iter()
             .map(|cf| {
                 let data = read_binary_file(&cf.graph_path)?;
-                Ok(WitnessGeneratorType::Raw(data))
+                Ok(program::data::WitnessGeneratorType::Raw(data))
             })
             .collect::<Result<Vec<_>>>()?,
 
-        max_rom_length: JSON_MAX_ROM_LENGTH,
+        max_rom_length: MAX_ROM_LENGTH,
     };
 
     println!("Generating public parameters...");
