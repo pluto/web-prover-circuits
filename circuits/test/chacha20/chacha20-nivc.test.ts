@@ -5,7 +5,7 @@ import { assert } from "chai";
 
 
 describe("chacha20-nivc", () => {
-    describe("2 block test", () => {
+    describe("16 block test", () => {
         let circuit: WitnessTester<["key", "nonce", "counter", "plainText", "cipherText", "step_in"], ["step_out"]>;
         it("should perform encryption", async () => {
             circuit = await circomkit.WitnessTester(`ChaCha20`, {
