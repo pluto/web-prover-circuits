@@ -33,29 +33,47 @@ template AESGCTRFOLD(NUM_CHUNKS) {
         aes[i].aad         <== aad;
     }
 
-    signal ciphertext_equal_check[NUM_CHUNKS][16];
-    for(var i = 0 ; i < NUM_CHUNKS; i++) {
-        for(var j = 0 ; j < 16 ; j++) {
-            ciphertext_equal_check[i][j] <== IsEqual()([aes[i].cipherText[j], cipherText[i][j]]);
-            ciphertext_equal_check[i][j] === 1;
-        }
+    // Regroup the plaintext and ciphertext into byte packed form
+    var computedCipherText[NUM_CHUNKS][16];
+    for(var i = 0 ; i < NUM_CHUNKS ; i++) {
+        computedCipherText[i] = aes[i].cipherText;
     }
+    signal packedCiphertext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(cipherText);
+    signal packedComputedCiphertext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(computedCipherText);
+    signal packedPlaintext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(plainText);
 
-    
-    var packedPlaintext[NUM_CHUNKS];
-    for(var i = 0 ; i < NUM_CHUNKS ; i++) {
-        packedPlaintext[i] = 0;
-        for(var j = 0 ; j < 16 ; j++) {
-            packedPlaintext[i] += plainText[i][j] * 2**(8*j);
-        }
+    signal plaintext_input_was_zero_chunk[NUM_CHUNKS];
+    signal ciphertext_input_was_zero_chunk[NUM_CHUNKS];
+    signal both_input_chunks_were_zero[NUM_CHUNKS];
+    signal ciphertext_option[NUM_CHUNKS];
+    signal ciphertext_equal_check[NUM_CHUNKS];
+    for(var i = 0 ; i < NUM_CHUNKS; i++) {
+            plaintext_input_was_zero_chunk[i] <== IsZero()(packedPlaintext[i]);   
+            ciphertext_input_was_zero_chunk[i] <== IsZero()(packedCiphertext[i]);
+            both_input_chunks_were_zero[i] <== plaintext_input_was_zero_chunk[i] * ciphertext_input_was_zero_chunk[i];
+            ciphertext_option[i] <== (1 - both_input_chunks_were_zero[i]) * packedComputedCiphertext[i];
+            ciphertext_equal_check[i] <== IsEqual()([packedCiphertext[i], ciphertext_option[i]]);
+            ciphertext_equal_check[i] === 1;
     }
-    signal hash[NUM_CHUNKS];
+    step_out[0] <== AESHasher(NUM_CHUNKS)(packedPlaintext, step_in[0]);
+}
+
+// TODO (autoparallel): Could probably just have datahasher take in an initial hash as an input, but this was quicker to try first.
+template AESHasher(NUM_CHUNKS) {
+    // TODO: add this assert back after witnesscalc supports
+    // assert(DATA_BYTES % 16 == 0);
+    signal input in[NUM_CHUNKS];
+    signal input initial_hash;
+    signal output out;
+
+    signal not_to_hash[NUM_CHUNKS];
+    signal option_hash[NUM_CHUNKS];
+    signal hashes[NUM_CHUNKS + 1];
+    hashes[0] <== initial_hash;
     for(var i = 0 ; i < NUM_CHUNKS ; i++) {
-        if(i == 0) {
-            hash[i] <== PoseidonChainer()([step_in[0],packedPlaintext[i]]);
-        } else {
-            hash[i] <== PoseidonChainer()([hash[i-1], packedPlaintext[i]]);
-        }
+        not_to_hash[i] <== IsZero()(in[i]);
+        option_hash[i] <== PoseidonChainer()([hashes[i],in[i]]);
+        hashes[i+1]    <== not_to_hash[i] * (hashes[i] - option_hash[i]) + option_hash[i]; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
     }
-    step_out[0] <== hash[NUM_CHUNKS - 1];
+    out <== hashes[NUM_CHUNKS];
 }
