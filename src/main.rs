@@ -21,9 +21,7 @@ const BASE_CIRCUIT_NAMES: &[&str] = &[
     "json_mask_object",
 ];
 
-const MAX_ROM_LENGTH: usize = 45;
-
-fn read_binary_file(path: &Path) -> Result<Vec<u8>> {
+fn read_file(path: &Path) -> Result<Vec<u8>> {
     fs::read(path).with_context(|| format!("Failed to read file: {}", path.display()))
 }
 
@@ -33,7 +31,7 @@ fn load_circuit_files(artifacts_dir: &Path, target_size: &str) -> Result<Vec<Cir
         .map(|name| {
             let circuit_name = format!("{}_{}", name, target_size);
             let r1cs_path = artifacts_dir.join(format!("{}.r1cs", circuit_name));
-            let graph_path = artifacts_dir.join(format!("{}.graph", circuit_name));
+            let graph_path = artifacts_dir.join(format!("{}.bin", circuit_name));
 
             // Verify files exist before proceeding
             if !r1cs_path.exists() {
@@ -53,15 +51,22 @@ fn load_circuit_files(artifacts_dir: &Path, target_size: &str) -> Result<Vec<Cir
 
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
-    if args.len() != 3 {
-        anyhow::bail!("Usage: {} <artifacts_directory> <target_size>", args[0]);
+    if args.len() != 4 {
+        anyhow::bail!(
+            "Usage: {} <artifacts_directory> <target_size> <max_rom_length>",
+            args[0]
+        );
     }
 
     let artifacts_dir = PathBuf::from(&args[1]);
     let target_size = &args[2];
+    let max_rom_length = args[3]
+        .parse()
+        .context("Failed to parse max_rom_length as number")?;
 
     println!("Processing circuits for target size: {}", target_size);
     println!("Loading circuit files from: {}", artifacts_dir.display());
+    println!("Using max ROM length: {}", max_rom_length);
 
     let circuit_files = load_circuit_files(&artifacts_dir, target_size)?;
 
@@ -69,7 +74,7 @@ fn main() -> Result<()> {
         r1cs_types: circuit_files
             .iter()
             .map(|cf| {
-                let data = read_binary_file(&cf.r1cs_path)?;
+                let data = read_file(&cf.r1cs_path)?;
                 Ok(program::data::R1CSType::Raw(data))
             })
             .collect::<Result<Vec<_>>>()?,
@@ -77,12 +82,12 @@ fn main() -> Result<()> {
         witness_generator_types: circuit_files
             .iter()
             .map(|cf| {
-                let data = read_binary_file(&cf.graph_path)?;
+                let data = read_file(&cf.graph_path)?;
                 Ok(program::data::WitnessGeneratorType::Raw(data))
             })
             .collect::<Result<Vec<_>>>()?,
 
-        max_rom_length: MAX_ROM_LENGTH,
+        max_rom_length,
     };
 
     println!("Generating public parameters...");

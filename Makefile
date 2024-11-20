@@ -28,9 +28,11 @@ build:
 # Parameters target
 .PHONY: params
 params:
-	@for size in $(TARGET_SIZES); do \
-		echo "Generating parameters for $${size}..."; \
-		cargo run --release --manifest-path parameter-generator/Cargo.toml -- builds/target_$${size}/artifacts $${size}; \
+	@for target_dir in $(TARGET_DIRS); do \
+		size=$$(basename "$$target_dir" | sed 's/target_//' | sed 's/b//'); \
+		rom_length=$$(echo "$$size / 16 + 16" | bc); \
+		echo "Generating parameters for $${size}b with ROM length $$rom_length..."; \
+		cargo +nightly run -- "$$target_dir/artifacts" "$${size}b" "$$rom_length" || exit 1; \
 	done
 
 # Clean target
