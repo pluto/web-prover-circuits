@@ -28,13 +28,14 @@ describe("aes-gctr-nivc", () => {
         let plainText = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
         let iv = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
         let aad = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-        let ct = [0x03, 0x88, 0xda, 0xce, 0x60, 0xb6, 0xa3, 0x92, 0xf3, 0x28, 0xc2, 0xb9, 0x71, 0xb2, 0xfe, 0x78];
+        // let ct = [0x03, 0x88, 0xda, 0xce, 0x60, 0xb6, 0xa3, 0x92, 0xf3, 0x28, 0xc2, 0xb9, 0x71, 0xb2, 0xfe, 0x78];
 
         const ctr = [0x00, 0x00, 0x00, 0x01];
         const step_in = 0;
 
-        const witness = await circuit_one_block.compute({ key: key, iv: iv, plainText: plainText, aad: aad, ctr: ctr, cipherText: ct, step_in: step_in }, ["step_out"])
-        assert.deepEqual(witness.step_out, PoseidonModular([step_in, bytesToBigInt(plainText)]));
+        const witness = await circuit_one_block.compute({ key: key, iv: iv, plainText: plainText, aad: aad, ctr: ctr, cipherText: plainText, step_in: step_in }, ["step_out"])
+        console.log(witness.step_out);
+        assert.deepEqual(witness.step_out, BigInt(0));
     });
 
     it("all correct for self generated single non zero pt block", async () => {
@@ -109,5 +110,21 @@ describe("aes-gctr-nivc", () => {
         const witness = await circuit_two_block.compute({ key: key, iv: iv, aad: aad, ctr: ctr_0, plainText: [plainText1, plainText2], cipherText: [ct_part1, ct_part2], step_in: step_in_0 }, ["step_out"])
         let hash_0 = PoseidonModular([step_in_0, bytesToBigInt(plainText1)]);
         assert.deepEqual(witness.step_out, PoseidonModular([hash_0, bytesToBigInt(plainText2)]));
+    });
+
+    it("all correct for two folds at once one zero chunk", async () => {
+        circuit_two_block = await circomkit.WitnessTester("aes-gcm-fold", {
+            file: "aes-gcm/nivc/aes-gctr-nivc",
+            template: "AESGCTRFOLD",
+            params: [2]
+        });
+
+        const ctr_0 = [0x00, 0x00, 0x00, 0x01];
+        const step_in_0 = 0;
+        let zero_chunk = Array(16).fill(0);
+
+        const witness = await circuit_two_block.compute({ key: key, iv: iv, aad: aad, ctr: ctr_0, plainText: [plainText1, zero_chunk], cipherText: [ct_part1, zero_chunk], step_in: step_in_0 }, ["step_out"])
+        let hash_0 = PoseidonModular([step_in_0, bytesToBigInt(plainText1)]);
+        assert.deepEqual(witness.step_out, hash_0);
     });
 });
