@@ -94,6 +94,8 @@ jobs:
 
     - name: Build and run parameter generator
       run: |
+        rustup install nightly
+
         # Build the parameter generator
         cargo build --release
         
