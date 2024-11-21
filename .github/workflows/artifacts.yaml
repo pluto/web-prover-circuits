@@ -87,6 +87,10 @@ jobs:
         make debug  # Show what will be processed
         make build  # Build the circuits
 
+    - name: Configure Git for Private Repos
+      run: |
+        git config --global url."https://${{ secrets.PAT }}@github.com/".insteadOf "https://github.com/"
+
     - name: Build and run parameter generator
       run: |
         # Build the parameter generator
