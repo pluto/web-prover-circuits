@@ -5,7 +5,5 @@ edition = "2021"
 
 [dependencies]
 proofs = { git = "https://github.com/pluto/web-prover", rev = "1df0818" }
-client-side-prover = { git = "https://github.com/pluto/client-side-prover" }
-halo2curves = "0.6.1"
 bincode = "1.3"
 anyhow = "1.0"

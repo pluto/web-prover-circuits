@@ -666,47 +666,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "client-side-prover"
-version = "0.1.0"
-source = "git+https://github.com/pluto/client-side-prover#316912f90ffb83456adc7a0112c4fd268016bb8d"
-dependencies = [
- "bellpepper",
- "bellpepper-core",
- "bincode",
- "bitvec",
- "byteorder",
- "cfg-if",
- "digest 0.10.7",
- "ff",
- "generic-array 1.1.0",
- "getrandom 0.2.15",
- "group",
- "grumpkin-msm",
- "halo2curves",
- "itertools 0.13.0",
- "neptune",
- "num-bigint 0.4.6",
- "num-integer",
- "num-traits",
- "once_cell",
- "pairing",
- "proptest",
- "rand 0.8.5",
- "rand_chacha 0.3.1",
- "rand_core 0.6.4",
- "rayon",
- "rayon-scan",
- "ref-cast",
- "serde",
- "sha3",
- "static_assertions",
- "subtle",
- "thiserror",
- "tracing",
- "vergen",
-]
-
-[[package]]
 name = "cobs"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -833,8 +792,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bincode",
- "client-side-prover 0.1.0 (git+https://github.com/pluto/client-side-prover)",
- "halo2curves",
  "proofs",
 ]
 
@@ -1931,7 +1888,7 @@ dependencies = [
  "byteorder",
  "circom_witnesscalc",
  "clap",
- "client-side-prover 0.1.0 (git+https://github.com/pluto/client-side-prover?rev=316912f)",
+ "client-side-prover",
  "ff",
  "flate2",
  "halo2curves",

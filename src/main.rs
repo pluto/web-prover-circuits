@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
-use client_side_prover::{
-    provider::{hyperkzg::EvaluationEngine, Bn256EngineKZG, GrumpkinEngine},
-    spartan::batched::BatchedRelaxedR1CSSNARK,
-    supernova::snark::CompressedSNARK,
-};
+// use client_side_prover::{
+//     provider::{hyperkzg::EvaluationEngine, Bn256EngineKZG, GrumpkinEngine},
+//     spartan::batched::BatchedRelaxedR1CSSNARK,
+//     supernova::snark::CompressedSNARK,
+// };
 use proofs::program::{
     self,
     data::{ProgramData, SetupData},
@@ -13,12 +13,12 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-pub type E1 = Bn256EngineKZG;
-pub type E2 = GrumpkinEngine;
-pub type EE1 = EvaluationEngine<halo2curves::bn256::Bn256, E1>;
-pub type EE2 = client_side_prover::provider::ipa_pc::EvaluationEngine<E2>;
-pub type S1 = BatchedRelaxedR1CSSNARK<E1, EE1>;
-pub type S2 = BatchedRelaxedR1CSSNARK<E2, EE2>;
+// pub type E1 = Bn256EngineKZG;
+// pub type E2 = GrumpkinEngine;
+// pub type EE1 = EvaluationEngine<halo2curves::bn256::Bn256, E1>;
+// pub type EE2 = client_side_prover::provider::ipa_pc::EvaluationEngine<E2>;
+// pub type S1 = BatchedRelaxedR1CSSNARK<E1, EE1>;
+// pub type S2 = BatchedRelaxedR1CSSNARK<E2, EE2>;
 
 struct CircuitFiles {
     r1cs_path: PathBuf,
@@ -105,7 +105,7 @@ fn main() -> Result<()> {
     println!("Generating public parameters...");
     let public_params = program::setup(&setup_data);
 
-    // TODO (autoparallel): Implement serde on the `ProverKey` and `VerifierKey` then uncomment this
+    // TODO (autoparallel): Implement serde on the `ProverKey` and `VerifierKey` then uncomment this. Would be smarter to expose a function in `proofs` so we don't do as much here
     // let (pk, vk) = CompressedSNARK::<E1, S1, S2>::setup(&public_params)?;
 
     // Write out the `ProverKey`
@@ -121,7 +121,7 @@ fn main() -> Result<()> {
     // file.write_all(&serialized_pk)
     //     .with_context(|| format!("Failed to write to output file: {}", output_file.display()))?;
 
-    // // Write out the `VerifierKey`
+    // Write out the `VerifierKey`
     // let serialized_vk =
     //     bincode::serialize(&vk).context("Failed to serialize auxiliary parameters")?;
 
