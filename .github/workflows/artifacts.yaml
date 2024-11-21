@@ -6,7 +6,7 @@ concurrency:
 
 on:
   pull_request:
-    branches: [ "*" ]
+    branches: [ "feat/public-params-artifact-matt", "feat/public-params-artifact" ]
 
 jobs:
   check-version:
