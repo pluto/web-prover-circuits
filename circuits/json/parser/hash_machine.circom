@@ -376,7 +376,7 @@ template RewriteStack(n) {
 
     signal still_parsing_string <== parsing_string * next_parsing_string;
     signal to_change_zeroth <== still_parsing_string * is_object_key;
-    signal end_kv <== readComma + readEndBrace;// TODO: This is true if we hit a comma or an end brace
+    signal end_kv <== readComma + readEndBrace;// TODO: This is true if we hit a comma or an end brace (should also make sure we are not parsing string!)
     signal end_hash0[n];
 
     signal not_end_char_for_first <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
