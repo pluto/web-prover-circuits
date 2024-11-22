@@ -357,10 +357,12 @@ template RewriteStack(n) {
     signal hash_0 <== is_object_key * stateHash[0].out;
     signal hash_1 <== (is_object_value + is_array) * stateHash[1].out; 
     signal option_hash;
+    log("hash_0 + hash_1 = ", hash_0 + hash_1);
     option_hash <== PoseidonChainer()([hash_0 + hash_1, byte]); // TODO: Trying this now so we just hash the byte stream of KVs
     // option_hash <== PoseidonChainer()([stateHash[1].out, byte]); // TODO: Now we are double hashing, we certainly don't need to do this, so should optimize this out
     log("to_hash: ", (1-not_to_hash));
     signal next_state_hash[2];
+    log("option_hash = ", option_hash);
     next_state_hash[0] <== not_to_hash * (stateHash[0].out - option_hash) + option_hash; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
     next_state_hash[1] <== not_to_hash * (stateHash[1].out - option_hash) + option_hash;
     // ^^^^ next_state_hash is the previous value (state_hash) or it is the newly computed value (option_hash)
@@ -383,6 +385,8 @@ template RewriteStack(n) {
     signal to_change_first <== (not_end_char_for_first + still_parsing_string) * (is_object_value + is_array);
     signal tree_hash_change_value[2] <== [to_change_zeroth * next_state_hash[0], to_change_first * next_state_hash[1]];
 
+
+    // TODO (autoparallel): Okay, this isn't clearing off the previous hash value and is instead adding them to each other. I suppose this isn't wrong, but it's not what is intended. I really need to refactor this shit.
     for(var i = 0; i < n; i++) {
         next_stack[i][0]      <== stack[i][0] + indicator[i] * stack_change_value[0];
         second_index_clear[i] <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
