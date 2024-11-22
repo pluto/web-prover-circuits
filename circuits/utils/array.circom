@@ -518,7 +518,7 @@ template IncrementWord() {
 //   0, 1, 0, 1, 0, 0, 0, 0, => 80
 //   0, 1, 0, 1, 0, 1, 0, 0, => 84
 //   0, 1, 0, 1, 0, 1, 0, 0, => 84
-//   0, 1, 0, 0, 1, 0, 0, 0, => 72 // getting ten here
+//   0, 1, 0, 0, 1, 0, 0, 0, => 72 
 // shoud be encoded as
 // 72, 84, 84, 80
 template fromLittleEndianToWords32() {
@@ -531,5 +531,19 @@ template fromLittleEndianToWords32() {
             Bits2Num[i].in[7-j] <== data[i*8 + j];
         }
         words[3-i] <== Bits2Num[i].out;
+    }
+}
+template fromWords32ToLittleEndian() {
+    signal input words[4];
+    signal output data[32];
+    component Num2Bits[4];
+
+    for(var i = 3; i >= 0; i--) {
+        Num2Bits[i] = Num2Bits(8);
+        Num2Bits[i].in <== words[3-i];
+        
+        for(var j = 7; j >= 0; j--) {
+            data[i*8 + j] <== Num2Bits[i].out[7-j];
+        }
     }
 }
