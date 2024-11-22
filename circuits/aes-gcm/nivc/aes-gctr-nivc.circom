@@ -38,6 +38,14 @@ template AESGCTRFOLD(NUM_CHUNKS) {
     for(var i = 0 ; i < NUM_CHUNKS ; i++) {
         computedCipherText[i] = aes[i].cipherText;
     }
+
+    // verify that ciphertext supplied as private input match the computed one
+    signal matchedCiphertext[NUM_CHUNKS];
+    for (var i = 0 ; i < NUM_CHUNKS ; i++) {
+        matchedCiphertext[i] <== IsEqualArray(16)([cipherText[i], aes[i].cipherText]);
+        matchedCiphertext[i] === 1;
+    }
+
     signal packedCiphertext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(cipherText);
     signal packedComputedCiphertext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(computedCipherText);
     signal packedPlaintext[NUM_CHUNKS] <== GenericBytePackArray(NUM_CHUNKS, 16)(plainText);
@@ -48,7 +56,7 @@ template AESGCTRFOLD(NUM_CHUNKS) {
     signal ciphertext_option[NUM_CHUNKS];
     signal ciphertext_equal_check[NUM_CHUNKS];
     for(var i = 0 ; i < NUM_CHUNKS; i++) {
-            plaintext_input_was_zero_chunk[i] <== IsZero()(packedPlaintext[i]);   
+            plaintext_input_was_zero_chunk[i] <== IsZero()(packedPlaintext[i]);
             ciphertext_input_was_zero_chunk[i] <== IsZero()(packedCiphertext[i]);
             both_input_chunks_were_zero[i] <== plaintext_input_was_zero_chunk[i] * ciphertext_input_was_zero_chunk[i];
             ciphertext_option[i] <== (1 - both_input_chunks_were_zero[i]) * packedComputedCiphertext[i];
