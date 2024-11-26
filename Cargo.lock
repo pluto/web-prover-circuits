@@ -627,7 +627,7 @@ checksum = "afb84c814227b90d6895e01398aee0d8033c00e7466aca416fb6a8e0eb19d8a7"
 [[package]]
 name = "client-side-prover"
 version = "0.1.0"
-source = "git+https://github.com/pluto/client-side-prover?rev=316912f#316912f90ffb83456adc7a0112c4fd268016bb8d"
+source = "git+https://github.com/pluto/client-side-prover?rev=2585467#2585467ea4c7edfcc09e4f14eee8344c5a09e453"
 dependencies = [
  "bellpepper",
  "bellpepper-core",
@@ -1879,7 +1879,7 @@ dependencies = [
 [[package]]
 name = "proofs"
 version = "0.1.0"
-source = "git+https://github.com/pluto/web-prover?rev=1df0818#1df0818180935a53c87368ba76c7018818e856f3"
+source = "git+https://github.com/pluto/web-prover?rev=63a826d#63a826dee402f3afc3a8bfc8f93128c6954fe737"
 dependencies = [
  "anyhow",
  "ark-bn254",

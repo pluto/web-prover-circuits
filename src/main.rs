@@ -1,14 +1,4 @@
 use anyhow::{Context, Result};
-// use client_side_prover::{
-//     provider::{hyperkzg::EvaluationEngine, Bn256EngineKZG, GrumpkinEngine},
-//     spartan::batched::BatchedRelaxedR1CSSNARK,
-//     supernova::snark::CompressedSNARK,
-// };
-use proofs::program::{
-    self,
-    data::{ProgramData, SetupData},
-    setup,
-};
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -28,9 +18,9 @@ struct CircuitFiles {
 const BASE_CIRCUIT_NAMES: &[&str] = &[
     "aes_gctr_nivc",
     "http_nivc",
-    "json_extract_value",
-    "json_mask_array_index",
     "json_mask_object",
+    "json_mask_array_index",
+    "json_extract_value",
 ];
 
 fn read_file(path: &Path) -> Result<Vec<u8>> {
@@ -82,12 +72,12 @@ fn main() -> Result<()> {
 
     let circuit_files = load_circuit_files(&artifacts_dir, target_size)?;
 
-    let setup_data = SetupData {
+    let setup_data = proofs::program::data::SetupData {
         r1cs_types: circuit_files
             .iter()
             .map(|cf| {
                 let data = read_file(&cf.r1cs_path)?;
-                Ok(program::data::R1CSType::Raw(data))
+                Ok(proofs::program::data::R1CSType::Raw(data))
             })
             .collect::<Result<Vec<_>>>()?,
 
@@ -95,51 +85,61 @@ fn main() -> Result<()> {
             .iter()
             .map(|cf| {
                 let data = read_file(&cf.graph_path)?;
-                Ok(program::data::WitnessGeneratorType::Raw(data))
+                Ok(proofs::program::data::WitnessGeneratorType::Raw(data))
             })
             .collect::<Result<Vec<_>>>()?,
 
         max_rom_length,
     };
 
-    println!("Generating public parameters...");
-    let public_params = program::setup(&setup_data);
+    println!("Generating `BackendData`...");
 
-    // TODO (autoparallel): Implement serde on the `ProverKey` and `VerifierKey` then uncomment this. Would be smarter to expose a function in `proofs` so we don't do as much here
-    // let (pk, vk) = CompressedSNARK::<E1, S1, S2>::setup(&public_params)?;
+    let proofs::BackendData {
+        aux_params,
+        prover_key,
+        verifier_key,
+    } = proofs::setup_backend(setup_data).unwrap();
 
     // Write out the `ProverKey`
-    // let serialized_pk =
-    //     bincode::serialize(&pk).context("Failed to serialize auxiliary parameters")?;
+    let serialized_pk =
+        bincode::serialize(&prover_key).context("Failed to serialize auxiliary parameters")?;
 
-    // let output_file = artifacts_dir.join(format!("prover_key_{}.bin", target_size));
-    // println!("Writing output to: {}", output_file.display());
+    let output_file = artifacts_dir.join(format!(
+        "prover_key_{}_rom_length_{}.bin",
+        target_size, max_rom_length
+    ));
+    println!("Writing output to: {}", output_file.display());
 
-    // let mut file = File::create(&output_file)
-    //     .with_context(|| format!("Failed to create output file: {}", output_file.display()))?;
+    let mut file = File::create(&output_file)
+        .with_context(|| format!("Failed to create output file: {}", output_file.display()))?;
 
-    // file.write_all(&serialized_pk)
-    //     .with_context(|| format!("Failed to write to output file: {}", output_file.display()))?;
+    file.write_all(&serialized_pk)
+        .with_context(|| format!("Failed to write to output file: {}", output_file.display()))?;
 
     // Write out the `VerifierKey`
-    // let serialized_vk =
-    //     bincode::serialize(&vk).context("Failed to serialize auxiliary parameters")?;
+    let serialized_vk =
+        bincode::serialize(&verifier_key).context("Failed to serialize auxiliary parameters")?;
 
-    // let output_file = artifacts_dir.join(format!("prover_key_{}.bin", target_size));
-    // println!("Writing output to: {}", output_file.display());
+    let output_file = artifacts_dir.join(format!(
+        "verifier_key_{}_rom_length_{}.bin",
+        target_size, max_rom_length
+    ));
+    println!("Writing output to: {}", output_file.display());
 
-    // let mut file = File::create(&output_file)
-    //     .with_context(|| format!("Failed to create output file: {}", output_file.display()))?;
+    let mut file = File::create(&output_file)
+        .with_context(|| format!("Failed to create output file: {}", output_file.display()))?;
 
-    // file.write_all(&serialized_vk)
-    //     .with_context(|| format!("Failed to write to output file: {}", output_file.display()))?;
+    file.write_all(&serialized_vk)
+        .with_context(|| format!("Failed to write to output file: {}", output_file.display()))?;
 
     // Write out the `AuxParams`
-    let aux_params = public_params.aux_params();
     let serialized_aux_params =
         bincode::serialize(&aux_params).context("Failed to serialize auxiliary parameters")?;
 
-    let output_file = artifacts_dir.join(format!("aux_params_{}.bin", target_size));
+    let output_file = artifacts_dir.join(format!(
+        "aux_params_{}_rom_length_{}.bin",
+        target_size, max_rom_length
+    ));
     println!("Writing output to: {}", output_file.display());
 
     let mut file = File::create(&output_file)
