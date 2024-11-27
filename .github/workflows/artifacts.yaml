@@ -92,7 +92,12 @@ jobs:
         git config --global url."https://${{ secrets.PAT }}@github.com/".insteadOf "https://github.com/"
 
     - name: Build and run parameter generator
-      run: |        
+      run: |
+        rustup install nightly
+
+        # Build the parameter generator
+        cargo build --release
+        
         # Generate parameters using makefile target
         make params
         
