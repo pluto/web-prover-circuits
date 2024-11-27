@@ -114,17 +114,29 @@ jobs:
 
     - name: Create release artifacts
       run: |
-        # Get the list of target directories
+        # Verify parameter files were created
         for target_dir in builds/target_*b; do
-          if [ -d "$target_dir/artifacts" ]; then
-            # Extract the target size from the directory name
-            target_size=$(basename "$target_dir")
-
-            echo "Creating archive for $target_size"
-            # Create zip file for this target size
-            ( cd "$target_dir/artifacts" && \
-              zip -r "../../../circom-artifacts-${target_size}-v${{ env.VERSION }}.zip" . )
-          fi
+          size=$(basename "$target_dir" | sed 's/target_//')
+          # Calculate ROM length the same way as in Makefile
+          rom_length=$(echo "${size%b} / 16 + 16" | bc)
+          
+          # List of expected files
+          files=(
+            "aux_params_${size}_rom_length_${rom_length}.bin"
+            "prover_key_${size}_rom_length_${rom_length}.bin"
+            "verifier_key_${size}_rom_length_${rom_length}.bin"
+          )
+          
+          for file in "${files[@]}"; do
+            if [ ! -f "$target_dir/artifacts/$file" ]; then
+              echo "Error: File not found: $file in $target_dir/artifacts"
+              exit 1
+            else
+              echo "Successfully verified: $file"
+            fi
+          done
+          
+          echo "Successfully generated all parameter files for ${size}"
         done
 
     - name: Clean build artifacts

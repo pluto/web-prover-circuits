@@ -3,13 +3,6 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-// pub type E1 = Bn256EngineKZG;
-// pub type E2 = GrumpkinEngine;
-// pub type EE1 = EvaluationEngine<halo2curves::bn256::Bn256, E1>;
-// pub type EE2 = client_side_prover::provider::ipa_pc::EvaluationEngine<E2>;
-// pub type S1 = BatchedRelaxedR1CSSNARK<E1, EE1>;
-// pub type S2 = BatchedRelaxedR1CSSNARK<E2, EE2>;
-
 struct CircuitFiles {
     r1cs_path: PathBuf,
     graph_path: PathBuf,
