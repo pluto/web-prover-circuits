@@ -12,7 +12,7 @@ $(shell mkdir -p $(addsuffix /artifacts,$(TARGET_DIRS)))
 
 # Default target
 .PHONY: all clean
-all: build
+all: buildmak
 
 # Build target
 .PHONY: build
@@ -32,7 +32,7 @@ params:
 		size=$$(basename "$$target_dir" | sed 's/target_//' | sed 's/b//'); \
 		rom_length=$$(echo "$$size / 16 + 16" | bc); \
 		echo "Generating parameters for $${size}b with ROM length $$rom_length..."; \
-		cargo +nightly run -- "$$target_dir/artifacts" "$${size}b" "$$rom_length" || exit 1; \
+		cargo +nightly run --release -- "$$target_dir/artifacts" "$${size}b" "$$rom_length" || exit 1; \
 	done
 
 # Clean target
