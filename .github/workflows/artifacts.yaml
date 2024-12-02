@@ -55,7 +55,7 @@ jobs:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
-        toolchain: nightly-2024-06-10
+        toolchain: nightly-2024-10-28
 
     - name: Install Circom
       run: |
@@ -87,18 +87,76 @@ jobs:
         make debug  # Show what will be processed
         make build  # Build the circuits
 
+    - name: Configure Git for Private Repos
+      run: |
+        git config --global url."https://${{ secrets.PAT }}@github.com/".insteadOf "https://github.com/"
+
+    - name: Build and run parameter generator
+      run: |
+        rustup install nightly
+
+        # Build the parameter generator
+        cargo build --release
+        
+        # Generate parameters using makefile target
+        make params
+        
+        # Verify parameter files were created
+        for target_dir in builds/target_*b; do
+          size=$(basename "$target_dir" | sed 's/target_//')
+          # Calculate ROM length the same way as in Makefile
+          rom_length=$(echo "${size%b} / 16 + 16" | bc)
+          
+          # List of expected files
+          files=(
+            "aux_params_${size}_rom_length_${rom_length}.bin"
+            "prover_key_${size}_rom_length_${rom_length}.bin"
+            "verifier_key_${size}_rom_length_${rom_length}.bin"
+          )
+          
+          for file in "${files[@]}"; do
+            if [ ! -f "$target_dir/artifacts/$file" ]; then
+              echo "Error: File not found: $file in $target_dir/artifacts"
+              exit 1
+            else
+              echo "Successfully verified: $file"
+            fi
+          done
+          
+          echo "Successfully generated all parameter files for ${size}"
+        done
+
     - name: Create release artifacts
       run: |
-        # Get the list of target directories
+        # First verify parameter files were created
         for target_dir in builds/target_*b; do
+          size=$(basename "$target_dir" | sed 's/target_//')
+          # Calculate ROM length the same way as in Makefile
+          rom_length=$(echo "${size%b} / 16 + 16" | bc)
+          
+          # List of expected files
+          files=(
+            "aux_params_${size}_rom_length_${rom_length}.bin"
+            "prover_key_${size}_rom_length_${rom_length}.bin"
+            "verifier_key_${size}_rom_length_${rom_length}.bin"
+          )
+          
+          for file in "${files[@]}"; do
+            if [ ! -f "$target_dir/artifacts/$file" ]; then
+              echo "Error: File not found: $file in $target_dir/artifacts"
+              exit 1
+            else
+              echo "Successfully verified: $file"
+            fi
+          done
+          
+          echo "Successfully generated all parameter files for ${size}"
+          
+          # Create zip archive for this target size
           if [ -d "$target_dir/artifacts" ]; then
-            # Extract the target size from the directory name
-            target_size=$(basename "$target_dir")
-
-            echo "Creating archive for $target_size"
-            # Create zip file for this target size
+            echo "Creating archive for $size"
             ( cd "$target_dir/artifacts" && \
-              zip -r "../../../circom-artifacts-${target_size}-v${{ env.VERSION }}.zip" . )
+              zip -r "../../../circom-artifacts-${size}-v${{ env.VERSION }}.zip" . )
           fi
         done
 
