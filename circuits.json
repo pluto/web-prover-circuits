@@ -267,5 +267,20 @@
       1024,
       10
     ]
+  },
+  "hash_machine": {
+    "file": "json/parser/hash_machine",
+    "template": "StateUpdateHasher",
+    "params": [
+      10
+    ]
+  },
+  "hash_parser": {
+    "file": "json/parser/hash_parser",
+    "template": "ParserHasher",
+    "params": [
+      1024,
+      10
+    ]
   }
 }
