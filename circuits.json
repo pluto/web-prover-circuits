@@ -213,45 +213,22 @@
       16
     ]
   },
-  "nivc_aes": {
-    "file": "aes-gcm/nivc/aes-gctr-nivc",
-    "template": "AESGCTRFOLD"
+  "plaintext_authentication_1024b": {
+    "file": "chacha20/nivc/chacha20_nivc",
+    "template": "ChaCha20_NIVC",
+    "params": [
+      256
+    ]
   },
-  "http_nivc": {
+  "http_verification_1024b": {
     "file": "http/nivc/http_nivc",
     "template": "HttpNIVC",
     "params": [
       1024,
-      10
+      25
     ]
   },
-  "nivc_start_line": {
-    "file": "http/nivc/parse_and_lock_start_line",
-    "template": "ParseAndLockStartLine",
-    "params": [
-      1024,
-      50,
-      200,
-      50
-    ]
-  },
-  "nivc_lock_header": {
-    "file": "http/nivc/lock_header",
-    "template": "LockHeader",
-    "params": [
-      1024,
-      50,
-      100
-    ]
-  },
-  "nivc_body_mask": {
-    "file": "http/nivc/body_mask",
-    "template": "HTTPMaskBodyNIVC",
-    "params": [
-      1024
-    ]
-  },
-  "nivc_json_object": {
+  "json_mask_object_1024b": {
     "file": "json/nivc/masker",
     "template": "JsonMaskObjectNIVC",
     "params": [
@@ -260,12 +237,20 @@
       10
     ]
   },
-  "nivc_json_array": {
+  "json_mask_array_index_1024b": {
     "file": "json/nivc/masker",
     "template": "JsonMaskArrayIndexNIVC",
     "params": [
       1024,
       10
+    ]
+  },
+  "json_extract_value_1024b": {
+    "file": "json/nivc/extractor",
+    "template": "MaskExtractFinal",
+    "params": [
+      1024,
+      50
     ]
   }
 }

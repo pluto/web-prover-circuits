@@ -9,8 +9,8 @@ struct CircuitFiles {
 }
 
 const BASE_CIRCUIT_NAMES: &[&str] = &[
-    "aes_gctr_nivc",
-    "http_nivc",
+    "plaintext_authentication",
+    "http_verification",
     "json_mask_object",
     "json_mask_array_index",
     "json_extract_value",
