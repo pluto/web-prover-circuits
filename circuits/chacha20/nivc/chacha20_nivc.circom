@@ -87,7 +87,7 @@ template ChaCha20_NIVC(N) {
   var j = 0;
 
   // do the ChaCha20 rounds
-    // rounds opperates on 4 words at a time
+  // rounds opperates on 4 words at a time
   component rounds[N/16];
   component xors[N];
   component counter_adder[N/16 - 1];
