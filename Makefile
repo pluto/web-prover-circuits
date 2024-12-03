@@ -12,7 +12,7 @@ $(shell mkdir -p $(addsuffix /artifacts,$(TARGET_DIRS)))
 
 # Default target
 .PHONY: all clean
-all: buildmak
+all: build params
 
 # Build target
 .PHONY: build
