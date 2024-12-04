@@ -1,7 +1,6 @@
 pragma circom 2.1.9;
 
 include "machine.circom";
-include "../utils/bytes.circom";
 include "../utils/hash.circom";
 
 template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {

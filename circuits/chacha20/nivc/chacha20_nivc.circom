@@ -4,7 +4,7 @@ pragma circom 2.1.9;
 
 include "../chacha-round.circom";
 include "../chacha-qr.circom";
-include "../../utils/generics-bits.circom";
+include "../../utils/bits.circom";
 include "../../utils/hash.circom";
 include "../../utils/array.circom";
 

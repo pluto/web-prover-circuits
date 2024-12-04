@@ -1,16 +1,10 @@
 pragma circom 2.1.9;
 
-include "../../utils/bytes.circom";
 include "machine.circom";
 
 template Parser(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal input data[DATA_BYTES];
 
-    //--------------------------------------------------------------------------------------------//
-    //-CONSTRAINTS--------------------------------------------------------------------------------//
-    //--------------------------------------------------------------------------------------------//
-    component dataASCII = ASCII(DATA_BYTES);
-    dataASCII.in <== data;
     //--------------------------------------------------------------------------------------------//
     // Initialze the parser
     component State[DATA_BYTES];

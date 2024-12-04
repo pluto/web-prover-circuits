@@ -3,7 +3,7 @@
 pragma circom 2.1.9;
 
 include "./chacha-qr.circom";
-include "../utils/generics-bits.circom";
+include "../utils/bits.circom";
 
 template Round() {
 	// in => 16 32-bit words
