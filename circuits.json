@@ -1,11 +1,4 @@
 {
-  "json": {
-    "file": "json/parser/machine",
-    "template": "StateUpdate",
-    "params": [
-      1
-    ]
-  },
   "plaintext_authentication_1024b": {
     "file": "chacha20/nivc/chacha20_nivc",
     "template": "ChaCha20_NIVC",
