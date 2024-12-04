@@ -18,14 +18,16 @@ template Syntax() {
     signal output COMMA         <== 44;
     //-White_space--------------------------------------------------------------------------------//
     // - ASCII char: `\n`
-    signal output NEWLINE       <== 10;
+    // signal output NEWLINE       <== 10;
     // - ASCII char: ` `
-    signal output SPACE         <== 32;
+    // signal output SPACE         <== 32;
     //-Escape-------------------------------------------------------------------------------------//
     // - ASCII char: `\`
-    signal output ESCAPE        <== 92;
+    // signal output ESCAPE        <== 92;
     //-Number_Remapping---------------------------------------------------------------------------//
-    signal output NUMBER        <== 256; // past a u8 -- reserved for ANY numerical ASCII (48 - 57)
+    signal output NUMBER_START  <== 48;
+    signal output NUMBER_END    <== 57;
+
 }
 
 template Command() {

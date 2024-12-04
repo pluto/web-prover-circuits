@@ -57,37 +57,38 @@ template StateUpdate(MAX_STACK_HEIGHT) {
     signal output next_parsing_number;
 
     component Command = Command();
+    component Syntax  = Syntax();
 
     //--------------------------------------------------------------------------------------------//
     // Break down what was read
     // * read in a start brace `{` *
     component readStartBrace   = IsEqual();
-    readStartBrace.in        <== [byte, 123];
+    readStartBrace.in        <== [byte, Syntax.START_BRACE];
     // * read in an end brace `}` *
     component readEndBrace     = IsEqual();
-    readEndBrace.in          <== [byte, 125];
+    readEndBrace.in          <== [byte, Syntax.END_BRACE];
     // * read in a start bracket `[` *
     component readStartBracket = IsEqual();
-    readStartBracket.in      <== [byte, 91];
+    readStartBracket.in      <== [byte, Syntax.START_BRACKET];
     // * read in an end bracket `]` *
     component readEndBracket   = IsEqual();
-    readEndBracket.in        <== [byte, 93];
+    readEndBracket.in        <== [byte, Syntax.END_BRACKET];
     // * read in a colon `:` *
     component readColon        = IsEqual();
-    readColon.in             <== [byte, 58];
+    readColon.in             <== [byte, Syntax.COLON];
     // * read in a comma `,` *
     component readComma        = IsEqual();
-    readComma.in             <== [byte, 44];
+    readComma.in             <== [byte, Syntax.COMMA];
     // * read in some delimeter *
     signal readDelimeter     <== readStartBrace.out + readEndBrace.out + readStartBracket.out + readEndBracket.out
                                + readColon.out + readComma.out;
     // * read in some number *
     component readNumber       = InRange(8);
     readNumber.in            <== byte;
-    readNumber.range         <== [48, 57]; // This is the range where ASCII digits are
+    readNumber.range         <== [Syntax.NUMBER_START, Syntax.NUMBER_END]; // This is the range where ASCII digits are
     // * read in a quote `"` *
     component readQuote        = IsEqual();
-    readQuote.in             <== [byte, 34];
+    readQuote.in             <== [byte, Syntax.QUOTE];
     component readOther        = IsZero();
     readOther.in             <== readDelimeter + readNumber.out + readQuote.out;
     //--------------------------------------------------------------------------------------------//
