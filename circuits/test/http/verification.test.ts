@@ -1,6 +1,6 @@
-import { circomkit, WitnessTester, toByte } from "../../common";
+import { circomkit, WitnessTester, toByte } from "../common";
 import { assert } from "chai";
-import { DataHasher } from "../../common/poseidon";
+import { DataHasher } from "../common/poseidon";
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8

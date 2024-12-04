@@ -221,8 +221,8 @@
     ]
   },
   "http_verification_1024b": {
-    "file": "http/nivc/http_nivc",
-    "template": "HttpNIVC",
+    "file": "http/verification",
+    "template": "HTTPVerification",
     "params": [
       1024,
       25

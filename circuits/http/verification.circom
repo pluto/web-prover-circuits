@@ -1,10 +1,10 @@
 pragma circom 2.1.9;
 
-include "../parser/machine.circom";
-include "../interpreter.circom";
-include "../../utils/bytes.circom";
+include "machine.circom";
+include "../utils/bytes.circom";
+include "../utils/hash.circom";
 
-template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
+template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     signal input step_in[1];
     signal output step_out[1];
 
@@ -44,11 +44,11 @@ template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     signal not_start_line_mask[DATA_BYTES];
     for(var i = 0 ; i < DATA_BYTES ; i++) {
         not_start_line_mask[i] <== IsZero()(State[i].parsing_start);
-        start_line[i] <== data[i] * (1 - not_start_line_mask[i]);
+        start_line[i]          <== data[i] * (1 - not_start_line_mask[i]);
     }
-    signal inner_start_line_hash <== DataHasher(DATA_BYTES)(start_line);
+    signal inner_start_line_hash       <== DataHasher(DATA_BYTES)(start_line);
     signal start_line_hash_equal_check <== IsEqual()([inner_start_line_hash, start_line_hash]);
-    start_line_hash_equal_check === 1;
+    start_line_hash_equal_check        === 1;
 
     // Get the header shit
     signal header[MAX_NUMBER_OF_HEADERS][DATA_BYTES];
@@ -63,8 +63,8 @@ template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     signal header_is_unused[MAX_NUMBER_OF_HEADERS]; // If a header hash is passed in as 0, it is not used (no way to compute preimage of 0) 
     signal header_hashes_equal_check[MAX_NUMBER_OF_HEADERS];
     for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS ; i++) {
-        header_is_unused[i]    <== IsZero()(header_hashes[i]);
-        inner_header_hashes[i] <== DataHasher(DATA_BYTES)(header[i]);
+        header_is_unused[i]          <== IsZero()(header_hashes[i]);
+        inner_header_hashes[i]       <== DataHasher(DATA_BYTES)(header[i]);
         header_hashes_equal_check[i] <== IsEqual()([(1 - header_is_unused[i]) * inner_header_hashes[i], header_hashes[i]]);
         header_hashes_equal_check[i] === 1;
     }
@@ -72,12 +72,11 @@ template HttpNIVC(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     // Get the body shit
     signal body[DATA_BYTES];
     for(var i = 0 ; i < DATA_BYTES ; i++) {
-        body[i]       <== data[i] * State[i].parsing_body;
+        body[i] <== data[i] * State[i].parsing_body;
     }
-    signal inner_body_hash <== DataHasher(DATA_BYTES)(body);
+    signal inner_body_hash       <== DataHasher(DATA_BYTES)(body);
     signal body_hash_equal_check <== IsEqual()([inner_body_hash, body_hash]);
-    body_hash_equal_check === 1;
-
+    body_hash_equal_check        === 1;
 
     step_out[0] <== inner_body_hash;
 }
