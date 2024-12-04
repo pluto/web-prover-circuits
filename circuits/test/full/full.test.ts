@@ -228,116 +228,6 @@ const json_key3_mask = [
 ];
 const json_key3_mask_hash = DataHasher(json_key3_mask);
 
-describe("NIVC_FULL_AES", async () => {
-    let aesCircuit: WitnessTester<["key", "iv", "aad", "ctr", "plainText", "cipherText", "step_in"], ["step_out"]>;
-    let httpCircuit: WitnessTester<["step_in", "data", "start_line_hash", "header_hashes", "body_hash"], ["step_out"]>;
-    let json_mask_object_circuit: WitnessTester<["step_in", "data", "key", "keyLen"], ["step_out"]>;
-    let json_mask_arr_circuit: WitnessTester<["step_in", "data", "index"], ["step_out"]>;
-    let extract_value_circuit: WitnessTester<["step_in", "data"], ["step_out"]>;
-
-    const MAX_NUMBER_OF_HEADERS = 2;
-    const DATA_BYTES = 320;
-    const MAX_STACK_HEIGHT = 5;
-    const MAX_KEY_LENGTH = 8;
-    const MAX_VALUE_LENGTH = 32;
-
-    before(async () => {
-        aesCircuit = await circomkit.WitnessTester("AESGCTRFOLD", {
-            file: "aes-gcm/nivc/aes-gctr-nivc",
-            template: "AESGCTRFOLD",
-            params: [1]
-        });
-        console.log("#constraints (AES):", await aesCircuit.getConstraintCount());
-
-        httpCircuit = await circomkit.WitnessTester(`HttpNIVC`, {
-            file: "http/nivc/http_nivc",
-            template: "HttpNIVC",
-            params: [DATA_BYTES, MAX_NUMBER_OF_HEADERS],
-        });
-        console.log("#constraints (HttpNIVC):", await httpCircuit.getConstraintCount());
-
-        json_mask_object_circuit = await circomkit.WitnessTester(`JsonMaskObjectNIVC`, {
-            file: "json/nivc/masker",
-            template: "JsonMaskObjectNIVC",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH],
-        });
-        console.log("#constraints (JSON-MASK-OBJECT):", await json_mask_object_circuit.getConstraintCount());
-
-        json_mask_arr_circuit = await circomkit.WitnessTester(`JsonMaskArrayIndexNIVC`, {
-            file: "json/nivc/masker",
-            template: "JsonMaskArrayIndexNIVC",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT],
-        });
-        console.log("#constraints (JSON-MASK-ARRAY-INDEX):", await json_mask_arr_circuit.getConstraintCount());
-
-        extract_value_circuit = await circomkit.WitnessTester(`JsonMaskExtractFinal`, {
-            file: "json/nivc/extractor",
-            template: "MaskExtractFinal",
-            params: [DATA_BYTES, MAX_VALUE_LENGTH],
-        });
-        console.log("#constraints (JSON-MASK-EXTRACT-FINAL):", await extract_value_circuit.getConstraintCount());
-    });
-
-    it("NIVC_CHAIN", async () => {
-        const init_nivc_input = 0;
-        // Run AES chain
-        let ctr = [0x00, 0x00, 0x00, 0x01];
-        let pt = http_response_plaintext.slice(0, 16);
-        let ct = aes_http_response_ciphertext.slice(0, 16);
-        let aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), cipherText: ct, step_in: init_nivc_input }, ["step_out"]);
-        let i = 0;
-        console.log("AES `step_out[", i, "]`: ", aes_gcm.step_out);
-        for (i = 1; i < (DATA_BYTES / 16); i++) {
-            ctr[3] += 1; // This will work since we don't run a test that overlows a byte
-            let pt = http_response_plaintext.slice(i * 16, i * 16 + 16);
-            let ct = aes_http_response_ciphertext.slice(i * 16, i * 16 + 16);
-            aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), cipherText: ct, step_in: aes_gcm.step_out }, ["step_out"]);
-            console.log("AES `step_out[", i, "]`: ", aes_gcm.step_out);
-        }
-        assert.deepEqual(http_response_hash, aes_gcm.step_out);
-
-        let http = await httpCircuit.compute({ step_in: aes_gcm.step_out, data: http_response_plaintext, start_line_hash: http_start_line_hash, header_hashes: [http_header_0_hash, http_header_1_hash], body_hash: http_body_mask_hash }, ["step_out"]);
-        console.log("HttpNIVC `step_out`:", http.step_out);
-
-        let key0 = [100, 97, 116, 97, 0, 0, 0, 0]; // "data"
-        let key0Len = 4;
-        let key1 = [105, 116, 101, 109, 115, 0, 0, 0]; // "items"
-        let key1Len = 5;
-        let key2 = [112, 114, 111, 102, 105, 108, 101, 0]; // "profile"
-        let key2Len = 7;
-        let key3 = [110, 97, 109, 101, 0, 0, 0, 0]; // "name"
-        let key3Len = 4;
-
-        let json_extract_key0 = await json_mask_object_circuit.compute({ step_in: http.step_out, data: http_body, key: key0, keyLen: key0Len }, ["step_out"]);
-        console.log("JSON Extract key0 `step_out`:", json_extract_key0.step_out);
-        assert.deepEqual(json_extract_key0.step_out, json_key0_mask_hash);
-
-        let json_extract_key1 = await json_mask_object_circuit.compute({ step_in: json_extract_key0.step_out, data: json_key0_mask, key: key1, keyLen: key1Len }, ["step_out"]);
-        assert.deepEqual(json_extract_key1.step_out, json_key1_mask_hash);
-        console.log("JSON Extract key1 `step_out`:", json_extract_key1.step_out);
-
-        let json_extract_arr = await json_mask_arr_circuit.compute({ step_in: json_extract_key1.step_out, data: json_key1_mask, index: 0 }, ["step_out"]);
-        assert.deepEqual(json_extract_arr.step_out, json_arr_mask_hash);
-        console.log("JSON Extract arr `step_out`:", json_extract_arr.step_out);
-
-        let json_extract_key2 = await json_mask_object_circuit.compute({ step_in: json_extract_arr.step_out, data: json_arr_mask, key: key2, keyLen: key2Len }, ["step_out"]);
-        assert.deepEqual(json_extract_key2.step_out, json_key2_mask_hash);
-        console.log("JSON Extract key2 `step_out`:", json_extract_key2.step_out);
-
-        let json_extract_key3 = await json_mask_object_circuit.compute({ step_in: json_extract_key2.step_out, data: json_key2_mask, key: key3, keyLen: key3Len }, ["step_out"]);
-        assert.deepEqual(json_extract_key3.step_out, json_key3_mask_hash);
-        console.log("JSON Extract key3 `step_out`:", json_extract_key3.step_out);
-
-        // TODO (autoparallel): we need to rethink extraction here.
-        let finalOutput = toByte("\"Taylor Swift\"");
-        let finalOutputPadded = finalOutput.concat(Array(Math.max(0, MAX_VALUE_LENGTH - finalOutput.length)).fill(0));
-        let final_value_hash = DataHasher(finalOutputPadded);
-        let extractValue = await extract_value_circuit.compute({ step_in: json_extract_key3.step_out, data: json_key3_mask }, ["step_out"]);
-        console.log("finalValue", extractValue.step_out);
-        assert.deepEqual(extractValue.step_out, final_value_hash);
-    });
-});
-
 describe("NIVC_FULL_CHACHA", async () => {
     let chacha20Circuit: WitnessTester<["key", "nonce", "counter", "plainText", "cipherText", "step_in"], ["step_out"]>;
     let httpCircuit: WitnessTester<["step_in", "data", "start_line_hash", "header_hashes", "body_hash"], ["step_out"]>;
@@ -351,205 +241,92 @@ describe("NIVC_FULL_CHACHA", async () => {
     const MAX_KEY_LENGTH = 8;
     const MAX_VALUE_LENGTH = 32;
 
-    before(async () => {
-        chacha20Circuit = await circomkit.WitnessTester("CHACHA20", {
-            file: "chacha20/nivc/chacha20_nivc",
-            template: "ChaCha20_NIVC",
-            params: [80] // 80 * 32 = 2560 bits / 8 = 320 bytes
-        });
-        console.log("#constraints (CHACHA20):", await chacha20Circuit.getConstraintCount());
 
-        httpCircuit = await circomkit.WitnessTester(`HttpNIVC`, {
-            file: "http/nivc/http_nivc",
-            template: "HttpNIVC",
-            params: [DATA_BYTES, MAX_NUMBER_OF_HEADERS],
-        });
-        console.log("#constraints (HttpNIVC):", await httpCircuit.getConstraintCount());
-
-        json_mask_object_circuit = await circomkit.WitnessTester(`JsonMaskObjectNIVC`, {
-            file: "json/nivc/masker",
-            template: "JsonMaskObjectNIVC",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH],
-        });
-        console.log("#constraints (JSON-MASK-OBJECT):", await json_mask_object_circuit.getConstraintCount());
-
-        json_mask_arr_circuit = await circomkit.WitnessTester(`JsonMaskArrayIndexNIVC`, {
-            file: "json/nivc/masker",
-            template: "JsonMaskArrayIndexNIVC",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT],
-        });
-        console.log("#constraints (JSON-MASK-ARRAY-INDEX):", await json_mask_arr_circuit.getConstraintCount());
-
-        extract_value_circuit = await circomkit.WitnessTester(`JsonMaskExtractFinal`, {
-            file: "json/nivc/extractor",
-            template: "MaskExtractFinal",
-            params: [DATA_BYTES, MAX_VALUE_LENGTH],
-        });
-        console.log("#constraints (JSON-MASK-EXTRACT-FINAL):", await extract_value_circuit.getConstraintCount());
+    chacha20Circuit = await circomkit.WitnessTester("CHACHA20", {
+        file: "chacha20/nivc/chacha20_nivc",
+        template: "ChaCha20_NIVC",
+        params: [80] // 80 * 32 = 2560 bits / 8 = 320 bytes
     });
+    console.log("#constraints (CHACHA20):", await chacha20Circuit.getConstraintCount());
 
-    it("NIVC_CHAIN", async () => {
-        const init_nivc_input = 0;
-        // Run ChaCha20
-        const counterBits = uintArray32ToBits([1])[0]
-        const ptIn = toInput(Buffer.from(http_response_plaintext));
-        const ctIn = toInput(Buffer.from(chacha20_http_response_ciphertext));
-        const keyIn = toInput(Buffer.from(Array(32).fill(0)));
-        const nonceIn = toInput(Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00]));
-        let chacha20 = await chacha20Circuit.compute({ key: keyIn, nonce: nonceIn, counter: counterBits, plainText: ptIn, cipherText: ctIn, step_in: init_nivc_input }, ["step_out"]);
-        console.log("ChaCha20 `step_out`:", chacha20.step_out);
-        assert.deepEqual(http_response_hash, chacha20.step_out);
-
-        let http = await httpCircuit.compute({ step_in: chacha20.step_out, data: http_response_plaintext, start_line_hash: http_start_line_hash, header_hashes: [http_header_0_hash, http_header_1_hash], body_hash: http_body_mask_hash }, ["step_out"]);
-        console.log("HttpNIVC `step_out`:", http.step_out);
-
-        let key0 = [100, 97, 116, 97, 0, 0, 0, 0]; // "data"
-        let key0Len = 4;
-        let key1 = [105, 116, 101, 109, 115, 0, 0, 0]; // "items"
-        let key1Len = 5;
-        let key2 = [112, 114, 111, 102, 105, 108, 101, 0]; // "profile"
-        let key2Len = 7;
-        let key3 = [110, 97, 109, 101, 0, 0, 0, 0]; // "name"
-        let key3Len = 4;
-
-        let json_extract_key0 = await json_mask_object_circuit.compute({ step_in: http.step_out, data: http_body, key: key0, keyLen: key0Len }, ["step_out"]);
-        console.log("JSON Extract key0 `step_out`:", json_extract_key0.step_out);
-        assert.deepEqual(json_extract_key0.step_out, json_key0_mask_hash);
-
-        let json_extract_key1 = await json_mask_object_circuit.compute({ step_in: json_extract_key0.step_out, data: json_key0_mask, key: key1, keyLen: key1Len }, ["step_out"]);
-        assert.deepEqual(json_extract_key1.step_out, json_key1_mask_hash);
-        console.log("JSON Extract key1 `step_out`:", json_extract_key1.step_out);
-
-        let json_extract_arr = await json_mask_arr_circuit.compute({ step_in: json_extract_key1.step_out, data: json_key1_mask, index: 0 }, ["step_out"]);
-        assert.deepEqual(json_extract_arr.step_out, json_arr_mask_hash);
-        console.log("JSON Extract arr `step_out`:", json_extract_arr.step_out);
-
-        let json_extract_key2 = await json_mask_object_circuit.compute({ step_in: json_extract_arr.step_out, data: json_arr_mask, key: key2, keyLen: key2Len }, ["step_out"]);
-        assert.deepEqual(json_extract_key2.step_out, json_key2_mask_hash);
-        console.log("JSON Extract key2 `step_out`:", json_extract_key2.step_out);
-
-        let json_extract_key3 = await json_mask_object_circuit.compute({ step_in: json_extract_key2.step_out, data: json_key2_mask, key: key3, keyLen: key3Len }, ["step_out"]);
-        assert.deepEqual(json_extract_key3.step_out, json_key3_mask_hash);
-        console.log("JSON Extract key3 `step_out`:", json_extract_key3.step_out);
-
-        // TODO (autoparallel): we need to rethink extraction here.
-        let finalOutput = toByte("\"Taylor Swift\"");
-        let finalOutputPadded = finalOutput.concat(Array(Math.max(0, MAX_VALUE_LENGTH - finalOutput.length)).fill(0));
-        let final_value_hash = DataHasher(finalOutputPadded);
-        let extractValue = await extract_value_circuit.compute({ step_in: json_extract_key3.step_out, data: json_key3_mask }, ["step_out"]);
-        console.log("finalValue", extractValue.step_out);
-        assert.deepEqual(extractValue.step_out, final_value_hash);
+    httpCircuit = await circomkit.WitnessTester(`HttpNIVC`, {
+        file: "http/verification",
+        template: "HTTPVerification",
+        params: [DATA_BYTES, MAX_NUMBER_OF_HEADERS],
     });
+    console.log("#constraints (HttpNIVC):", await httpCircuit.getConstraintCount());
+
+    json_mask_object_circuit = await circomkit.WitnessTester(`JsonMaskObjectNIVC`, {
+        file: "json/nivc/masker",
+        template: "JsonMaskObjectNIVC",
+        params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH],
+    });
+    console.log("#constraints (JSON-MASK-OBJECT):", await json_mask_object_circuit.getConstraintCount());
+
+    json_mask_arr_circuit = await circomkit.WitnessTester(`JsonMaskArrayIndexNIVC`, {
+        file: "json/nivc/masker",
+        template: "JsonMaskArrayIndexNIVC",
+        params: [DATA_BYTES, MAX_STACK_HEIGHT],
+    });
+    console.log("#constraints (JSON-MASK-ARRAY-INDEX):", await json_mask_arr_circuit.getConstraintCount());
+
+    extract_value_circuit = await circomkit.WitnessTester(`JsonMaskExtractFinal`, {
+        file: "json/nivc/extractor",
+        template: "MaskExtractFinal",
+        params: [DATA_BYTES, MAX_VALUE_LENGTH],
+    });
+    console.log("#constraints (JSON-MASK-EXTRACT-FINAL):", await extract_value_circuit.getConstraintCount());
+
+    const init_nivc_input = 0;
+    // Run ChaCha20
+    const counterBits = uintArray32ToBits([1])[0]
+    const ptIn = toInput(Buffer.from(http_response_plaintext));
+    const ctIn = toInput(Buffer.from(chacha20_http_response_ciphertext));
+    const keyIn = toInput(Buffer.from(Array(32).fill(0)));
+    const nonceIn = toInput(Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00]));
+    let chacha20 = await chacha20Circuit.compute({ key: keyIn, nonce: nonceIn, counter: counterBits, plainText: ptIn, cipherText: ctIn, step_in: init_nivc_input }, ["step_out"]);
+    console.log("ChaCha20 `step_out`:", chacha20.step_out);
+    assert.deepEqual(http_response_hash, chacha20.step_out);
+
+    let http = await httpCircuit.compute({ step_in: chacha20.step_out, data: http_response_plaintext, start_line_hash: http_start_line_hash, header_hashes: [http_header_0_hash, http_header_1_hash], body_hash: http_body_mask_hash }, ["step_out"]);
+    console.log("HttpNIVC `step_out`:", http.step_out);
+
+    let key0 = [100, 97, 116, 97, 0, 0, 0, 0]; // "data"
+    let key0Len = 4;
+    let key1 = [105, 116, 101, 109, 115, 0, 0, 0]; // "items"
+    let key1Len = 5;
+    let key2 = [112, 114, 111, 102, 105, 108, 101, 0]; // "profile"
+    let key2Len = 7;
+    let key3 = [110, 97, 109, 101, 0, 0, 0, 0]; // "name"
+    let key3Len = 4;
+
+    let json_extract_key0 = await json_mask_object_circuit.compute({ step_in: http.step_out, data: http_body, key: key0, keyLen: key0Len }, ["step_out"]);
+    console.log("JSON Extract key0 `step_out`:", json_extract_key0.step_out);
+    assert.deepEqual(json_extract_key0.step_out, json_key0_mask_hash);
+
+    let json_extract_key1 = await json_mask_object_circuit.compute({ step_in: json_extract_key0.step_out, data: json_key0_mask, key: key1, keyLen: key1Len }, ["step_out"]);
+    assert.deepEqual(json_extract_key1.step_out, json_key1_mask_hash);
+    console.log("JSON Extract key1 `step_out`:", json_extract_key1.step_out);
+
+    let json_extract_arr = await json_mask_arr_circuit.compute({ step_in: json_extract_key1.step_out, data: json_key1_mask, index: 0 }, ["step_out"]);
+    assert.deepEqual(json_extract_arr.step_out, json_arr_mask_hash);
+    console.log("JSON Extract arr `step_out`:", json_extract_arr.step_out);
+
+    let json_extract_key2 = await json_mask_object_circuit.compute({ step_in: json_extract_arr.step_out, data: json_arr_mask, key: key2, keyLen: key2Len }, ["step_out"]);
+    assert.deepEqual(json_extract_key2.step_out, json_key2_mask_hash);
+    console.log("JSON Extract key2 `step_out`:", json_extract_key2.step_out);
+
+    let json_extract_key3 = await json_mask_object_circuit.compute({ step_in: json_extract_key2.step_out, data: json_key2_mask, key: key3, keyLen: key3Len }, ["step_out"]);
+    assert.deepEqual(json_extract_key3.step_out, json_key3_mask_hash);
+    console.log("JSON Extract key3 `step_out`:", json_extract_key3.step_out);
+
+    // TODO (autoparallel): we need to rethink extraction here.
+    let finalOutput = toByte("\"Taylor Swift\"");
+    let finalOutputPadded = finalOutput.concat(Array(Math.max(0, MAX_VALUE_LENGTH - finalOutput.length)).fill(0));
+    let final_value_hash = DataHasher(finalOutputPadded);
+    let extractValue = await extract_value_circuit.compute({ step_in: json_extract_key3.step_out, data: json_key3_mask }, ["step_out"]);
+    console.log("finalValue", extractValue.step_out);
+    assert.deepEqual(extractValue.step_out, final_value_hash);
 });
 
 
-describe("NIVC_FULL_2_AES", async () => {
-    let aesCircuit: WitnessTester<["key", "iv", "aad", "ctr", "plainText", "cipherText", "step_in"], ["step_out"]>;
-    let httpCircuit: WitnessTester<["step_in", "data", "start_line_hash", "header_hashes", "body_hash"], ["step_out"]>;
-    let json_mask_object_circuit: WitnessTester<["step_in", "data", "key", "keyLen"], ["step_out"]>;
-    let json_mask_arr_circuit: WitnessTester<["step_in", "data", "index"], ["step_out"]>;
-    let extract_value_circuit: WitnessTester<["step_in", "data"], ["step_out"]>;
-
-    const MAX_NUMBER_OF_HEADERS = 2;
-    const DATA_BYTES = 320;
-    const MAX_STACK_HEIGHT = 5;
-    const MAX_KEY_LENGTH = 8;
-    const MAX_VALUE_LENGTH = 32;
-
-    before(async () => {
-        aesCircuit = await circomkit.WitnessTester("AESGCTRFOLD", {
-            file: "aes-gcm/nivc/aes-gctr-nivc",
-            template: "AESGCTRFOLD",
-            params: [2]
-        });
-        console.log("#constraints (AES):", await aesCircuit.getConstraintCount());
-
-        httpCircuit = await circomkit.WitnessTester(`HttpNIVC`, {
-            file: "http/nivc/http_nivc",
-            template: "HttpNIVC",
-            params: [DATA_BYTES, MAX_NUMBER_OF_HEADERS],
-        });
-        console.log("#constraints (HttpNIVC):", await httpCircuit.getConstraintCount());
-
-        json_mask_object_circuit = await circomkit.WitnessTester(`JsonMaskObjectNIVC`, {
-            file: "json/nivc/masker",
-            template: "JsonMaskObjectNIVC",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH],
-        });
-        console.log("#constraints (JSON-MASK-OBJECT):", await json_mask_object_circuit.getConstraintCount());
-
-        json_mask_arr_circuit = await circomkit.WitnessTester(`JsonMaskArrayIndexNIVC`, {
-            file: "json/nivc/masker",
-            template: "JsonMaskArrayIndexNIVC",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT],
-        });
-        console.log("#constraints (JSON-MASK-ARRAY-INDEX):", await json_mask_arr_circuit.getConstraintCount());
-
-        extract_value_circuit = await circomkit.WitnessTester(`JsonMaskExtractFinal`, {
-            file: "json/nivc/extractor",
-            template: "MaskExtractFinal",
-            params: [DATA_BYTES, MAX_VALUE_LENGTH],
-        });
-        console.log("#constraints (JSON-MASK-EXTRACT-FINAL):", await extract_value_circuit.getConstraintCount());
-    });
-
-    it("NIVC_CHAIN_2", async () => {
-        const init_nivc_input = 0;
-
-        // Run AES chain
-        let ctr = [0x00, 0x00, 0x00, 0x01];
-        let pt = [http_response_plaintext.slice(0, 16), http_response_plaintext.slice(16, 32)];
-        let ct = [aes_http_response_ciphertext.slice(0, 16), aes_http_response_ciphertext.slice(16, 32)];
-        let aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), cipherText: ct, step_in: init_nivc_input }, ["step_out"]);
-        let i = 0;
-        console.log("AES `step_out[", i, "]`: ", aes_gcm.step_out);
-        for (i = 1; i < (DATA_BYTES / (16 * 2)); i++) {
-            ctr[3] += 2; // This will work since we don't run a test that overlows a byte
-            let pt = [http_response_plaintext.slice(i * 32, i * 32 + 16), http_response_plaintext.slice(i * 32 + 16, i * 32 + 32)];
-            let ct = [aes_http_response_ciphertext.slice(i * 32, i * 32 + 16), aes_http_response_ciphertext.slice(i * 32 + 16, i * 32 + 32)];
-            aes_gcm = await aesCircuit.compute({ key: Array(16).fill(0), iv: Array(12).fill(0), ctr: ctr, plainText: pt, aad: Array(16).fill(0), cipherText: ct, step_in: aes_gcm.step_out }, ["step_out"]);
-            console.log("AES `step_out[", i, "]`: ", aes_gcm.step_out);
-        }
-        assert.deepEqual(http_response_hash, aes_gcm.step_out);
-
-        let http = await httpCircuit.compute({ step_in: aes_gcm.step_out, data: http_response_plaintext, start_line_hash: http_start_line_hash, header_hashes: [http_header_0_hash, http_header_1_hash], body_hash: http_body_mask_hash }, ["step_out"]);
-        console.log("HttpNIVC `step_out`:", http.step_out);
-
-        let key0 = [100, 97, 116, 97, 0, 0, 0, 0]; // "data"
-        let key0Len = 4;
-        let key1 = [105, 116, 101, 109, 115, 0, 0, 0]; // "items"
-        let key1Len = 5;
-        let key2 = [112, 114, 111, 102, 105, 108, 101, 0]; // "profile"
-        let key2Len = 7;
-        let key3 = [110, 97, 109, 101, 0, 0, 0, 0]; // "name"
-        let key3Len = 4;
-
-        let json_extract_key0 = await json_mask_object_circuit.compute({ step_in: http.step_out, data: http_body, key: key0, keyLen: key0Len }, ["step_out"]);
-        console.log("JSON Extract key0 `step_out`:", json_extract_key0.step_out);
-        assert.deepEqual(json_extract_key0.step_out, json_key0_mask_hash);
-
-        let json_extract_key1 = await json_mask_object_circuit.compute({ step_in: json_extract_key0.step_out, data: json_key0_mask, key: key1, keyLen: key1Len }, ["step_out"]);
-        assert.deepEqual(json_extract_key1.step_out, json_key1_mask_hash);
-        console.log("JSON Extract key1 `step_out`:", json_extract_key1.step_out);
-
-        let json_extract_arr = await json_mask_arr_circuit.compute({ step_in: json_extract_key1.step_out, data: json_key1_mask, index: 0 }, ["step_out"]);
-        assert.deepEqual(json_extract_arr.step_out, json_arr_mask_hash);
-        console.log("JSON Extract arr `step_out`:", json_extract_arr.step_out);
-
-        let json_extract_key2 = await json_mask_object_circuit.compute({ step_in: json_extract_arr.step_out, data: json_arr_mask, key: key2, keyLen: key2Len }, ["step_out"]);
-        assert.deepEqual(json_extract_key2.step_out, json_key2_mask_hash);
-        console.log("JSON Extract key2 `step_out`:", json_extract_key2.step_out);
-
-        let json_extract_key3 = await json_mask_object_circuit.compute({ step_in: json_extract_key2.step_out, data: json_key2_mask, key: key3, keyLen: key3Len }, ["step_out"]);
-        assert.deepEqual(json_extract_key3.step_out, json_key3_mask_hash);
-        console.log("JSON Extract key3 `step_out`:", json_extract_key3.step_out);
-
-        // TODO (autoparallel): we need to rethink extraction here.
-        let finalOutput = toByte("\"Taylor Swift\"");
-        let finalOutputPadded = finalOutput.concat(Array(Math.max(0, MAX_VALUE_LENGTH - finalOutput.length)).fill(0));
-        let final_value_hash = DataHasher(finalOutputPadded);
-        let extractValue = await extract_value_circuit.compute({ step_in: json_extract_key3.step_out, data: json_key3_mask }, ["step_out"]);
-        console.log("finalValue", extractValue.step_out);
-        assert.deepEqual(extractValue.step_out, final_value_hash);
-    });
-});
