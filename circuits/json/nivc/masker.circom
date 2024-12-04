@@ -1,6 +1,7 @@
 pragma circom 2.1.9;
 
 include "../interpreter.circom";
+include "../../utils/hash.circom";
 
 template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
     assert(MAX_STACK_HEIGHT >= 2); // TODO (autoparallel): idk if we need this now
