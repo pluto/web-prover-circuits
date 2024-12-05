@@ -66,6 +66,22 @@ template PoseidonChainer() {
     out <== Poseidon(2)(in);
 }
 
+template MaskedStreamDigest(DATA_BYTES) {
+    signal input in[DATA_BYTES];
+    signal output out;
+
+    signal hashes[DATA_BYTES + 1];
+    signal not_to_hash[DATA_BYTES];
+    signal option_hash[DATA_BYTES];
+    hashes[0] <== 0;
+    for(var i = 0 ; i < DATA_BYTES ; i++) {
+        not_to_hash[i] <== IsEqual()([in[i], -1]);
+        option_hash[i] <== PoseidonChainer()([hashes[i],i]);
+        hashes[i+1]    <== not_to_hash[i] * (hashes[i] - option_hash[i]) + option_hash[i]; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
+    }
+    out <== hashes[DATA_BYTES \ 16];
+}
+
 // TODO (autoparallel): This could modified to support an arbitrary length while combining 31 bytes at a time instead of 16
 template DataHasher(DATA_BYTES) {
     // TODO: add this assert back after witnesscalc supports

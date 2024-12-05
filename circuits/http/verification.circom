@@ -13,7 +13,8 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     data_hash        === step_in[0];
 
     signal input start_line_hash;
-    signal input header_hashes[MAX_NUMBER_OF_HEADERS];
+    signal input which_headers[MAX_NUMBER_OF_HEADERS];
+    signal input http_digest;
     signal input body_hash;
 
     // TODO: could just have a parser template and reduce code here
@@ -38,35 +39,40 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         State[data_idx].line_status         <== State[data_idx - 1].next_line_status;
     }
 
-    // Get the start line shit
-    signal start_line[DATA_BYTES];
-    signal not_start_line_mask[DATA_BYTES];
-    for(var i = 0 ; i < DATA_BYTES ; i++) {
-        not_start_line_mask[i] <== IsZero()(State[i].parsing_start);
-        start_line[i]          <== data[i] * (1 - not_start_line_mask[i]);
-    }
-    signal inner_start_line_hash       <== DataHasher(DATA_BYTES)(start_line);
-    signal start_line_hash_equal_check <== IsEqual()([inner_start_line_hash, start_line_hash]);
-    start_line_hash_equal_check        === 1;
+    // // Get the start line shit
+    // signal start_line[DATA_BYTES];
+    // signal not_start_line_mask[DATA_BYTES];
+    // for(var i = 0 ; i < DATA_BYTES ; i++) {
+    //     not_start_line_mask[i] <== IsZero()(State[i].parsing_start);
+    //     start_line[i]          <== data[i] * (1 - not_start_line_mask[i]);
+    // }
+    // signal inner_start_line_hash       <== DataHasher(DATA_BYTES)(start_line);
+    // signal start_line_hash_equal_check <== IsEqual()([inner_start_line_hash, start_line_hash]);
+    // start_line_hash_equal_check        === 1;
 
-    // Get the header shit
-    signal header[MAX_NUMBER_OF_HEADERS][DATA_BYTES];
-    signal header_masks[MAX_NUMBER_OF_HEADERS][DATA_BYTES];
+    // Mask leaving only selected headers and start line
     for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS ; i++) {
-        for(var j = 0 ; j < DATA_BYTES ; j++) {
-            header_masks[i][j] <== IsEqual()([State[j].parsing_header, i + 1]);
-            header[i][j]       <== data[j] * header_masks[i][j];
-        }
+        0 === which_headers[i] * (1 - which_headers[i]); // Assert this is a bit
     }
-    signal inner_header_hashes[MAX_NUMBER_OF_HEADERS];
-    signal header_is_unused[MAX_NUMBER_OF_HEADERS]; // If a header hash is passed in as 0, it is not used (no way to compute preimage of 0) 
-    signal header_hashes_equal_check[MAX_NUMBER_OF_HEADERS];
-    for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS ; i++) {
-        header_is_unused[i]          <== IsZero()(header_hashes[i]);
-        inner_header_hashes[i]       <== DataHasher(DATA_BYTES)(header[i]);
-        header_hashes_equal_check[i] <== IsEqual()([(1 - header_is_unused[i]) * inner_header_hashes[i], header_hashes[i]]);
-        header_hashes_equal_check[i] === 1;
+    signal http_mask[DATA_BYTES];
+    signal include_header[DATA_BYTES];
+    signal inside_header[DATA_BYTES];
+    for(var i = 0 ; i < DATA_BYTES ; i++) {
+        include_header[i] <== IndexSelector(MAX_NUMBER_OF_HEADERS)(which_headers, State[i].parsing_header - 1);
+        // IsEqual()([State[j].parsing_header, i + 1]);
+        http_mask[i]   <== data[i] * (include_header[i] + State[i].parsing_start);
     }
+    signal inner_http_digest <== MaskedStreamDigest(DATA_BYTES)(http_mask);
+    inner_http_digest === http_digest;
+    // signal inner_header_hashes[MAX_NUMBER_OF_HEADERS];
+    // signal header_is_unused[MAX_NUMBER_OF_HEADERS]; // If a header hash is passed in as 0, it is not used (no way to compute preimage of 0) 
+    // signal header_hashes_equal_check[MAX_NUMBER_OF_HEADERS];
+    // for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS ; i++) {
+    //     header_is_unused[i]          <== IsZero()(header_hashes[i]);
+    //     inner_header_hashes[i]       <== DataHasher(DATA_BYTES)(header[i]);
+    //     header_hashes_equal_check[i] <== IsEqual()([(1 - header_is_unused[i]) * inner_header_hashes[i], header_hashes[i]]);
+    //     header_hashes_equal_check[i] === 1;
+    // }
 
     // Get the body shit
     signal body[DATA_BYTES];
