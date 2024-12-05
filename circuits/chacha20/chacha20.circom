@@ -4,7 +4,7 @@ pragma circom 2.1.9;
 
 include "./chacha-round.circom";
 include "./chacha-qr.circom";
-include "../utils/generics-bits.circom";
+include "../utils/bits.circom";
 
 /** ChaCha20 in counter mode */
 // Chacha20 opperates a 4x4 matrix of 32-bit words where the first 4 words are constants: C
