@@ -11,7 +11,7 @@ describe("chacha20-nivc", () => {
             circuit = await circomkit.WitnessTester(`ChaCha20`, {
                 file: "chacha20/nivc/chacha20_nivc",
                 template: "ChaCha20_NIVC",
-                params: [16] // number of 32-bit words in the key, 32 * 16 = 512 bits
+                params: [64] // number of bytes for plaintext
             });
             // Test case from RCF https://www.rfc-editor.org/rfc/rfc7539.html#section-2.4.2
             // the input encoding here is not the most intuitive. inputs are serialized as little endian.
@@ -49,7 +49,6 @@ describe("chacha20-nivc", () => {
                     0xf9, 0x1b, 0x65, 0xc5, 0x52, 0x47, 0x33, 0xab, 0x8f, 0x59, 0x3d, 0xab, 0xcd, 0x62, 0xb3, 0x57,
                     0x16, 0x39, 0xd6, 0x24, 0xe6, 0x51, 0x52, 0xab, 0x8f, 0x53, 0x0c, 0x35, 0x9f, 0x08, 0x61, 0xd8
                 ];
-            const plaintextBits = toInput(Buffer.from(plaintextBytes))
             const counterBits = uintArray32ToBits([1])[0]
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
@@ -68,7 +67,7 @@ describe("chacha20-nivc", () => {
             circuit = await circomkit.WitnessTester(`ChaCha20`, {
                 file: "chacha20/nivc/chacha20_nivc",
                 template: "ChaCha20_NIVC",
-                params: [32] // number of 32-bit words in the key, 32 * 32 = 640 bits
+                params: [128] // number of bytes in plaintext
             });
             // Test case from RCF https://www.rfc-editor.org/rfc/rfc7539.html#section-2.4.2
             // the input encoding here is not the most intuitive. inputs are serialized as little endian.
@@ -106,7 +105,6 @@ describe("chacha20-nivc", () => {
             let totalLength = 128;
             let paddedPlaintextBytes = plaintextBytes.concat(Array(totalLength - plaintextBytes.length).fill(0));
             let paddedCiphertextBytes = ciphertextBytes.concat(Array(totalLength - ciphertextBytes.length).fill(0));
-            const plaintextBits = toInput(Buffer.from(paddedPlaintextBytes))
             const counterBits = uintArray32ToBits([1])[0]
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
