@@ -34,18 +34,21 @@ template ChaCha20_NIVC(DATA_BYTES) {
   // the below can be both ciphertext or plaintext depending on the direction
   // in => N 32-bit words => N 4 byte words
   signal input plainText[DATA_BYTES];
-  // out => N 32-bit words => N 4 byte words
-  signal input cipherText[DATA_BYTES];
 
+  // step_in should be the ciphertext digest
   signal input step_in[1];
+
+  // step_out should be the plaintext digest
   signal output step_out[1];
 
+  signal isPadding[DATA_BYTES];
   signal plaintextBits[DATA_BYTES / 4][32];
   component toBits[DATA_BYTES / 4];
   for (var i = 0 ; i < DATA_BYTES / 4 ; i++) {
     toBits[i] = fromWords32ToLittleEndian();
     for (var j = 0 ; j < 4 ; j++) {
-      toBits[i].words[j] <== plainText[i*4 + j];
+      isPadding[i * 4 + j]         <== IsEqual()([plainText[i * 4 + j], -1]);
+      toBits[i].words[j] <== (1 - isPadding[i * 4 + j]) * plainText[i*4 + j];
     }
     plaintextBits[i] <== toBits[i].data;
   }
@@ -102,7 +105,7 @@ template ChaCha20_NIVC(DATA_BYTES) {
   component xors[DATA_BYTES];
   component counter_adder[DATA_BYTES / 64 - 1];
 
-  signal computedCipherText[DATA_BYTES / 4][32];
+  signal cipherText[DATA_BYTES / 4][32];
 
   for(i = 0; i < DATA_BYTES / 64; i++) {
     rounds[i] = Round();
@@ -112,7 +115,7 @@ template ChaCha20_NIVC(DATA_BYTES) {
       xors[i*16 + j] = XorBits(32);
       xors[i*16 + j].a <== plaintextBits[i*16 + j];
       xors[i*16 + j].b <== rounds[i].out[j];
-      computedCipherText[i*16 + j] <== xors[i*16 + j].out;
+      cipherText[i*16 + j] <== xors[i*16 + j].out;
     }
 
     if(i < DATA_BYTES / 64 - 1) {
@@ -127,19 +130,20 @@ template ChaCha20_NIVC(DATA_BYTES) {
 
   component toCiphertextBytes[DATA_BYTES / 4];
   signal bigEndianCiphertext[DATA_BYTES];
+  
   for (var i = 0 ; i < DATA_BYTES / 4 ; i++) {
     toCiphertextBytes[i] = fromLittleEndianToWords32();
     for (var j = 0 ; j < 32 ; j++) {
-      toCiphertextBytes[i].data[j] <== computedCipherText[i][j];
+      toCiphertextBytes[i].data[j] <== cipherText[i][j];
     }
     for (var j = 0 ; j < 4 ; j++) {
-      bigEndianCiphertext[i*4 + j] <== toCiphertextBytes[i].words[j];
+      bigEndianCiphertext[i*4 + j] <== isPadding[i * 4 + j] * (-1 - toCiphertextBytes[i].words[j]) + toCiphertextBytes[i].words[j]; // equal to: (isPadding[i * 4 + j] * (-1)) + (1 - isPadding[i * 4 + j]) * toCiphertextBytes[i].words[j];
     }
   }
 
-  signal paddedCiphertextCheck <== IsEqualArrayPaddedLHS(DATA_BYTES)([cipherText, bigEndianCiphertext]);
-  paddedCiphertextCheck === 1;
+  signal ciphertext_hash <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
+  step_in[0]             === ciphertext_hash;
 
-  signal data_hash <== DataHasher(DATA_BYTES)(plainText);
-  step_out[0] <== data_hash;
+  signal plaintext_hash <== DataHasher(DATA_BYTES)(plainText);
+  step_out[0]           <== plaintext_hash;
 }
