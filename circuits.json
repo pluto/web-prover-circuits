@@ -3,7 +3,7 @@
     "file": "chacha20/nivc/chacha20_nivc",
     "template": "ChaCha20_NIVC",
     "params": [
-      256
+      1024
     ]
   },
   "http_verification_1024b": {
