@@ -66,6 +66,7 @@ template PoseidonChainer() {
     out <== Poseidon(2)(in);
 }
 
+// TODO (autoparallel): This could modified to support an arbitrary length while combining 31 bytes at a time instead of 16
 template DataHasher(DATA_BYTES) {
     // TODO: add this assert back after witnesscalc supports
     // assert(DATA_BYTES % 16 == 0);
@@ -75,13 +76,21 @@ template DataHasher(DATA_BYTES) {
     signal not_to_hash[DATA_BYTES \ 16];
     signal option_hash[DATA_BYTES \ 16];
     signal hashes[DATA_BYTES \ 16 + 1];
+    signal isPadding[DATA_BYTES];
     hashes[0] <== 0;
     for(var i = 0 ; i < DATA_BYTES \ 16 ; i++) {
         var packedInput = 0;
+        var isPaddedChunk = 0;
         for(var j = 0 ; j < 16 ; j++) {
-            packedInput += in[16 * i + j] * 2**(8*j);
+            /* 
+            If in[16 * i + j] is ever -1 we get `isPadding[16 * i + j] === 1` and since we add this
+            we get zero which does not change `packedInput`.
+            */
+            isPadding[16 * i + j] <== IsEqual()([in[16 * i + j], -1]);
+            isPaddedChunk          += isPadding[16 * i + j];
+            packedInput            += (in[16 * i + j] + isPadding[16 * i + j]) * 2**(8*j); 
         }
-        not_to_hash[i] <== IsZero()(packedInput);
+        not_to_hash[i] <== IsEqual()([isPaddedChunk, 16]);
         option_hash[i] <== PoseidonChainer()([hashes[i],packedInput]);
         hashes[i+1]    <== not_to_hash[i] * (hashes[i] - option_hash[i]) + option_hash[i]; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
     }
