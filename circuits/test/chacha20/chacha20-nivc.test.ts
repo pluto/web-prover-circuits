@@ -5,8 +5,8 @@ import { assert } from "chai";
 
 
 describe("chacha20-nivc", () => {
+    let circuit: WitnessTester<["key", "nonce", "counter", "plainText", "cipherText", "step_in"], ["step_out"]>;
     describe("16 block test", () => {
-        let circuit: WitnessTester<["key", "nonce", "counter", "plainText", "cipherText", "length", "step_in"], ["step_out"]>;
         it("should perform encryption", async () => {
             circuit = await circomkit.WitnessTester(`ChaCha20`, {
                 file: "chacha20/nivc/chacha20_nivc",
@@ -58,7 +58,6 @@ describe("chacha20-nivc", () => {
                 counter: counterBits,
                 cipherText: ciphertextBits,
                 plainText: plaintextBits,
-                length: plaintextBytes.length,
                 step_in: 0
             }, (["step_out"]));
             assert.deepEqual(w.step_out, DataHasher(plaintextBytes));
@@ -66,7 +65,6 @@ describe("chacha20-nivc", () => {
     });
 
     describe("padded plaintext", () => {
-        let circuit: WitnessTester<["key", "nonce", "counter", "plainText", "cipherText", "length", "step_in"], ["step_out"]>;
         it("should perform encryption", async () => {
             circuit = await circomkit.WitnessTester(`ChaCha20`, {
                 file: "chacha20/nivc/chacha20_nivc",
@@ -109,16 +107,14 @@ describe("chacha20-nivc", () => {
             let totalLength = 128;
             let paddedPlaintextBytes = plaintextBytes.concat(Array(totalLength - plaintextBytes.length).fill(0));
             let paddedCiphertextBytes = ciphertextBytes.concat(Array(totalLength - ciphertextBytes.length).fill(0));
-            const ciphertextBits = toInput(Buffer.from(paddedCiphertextBytes))
             const plaintextBits = toInput(Buffer.from(paddedPlaintextBytes))
             const counterBits = uintArray32ToBits([1])[0]
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
                 counter: counterBits,
-                cipherText: ciphertextBits,
+                cipherText: paddedCiphertextBytes,
                 plainText: plaintextBits,
-                length: plaintextBytes.length,
                 step_in: 0
             }, (["step_out"]));
             assert.deepEqual(w.step_out, DataHasher(paddedPlaintextBytes));

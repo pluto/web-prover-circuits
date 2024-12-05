@@ -35,8 +35,7 @@ template ChaCha20_NIVC(N) {
   // in => N 32-bit words => N 4 byte words
   signal input plainText[N][32];
   // out => N 32-bit words => N 4 byte words
-  signal input cipherText[N][32];
-  signal input length;
+  signal input cipherText[N*4];
 
   signal input step_in[1];
   signal output step_out[1];
@@ -116,19 +115,20 @@ template ChaCha20_NIVC(N) {
     }
   }
 
-  signal ciphertext_equal_check[N][32];
-  signal index_less_than_length[32*N];
-  signal ciphertext_not_equal[32 * N];
-  for(var i = 0 ; i < N; i++) {
-    for(var j = 0 ; j < 32 ; j++) {
-      var byteIndex = i*4 + j\8;
-      index_less_than_length[i*32 + j] <== LessThan(15)([byteIndex, length]);
-      ciphertext_not_equal[i*32 + j] <== IsEqual()([computedCipherText[i][j], cipherText[i][j]]);
-      ciphertext_equal_check[i][j] <== (1 - ciphertext_not_equal[i*32 + j]) * index_less_than_length[i*32 + j];
-      // 0 means ciphertext is equal and index < length
-      ciphertext_equal_check[i][j] === 0;
+  component toCiphertextBytes[N];
+  signal bigEndianCiphertext[N*4];
+  for (var i = 0 ; i < N ; i++) {
+    toCiphertextBytes[i] = fromLittleEndianToWords32();
+    for (var j = 0 ; j < 32 ; j++) {
+      toCiphertextBytes[i].data[j] <== computedCipherText[i][j];
+    }
+    for (var j = 0 ; j < 4 ; j++) {
+      bigEndianCiphertext[i*4 + j] <== toCiphertextBytes[i].words[j];
     }
   }
+
+  signal paddedCiphertextCheck <== IsEqualArrayPaddedLHS(N*4)([cipherText, bigEndianCiphertext]);
+  paddedCiphertextCheck === 1;
 
   component toBytes[N];
   signal bigEndianPlaintext[N*4];
