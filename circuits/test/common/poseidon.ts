@@ -106,3 +106,20 @@ export function DataHasher(input: number[]): bigint {
     // Return the last hash
     return hashes[Math.ceil(input.length / 16)];
 }
+
+export function MaskedByteStreamDigest(input: number[]): bigint {
+    let hashes: bigint[] = [BigInt(0)];  // Initialize first hash as 0
+
+    for (let i = 0; i < input.length; i++) {
+
+        // Compute next hash using previous hash and packed input, but if the whole block was padding, don't do it
+        if (input[i] == -1) {
+            hashes.push(hashes[i]);
+        } else {
+            hashes.push(PoseidonModular([hashes[i], input[i]]));
+        }
+    }
+
+    // Return the last hash
+    return hashes[hashes.length - 1];
+}

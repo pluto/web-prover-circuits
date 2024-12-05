@@ -1,4 +1,4 @@
-pragma circom 2.1.9;
+pragma circom 2.2.0;
 
 include "circomlib/circuits/comparators.circom";
 include "circomlib/circuits/gates.circom";
@@ -264,5 +264,15 @@ template fromWords32ToLittleEndian() {
         for(var j = 7; j >= 0; j--) {
             data[i*8 + j] <== Num2Bits[i].out[7-j];
         }
+    }
+}
+
+template pushToFront(N) {
+    signal input in[N];
+    signal output out[N];
+
+    signal isPadding[N];
+    for (var i = 0 ; i < N ; i++) {
+        isPadding[i] <== IsEqual()([in[i], -1]);
     }
 }

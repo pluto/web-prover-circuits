@@ -12,10 +12,9 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     signal data_hash <== DataHasher(DATA_BYTES)(data);
     data_hash        === step_in[0];
 
-    signal input start_line_hash;
     signal input which_headers[MAX_NUMBER_OF_HEADERS];
     signal input http_digest;
-    signal input body_hash;
+    signal input body_digest;
 
     // TODO: could just have a parser template and reduce code here
     component State[DATA_BYTES];
@@ -56,13 +55,17 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     }
     signal http_mask[DATA_BYTES];
     signal include_header[DATA_BYTES];
-    signal inside_header[DATA_BYTES];
+    signal not_parsing_start[DATA_BYTES];
     for(var i = 0 ; i < DATA_BYTES ; i++) {
+        not_parsing_start[i] <== IsZero()(State[i].parsing_start);
         include_header[i] <== IndexSelector(MAX_NUMBER_OF_HEADERS)(which_headers, State[i].parsing_header - 1);
-        // IsEqual()([State[j].parsing_header, i + 1]);
-        http_mask[i]   <== data[i] * (include_header[i] + State[i].parsing_start);
+        log("------------------------------------------------------------------");
+        log("include_header[", i,"]      =", include_header[i]);
+        log("State[", i, "].parsing_start =", State[i].parsing_start);
+        http_mask[i] <== data[i] * (include_header[i] + (1-not_parsing_start[i]));
+        log("http_mask[", i,"]           =", http_mask[i]);
     }
-    signal inner_http_digest <== MaskedStreamDigest(DATA_BYTES)(http_mask);
+    signal inner_http_digest <== MaskedByteStreamDigest(DATA_BYTES)(http_mask);
     inner_http_digest === http_digest;
     // signal inner_header_hashes[MAX_NUMBER_OF_HEADERS];
     // signal header_is_unused[MAX_NUMBER_OF_HEADERS]; // If a header hash is passed in as 0, it is not used (no way to compute preimage of 0) 
@@ -79,11 +82,11 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     for(var i = 0 ; i < DATA_BYTES ; i++) {
         body[i] <== data[i] * State[i].parsing_body;
     }
-    signal inner_body_hash       <== DataHasher(DATA_BYTES)(body);
-    signal body_hash_equal_check <== IsEqual()([inner_body_hash, body_hash]);
-    body_hash_equal_check        === 1;
+    signal inner_body_digest       <== MaskedByteStreamDigest(DATA_BYTES)(body);
+    signal body_digest_equal_check <== IsEqual()([inner_body_digest, body_digest]);
+    body_digest_equal_check        === 1;
 
-    step_out[0] <== inner_body_hash;
+    step_out[0] <== inner_body_digest;
 
     // Verify machine ends in a valid state
     State[DATA_BYTES - 1].next_parsing_start       === 0;
