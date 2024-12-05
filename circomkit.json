@@ -4,5 +4,6 @@
     "curve": "bn128",
     "includes": [
         "node_modules"
-    ]
+    ],
+    "optimization": 2
 }
