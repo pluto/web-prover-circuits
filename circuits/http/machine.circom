@@ -90,8 +90,8 @@ template StateChange() {
     // enable parsing header on reading CRLF
     signal enableParsingHeader <== readCRLF * isParsingStart;
     // check if we are parsing header
-    // TODO: correct this 3 (it means we can parse max 2^3 headers)
-    signal isParsingHeader <== GreaterEqThan(3)([state[1], 1]);
+    // Allows for max headers to be 2^5 = 32
+    signal isParsingHeader <== GreaterEqThan(5)([state[1], 1]);
     // increment parsing header counter on CRLF and parsing header
     signal incrementParsingHeader <== readCRLF * isParsingHeader;
     // disable parsing header on reading CRLF-CRLF
