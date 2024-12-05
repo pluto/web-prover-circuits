@@ -338,7 +338,7 @@ describe("NIVC_FULL_AES", async () => {
 });
 
 describe("NIVC_FULL_CHACHA", async () => {
-    let chacha20Circuit: WitnessTester<["key", "nonce", "counter", "plainText", "cipherText", "length", "step_in"], ["step_out"]>;
+    let chacha20Circuit: WitnessTester<["key", "nonce", "counter", "plainText", "cipherText", "step_in"], ["step_out"]>;
     let httpCircuit: WitnessTester<["step_in", "data", "start_line_hash", "header_hashes", "body_hash"], ["step_out"]>;
     let json_mask_object_circuit: WitnessTester<["step_in", "data", "key", "keyLen"], ["step_out"]>;
     let json_mask_arr_circuit: WitnessTester<["step_in", "data", "index"], ["step_out"]>;
@@ -394,7 +394,7 @@ describe("NIVC_FULL_CHACHA", async () => {
         const ptIn = toInput(Buffer.from(http_response_plaintext));
         const keyIn = toInput(Buffer.from(Array(32).fill(0)));
         const nonceIn = toInput(Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00]));
-        let chacha20 = await chacha20Circuit.compute({ key: keyIn, nonce: nonceIn, counter: counterBits, plainText: ptIn, cipherText: chacha20_http_response_ciphertext, length: http_response_plaintext.length, step_in: init_nivc_input }, ["step_out"]);
+        let chacha20 = await chacha20Circuit.compute({ key: keyIn, nonce: nonceIn, counter: counterBits, plainText: ptIn, cipherText: chacha20_http_response_ciphertext, step_in: init_nivc_input }, ["step_out"]);
         console.log("ChaCha20 `step_out`:", chacha20.step_out);
         assert.deepEqual(http_response_hash, chacha20.step_out);
 
