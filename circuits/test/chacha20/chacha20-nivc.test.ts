@@ -56,7 +56,7 @@ describe("chacha20-nivc", () => {
                 nonce: toInput(Buffer.from(nonceBytes)),
                 counter: counterBits,
                 cipherText: ciphertextBytes,
-                plainText: plaintextBits,
+                plainText: plaintextBytes,
                 step_in: 0
             }, (["step_out"]));
             assert.deepEqual(w.step_out, DataHasher(plaintextBytes));
@@ -113,7 +113,7 @@ describe("chacha20-nivc", () => {
                 nonce: toInput(Buffer.from(nonceBytes)),
                 counter: counterBits,
                 cipherText: paddedCiphertextBytes,
-                plainText: plaintextBits,
+                plainText: paddedPlaintextBytes,
                 step_in: 0
             }, (["step_out"]));
             assert.deepEqual(w.step_out, DataHasher(paddedPlaintextBytes));

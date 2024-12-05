@@ -394,7 +394,7 @@ describe("NIVC_FULL_CHACHA", async () => {
         const ptIn = toInput(Buffer.from(http_response_plaintext));
         const keyIn = toInput(Buffer.from(Array(32).fill(0)));
         const nonceIn = toInput(Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00]));
-        let chacha20 = await chacha20Circuit.compute({ key: keyIn, nonce: nonceIn, counter: counterBits, plainText: ptIn, cipherText: chacha20_http_response_ciphertext, step_in: init_nivc_input }, ["step_out"]);
+        let chacha20 = await chacha20Circuit.compute({ key: keyIn, nonce: nonceIn, counter: counterBits, plainText: http_response_plaintext, cipherText: chacha20_http_response_ciphertext, step_in: init_nivc_input }, ["step_out"]);
         console.log("ChaCha20 `step_out`:", chacha20.step_out);
         assert.deepEqual(http_response_hash, chacha20.step_out);
 
