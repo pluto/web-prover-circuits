@@ -82,13 +82,26 @@ describe("hash", () => {
             console.log("#constraints:", await circuit.getConstraintCount());
         });
 
+        let all_zero_hash = BigInt("14744269619966411208579211824598458697587494354926760081771325075741142829156");
         it("witness: in = [0,...x16]", async () => {
             const input = Array(16).fill(0);
+            await circuit.expectPass(
+                { in: input },
+                { out: all_zero_hash }
+            );
+        });
+        // Check that TS version of DataHasher also is correct
+        assert.deepEqual(DataHasher(Array(16).fill(0)), all_zero_hash);
+
+        it("witness: in = [-1,...x16]", async () => {
+            const input = Array(16).fill(-1);
             await circuit.expectPass(
                 { in: input },
                 { out: 0 }
             );
         });
+        // Check that TS version of DataHasher also is correct
+        assert.deepEqual(DataHasher(Array(16).fill(-1)), 0);
 
         it("witness: in = [1,0,...x15]", async () => {
             let input = Array(16).fill(0);
@@ -99,6 +112,7 @@ describe("hash", () => {
                 { out: hash }
             );
         });
+
 
         it("witness: in = [0,0,...x15,1]", async () => {
             let input = Array(16).fill(0);
@@ -128,19 +142,8 @@ describe("hash", () => {
         10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13,
         10, 32, 32, 32, 125, 13, 10, 125]
 
-    const http_start_line = [
-        72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75, 13, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0,
-    ];
+    const http_start_line = [72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75, 13, 10];
+    const padded_http_start_line = http_start_line.concat(Array(320 - http_start_line.length).fill(-1));
 
     describe("DataHasherHTTP", () => {
         let circuit: WitnessTester<["in"], ["out"]>;
@@ -162,19 +165,20 @@ describe("hash", () => {
             console.log("#constraints:", await circuit.getConstraintCount());
         });
 
-        it("witness: TEST HTTP BYTES", async () => {
+        it("witness: HTTP bytes", async () => {
             let hash = DataHasher(TEST_HTTP_BYTES);
             assert.deepEqual(String(hash), "2195365663909569734943279727560535141179588918483111718403427949138562480675");
             await circuit.expectPass({ in: TEST_HTTP_BYTES }, { out: "2195365663909569734943279727560535141179588918483111718403427949138562480675" });
         });
 
-        let hash = DataHasher(http_start_line);
-        it("witness: TEST HTTP START LINE MASK", async () => {
-            await circuit.expectPass({ in: http_start_line }, { out: hash });
+        let padded_hash = DataHasher(padded_http_start_line);
+        it("witness: padded HTTP start line", async () => {
+            await circuit.expectPass({ in: padded_http_start_line }, { out: padded_hash });
         });
 
-        it("witness: TEST HTTP START LINE MASK TRUNCATED", async () => {
-            await circuit_small.expectPass({ in: http_start_line.slice(0, 32) }, { out: hash });
+        let hash = DataHasher(http_start_line);
+        it("witness: unpadded HTTP start line", async () => {
+            await circuit_small.expectPass({ in: http_start_line.concat(Array(32 - http_start_line.length).fill(-1)) }, { out: hash });
         });
     });
 });

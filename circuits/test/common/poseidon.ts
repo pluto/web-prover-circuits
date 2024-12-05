@@ -74,22 +74,29 @@ export function PoseidonModular(input: Array<number | string | bigint>): bigint 
 }
 
 export function DataHasher(input: number[]): bigint {
-    if (input.length % 16 !== 0) {
-        throw new Error("DATA_BYTES must be divisible by 16");
-    }
-
     let hashes: bigint[] = [BigInt(0)];  // Initialize first hash as 0
 
-    for (let i = 0; i < Math.floor(input.length / 16); i++) {
+    for (let i = 0; i < Math.ceil(input.length / 16); i++) {
         let packedInput = BigInt(0);
+        let isPaddedChunk = 0;
 
+        // Allow for using unpadded input:
+        let innerLoopLength = 16;
+        let lengthRemaining = input.length - 16 * i;
+        if (lengthRemaining < 16) {
+            innerLoopLength = lengthRemaining;
+        }
         // Pack 16 bytes into a single number
-        for (let j = 0; j < 16; j++) {
-            packedInput += BigInt(input[16 * i + j]) * BigInt(2 ** (8 * j));
+        for (let j = 0; j < innerLoopLength; j++) {
+            if (input[16 * i + j] != -1) {
+                packedInput += BigInt(input[16 * i + j]) * BigInt(2 ** (8 * j));
+            } else {
+                isPaddedChunk += 1;
+            }
         }
 
-        // Compute next hash using previous hash and packed input, but if packed input is zero, don't hash it.
-        if (packedInput == BigInt(0)) {
+        // Compute next hash using previous hash and packed input, but if the whole block was padding, don't do it
+        if (isPaddedChunk == innerLoopLength) {
             hashes.push(hashes[i]);
         } else {
             hashes.push(PoseidonModular([hashes[i], packedInput]));
@@ -97,5 +104,5 @@ export function DataHasher(input: number[]): bigint {
     }
 
     // Return the last hash
-    return hashes[Math.floor(input.length / 16)];
+    return hashes[Math.ceil(input.length / 16)];
 }
