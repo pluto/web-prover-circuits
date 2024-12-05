@@ -49,14 +49,13 @@ describe("chacha20-nivc", () => {
                     0xf9, 0x1b, 0x65, 0xc5, 0x52, 0x47, 0x33, 0xab, 0x8f, 0x59, 0x3d, 0xab, 0xcd, 0x62, 0xb3, 0x57,
                     0x16, 0x39, 0xd6, 0x24, 0xe6, 0x51, 0x52, 0xab, 0x8f, 0x53, 0x0c, 0x35, 0x9f, 0x08, 0x61, 0xd8
                 ];
-            const ciphertextBits = toInput(Buffer.from(ciphertextBytes))
             const plaintextBits = toInput(Buffer.from(plaintextBytes))
             const counterBits = uintArray32ToBits([1])[0]
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
                 counter: counterBits,
-                cipherText: ciphertextBits,
+                cipherText: ciphertextBytes,
                 plainText: plaintextBits,
                 step_in: 0
             }, (["step_out"]));
