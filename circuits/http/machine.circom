@@ -1,7 +1,6 @@
 pragma circom 2.1.9;
 
-include "language.circom";
-include "../../utils/array.circom";
+include "../utils/array.circom";
 
 template HttpStateUpdate() {
     signal input parsing_start; // flag that counts up to 3 for each value in the start line

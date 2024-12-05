@@ -1,6 +1,6 @@
-import { circomkit, WitnessTester, toByte } from "../../common";
+import { circomkit, WitnessTester, toByte } from "../common";
 import { assert } from "chai";
-import { DataHasher } from "../../common/poseidon";
+import { DataHasher } from "../common/poseidon";
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
@@ -97,9 +97,9 @@ const TEST_HTTP_BODY = [
 ];
 
 const DATA_BYTES = 320;
-const TOTAL_BYTES_ACROSS_NIVC = 1;
+const MAX_NUMBER_OF_HEADERS = 2;
 
-describe("HTTP_NIVC", async () => {
+describe("HTTP Verfication", async () => {
     let dataHasher: WitnessTester<["in"], ["out"]>;
     let httpNivc: WitnessTester<["step_in", "data", "start_line_hash", "header_hashes", "body_hash"], ["step_out"]>;
     before(async () => {
@@ -110,9 +110,9 @@ describe("HTTP_NIVC", async () => {
         });
 
         httpNivc = await circomkit.WitnessTester("http_nivc", {
-            file: "http/nivc/http_nivc",
-            template: "HttpNIVC",
-            params: [320, 2]
+            file: "http/verification",
+            template: "HTTPVerification",
+            params: [DATA_BYTES, MAX_NUMBER_OF_HEADERS]
         });
     });
 

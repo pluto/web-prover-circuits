@@ -1,5 +1,5 @@
 pragma circom 2.1.9;
 
-include "../../circuits/http/nivc/http_nivc.circom";
+include "../../circuits/http/verification.circom";
 
-component main { public [step_in] } = HttpNIVC(1024, 25);
+component main { public [step_in] } = HTTPVerification(1024, 25);
