@@ -33,12 +33,22 @@ template ChaCha20_NIVC(N) {
 
   // the below can be both ciphertext or plaintext depending on the direction
   // in => N 32-bit words => N 4 byte words
-  signal input plainText[N][32];
+  signal input plainText[N*4];
   // out => N 32-bit words => N 4 byte words
   signal input cipherText[N*4];
 
   signal input step_in[1];
   signal output step_out[1];
+
+  signal plaintextBits[N][32];
+  component toBits[N];
+  for (var i = 0 ; i < N ; i++) {
+    toBits[i] = fromWords32ToLittleEndian();
+    for (var j = 0 ; j < 4 ; j++) {
+      toBits[i].words[j] <== plainText[i*4 + j];
+    }
+    plaintextBits[i] <== toBits[i].data;
+  }
 
   var tmp[16][32] = [
     [
@@ -100,7 +110,7 @@ template ChaCha20_NIVC(N) {
     // XOR block with input
     for(j = 0; j < 16; j++) {
       xors[i*16 + j] = XorBits(32);
-      xors[i*16 + j].a <== plainText[i*16 + j];
+      xors[i*16 + j].a <== plaintextBits[i*16 + j];
       xors[i*16 + j].b <== rounds[i].out[j];
       computedCipherText[i*16 + j] <== xors[i*16 + j].out;
     }
@@ -130,17 +140,17 @@ template ChaCha20_NIVC(N) {
   signal paddedCiphertextCheck <== IsEqualArrayPaddedLHS(N*4)([cipherText, bigEndianCiphertext]);
   paddedCiphertextCheck === 1;
 
-  component toBytes[N];
-  signal bigEndianPlaintext[N*4];
-  for(var i = 0 ; i < N; i++) {
-    toBytes[i] = fromLittleEndianToWords32();
-    for(var j = 0 ; j < 32 ; j++) {
-      toBytes[i].data[j] <== plainText[i][j];
-    }
-    for(var j = 0; j < 4; j++) {
-      bigEndianPlaintext[i*4 + j] <== toBytes[i].words[j];
-    }
-  }
-  signal data_hash <== DataHasher(N*4)(bigEndianPlaintext);
+  // component toBytes[N];
+  // signal bigEndianPlaintext[N*4];
+  // for(var i = 0 ; i < N; i++) {
+  //   toBytes[i] = fromLittleEndianToWords32();
+  //   for(var j = 0 ; j < 32 ; j++) {
+  //     toBytes[i].data[j] <== plainText[i][j];
+  //   }
+  //   for(var j = 0; j < 4; j++) {
+  //     bigEndianPlaintext[i*4 + j] <== toBytes[i].words[j];
+  //   }
+  // }
+  signal data_hash <== DataHasher(N*4)(plainText);
   step_out[0] <== data_hash;
 }
