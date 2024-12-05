@@ -2,7 +2,6 @@ import { assert } from "chai";
 import { circomkit, WitnessTester, toByte, uintArray32ToBits, toUint32Array } from "../common";
 import { DataHasher } from "../common/poseidon";
 import { toInput } from "../chacha20/chacha20-nivc.test";
-import { buffer } from "stream/consumers";
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
@@ -355,7 +354,7 @@ describe("NIVC_FULL_CHACHA", async () => {
         chacha20Circuit = await circomkit.WitnessTester("CHACHA20", {
             file: "chacha20/nivc/chacha20_nivc",
             template: "ChaCha20_NIVC",
-            params: [80] // 80 * 32 = 2560 bits / 8 = 320 bytes
+            params: [320]
         });
         console.log("#constraints (CHACHA20):", await chacha20Circuit.getConstraintCount());
 
@@ -392,11 +391,9 @@ describe("NIVC_FULL_CHACHA", async () => {
         const init_nivc_input = 0;
         // Run ChaCha20
         const counterBits = uintArray32ToBits([1])[0]
-        const ptIn = toInput(Buffer.from(http_response_plaintext));
-        const ctIn = toInput(Buffer.from(chacha20_http_response_ciphertext));
         const keyIn = toInput(Buffer.from(Array(32).fill(0)));
         const nonceIn = toInput(Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00]));
-        let chacha20 = await chacha20Circuit.compute({ key: keyIn, nonce: nonceIn, counter: counterBits, plainText: ptIn, cipherText: ctIn, step_in: init_nivc_input }, ["step_out"]);
+        let chacha20 = await chacha20Circuit.compute({ key: keyIn, nonce: nonceIn, counter: counterBits, plainText: http_response_plaintext, cipherText: chacha20_http_response_ciphertext, step_in: init_nivc_input }, ["step_out"]);
         console.log("ChaCha20 `step_out`:", chacha20.step_out);
         assert.deepEqual(http_response_hash, chacha20.step_out);
 

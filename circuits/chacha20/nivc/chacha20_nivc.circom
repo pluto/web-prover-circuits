@@ -22,8 +22,8 @@ include "../../utils/array.circom";
 // +---+---+---+---+
 // | # | N | N | N |
 // +---+---+---+---+
-// paramaterized by n which is the number of 32-bit words to encrypt
-template ChaCha20_NIVC(N) {
+// paramaterized by `DATA_BYTES` which is the plaintext length in bytes
+template ChaCha20_NIVC(DATA_BYTES) {
   // key => 8 32-bit words = 32 bytes
   signal input key[8][32];
   // nonce => 3 32-bit words = 12 bytes
@@ -33,12 +33,22 @@ template ChaCha20_NIVC(N) {
 
   // the below can be both ciphertext or plaintext depending on the direction
   // in => N 32-bit words => N 4 byte words
-  signal input plainText[N][32];
+  signal input plainText[DATA_BYTES];
   // out => N 32-bit words => N 4 byte words
-  signal input cipherText[N][32];
+  signal input cipherText[DATA_BYTES];
 
   signal input step_in[1];
   signal output step_out[1];
+
+  signal plaintextBits[DATA_BYTES / 4][32];
+  component toBits[DATA_BYTES / 4];
+  for (var i = 0 ; i < DATA_BYTES / 4 ; i++) {
+    toBits[i] = fromWords32ToLittleEndian();
+    for (var j = 0 ; j < 4 ; j++) {
+      toBits[i].words[j] <== plainText[i*4 + j];
+    }
+    plaintextBits[i] <== toBits[i].data;
+  }
 
   var tmp[16][32] = [
     [
@@ -88,24 +98,24 @@ template ChaCha20_NIVC(N) {
 
   // do the ChaCha20 rounds
   // rounds opperates on 4 words at a time
-  component rounds[N/16];
-  component xors[N];
-  component counter_adder[N/16 - 1];
+  component rounds[DATA_BYTES / 64];
+  component xors[DATA_BYTES];
+  component counter_adder[DATA_BYTES / 64 - 1];
 
-  signal computedCipherText[N][32];
+  signal computedCipherText[DATA_BYTES / 4][32];
 
-  for(i = 0; i < N/16; i++) {
+  for(i = 0; i < DATA_BYTES / 64; i++) {
     rounds[i] = Round();
     rounds[i].in <== tmp;
     // XOR block with input
     for(j = 0; j < 16; j++) {
       xors[i*16 + j] = XorBits(32);
-      xors[i*16 + j].a <== plainText[i*16 + j];
+      xors[i*16 + j].a <== plaintextBits[i*16 + j];
       xors[i*16 + j].b <== rounds[i].out[j];
       computedCipherText[i*16 + j] <== xors[i*16 + j].out;
     }
 
-    if(i < N/16 - 1) {
+    if(i < DATA_BYTES / 64 - 1) {
       counter_adder[i] = AddBits(32);
       counter_adder[i].a <== tmp[12];
       counter_adder[i].b <== one;
@@ -115,25 +125,21 @@ template ChaCha20_NIVC(N) {
     }
   }
 
-  signal ciphertext_equal_check[N][32];
-  for(var i = 0 ; i < N; i++) {
-    for(var j = 0 ; j < 32 ; j++) {
-      ciphertext_equal_check[i][j] <== IsEqual()([computedCipherText[i][j], cipherText[i][j]]);
-      ciphertext_equal_check[i][j] === 1;
+  component toCiphertextBytes[DATA_BYTES / 4];
+  signal bigEndianCiphertext[DATA_BYTES];
+  for (var i = 0 ; i < DATA_BYTES / 4 ; i++) {
+    toCiphertextBytes[i] = fromLittleEndianToWords32();
+    for (var j = 0 ; j < 32 ; j++) {
+      toCiphertextBytes[i].data[j] <== computedCipherText[i][j];
+    }
+    for (var j = 0 ; j < 4 ; j++) {
+      bigEndianCiphertext[i*4 + j] <== toCiphertextBytes[i].words[j];
     }
   }
 
-  component toBytes[N];
-  signal bigEndianPlaintext[N*4];
-  for(var i = 0 ; i < N; i++) {
-    toBytes[i] = fromLittleEndianToWords32();
-    for(var j = 0 ; j < 32 ; j++) {
-      toBytes[i].data[j] <== plainText[i][j];
-    }
-    for(var j = 0; j < 4; j++) {
-      bigEndianPlaintext[i*4 + j] <== toBytes[i].words[j];
-    }
-  }
-  signal data_hash <== DataHasher(N*4)(bigEndianPlaintext);
+  signal paddedCiphertextCheck <== IsEqualArrayPaddedLHS(DATA_BYTES)([cipherText, bigEndianCiphertext]);
+  paddedCiphertextCheck === 1;
+
+  signal data_hash <== DataHasher(DATA_BYTES)(plainText);
   step_out[0] <== data_hash;
 }
