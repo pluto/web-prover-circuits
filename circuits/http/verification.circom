@@ -78,4 +78,12 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     body_hash_equal_check        === 1;
 
     step_out[0] <== inner_body_hash;
+
+    // Verify machine ends in a valid state
+    State[DATA_BYTES - 1].next_parsing_start       === 0;
+    State[DATA_BYTES - 1].next_parsing_header      === 0;
+    State[DATA_BYTES - 1].next_parsing_field_name  === 0;
+    State[DATA_BYTES - 1].next_parsing_field_value === 0;
+    State[DATA_BYTES - 1].next_parsing_body        === 1;
+    State[DATA_BYTES - 1].next_line_status         === 0;
 }
