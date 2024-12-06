@@ -1,6 +1,7 @@
-import { circomkit, WitnessTester, toByte } from "../common";
+import { circomkit, WitnessTester, PolynomialDigest, http_response_plaintext, http_start_line, http_header_0, http_header_1, http_body } from "../common";
 import { assert } from "chai";
 import { DataHasher } from "../common/poseidon";
+import { poseidon2 } from "poseidon-lite";
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
@@ -20,71 +21,11 @@ import { DataHasher } from "../common/poseidon";
 //    }
 // }
 
-// 320 bytes in the HTTP response
-let TEST_HTTP = [
-    72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75, 13, 10, 99, 111, 110, 116, 101, 110,
-    116, 45, 116, 121, 112, 101, 58, 32, 97, 112, 112, 108, 105, 99, 97, 116, 105, 111, 110, 47, 106,
-    115, 111, 110, 59, 32, 99, 104, 97, 114, 115, 101, 116, 61, 117, 116, 102, 45, 56, 13, 10, 99,
-    111, 110, 116, 101, 110, 116, 45, 101, 110, 99, 111, 100, 105, 110, 103, 58, 32, 103, 122, 105,
-    112, 13, 10, 84, 114, 97, 110, 115, 102, 101, 114, 45, 69, 110, 99, 111, 100, 105, 110, 103, 58,
-    32, 99, 104, 117, 110, 107, 101, 100, 13, 10, 13, 10, 123, 13, 10, 32, 32, 32, 34, 100, 97, 116,
-    97, 34, 58, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32, 34, 105, 116, 101, 109, 115, 34, 58, 32,
-    91, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32,
-    32, 32, 32, 32, 32, 32, 32, 32, 34, 100, 97, 116, 97, 34, 58, 32, 34, 65, 114, 116, 105, 115,
-    116, 34, 44, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 34, 112, 114,
-    111, 102, 105, 108, 101, 34, 58, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-    32, 32, 32, 32, 34, 110, 97, 109, 101, 34, 58, 32, 34, 84, 97, 121, 108, 111, 114, 32, 83, 119,
-    105, 102, 116, 34, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13,
-    10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13,
-    10, 32, 32, 32, 125, 13, 10, 125];
-
-const TEST_HTTP_START_LINE = [
-    72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75
-];
-
-const TEST_HTTP_HEADER_0 = [
-    99, 111, 110, 116, 101, 110, 116, 45, 116,
-    121, 112, 101, 58, 32, 97, 112, 112, 108, 105, 99, 97, 116, 105, 111, 110, 47, 106, 115, 111,
-    110, 59, 32, 99, 104, 97, 114, 115, 101, 116, 61, 117, 116, 102, 45, 56
-];
-
-const TEST_HTTP_HEADER_1 = [
-    99, 111, 110, 116, 101, 110, 116, 45, 101, 110, 99, 111, 100, 105, 110, 103, 58, 32, 103, 122,
-    105, 112
-];
-
-const TEST_HTTP_BODY = [
-    123, 13, 10, 32, 32, 32, 34,
-    100, 97, 116, 97, 34, 58, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32, 32, 34, 105, 116, 101, 109,
-    115, 34, 58, 32, 91, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 123, 13, 10, 32, 32,
-    32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 34, 100, 97, 116, 97, 34, 58, 32, 34, 65,
-    114, 116, 105, 115, 116, 34, 44, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-    32, 32, 34, 112, 114, 111, 102, 105, 108, 101, 34, 58, 32, 123, 13, 10, 32, 32, 32, 32, 32, 32,
-    32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 34, 110, 97, 109, 101, 34, 58, 32, 34, 84, 97, 121,
-    108, 111, 114, 32, 83, 119, 105, 102, 116, 34, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-    32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32,
-    32, 32, 32, 32, 32, 32, 93, 13, 10, 32, 32, 32, 125, 13, 10, 125,
-];
-
 const DATA_BYTES = 320;
 const MAX_NUMBER_OF_HEADERS = 2;
 
-function PolynomialDigest(coeffs: number[], input: bigint): bigint {
-    const prime = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
-
-    let result = BigInt(0);
-    let power = BigInt(1);
-
-    for (let i = 0; i < coeffs.length; i++) {
-        result = (result + BigInt(coeffs[i]) * power) % prime;
-        power = (power * input) % prime;
-    }
-
-    return result;
-}
-
 describe("HTTP Verfication", async () => {
-    let HTTPVerification: WitnessTester<["step_in", "data", "main_digests", "body_digest"], ["step_out"]>;
+    let HTTPVerification: WitnessTester<["step_in", "data", "main_digests"], ["step_out"]>;
     before(async () => {
         HTTPVerification = await circomkit.WitnessTester("http_nivc", {
             file: "http/verification",
@@ -93,96 +34,88 @@ describe("HTTP Verfication", async () => {
         });
     });
 
-    it("witness: TEST_HTTP, no header", async () => {
+    it("witness: http_response_plaintext, no header", async () => {
         // Get all the hashes we need
-        let plaintext_hash = DataHasher(TEST_HTTP);
+        let plaintext_hash = DataHasher(http_response_plaintext);
 
         // Compute the HTTP info digest
-        let main_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
-        let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
+        let main_digest = PolynomialDigest(http_start_line, plaintext_hash);
+        let body_digest = PolynomialDigest(http_body, plaintext_hash);
+        let step_out = poseidon2([body_digest, plaintext_hash]);
 
         // Run the HTTP circuit
         // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
         let http_nivc_compute = await HTTPVerification.compute({
             step_in: plaintext_hash,
-            data: TEST_HTTP,
+            data: http_response_plaintext,
             main_digests: [main_digest].concat(Array(2).fill(0)),
-            body_digest: body_digest,
         }, ["step_out"]);
         // I fucking hate circomkit
-        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], body_digest);
-
-
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], step_out);
     });
 
-    it("witness: TEST_HTTP, one header", async () => {
+    it("witness: http_response_plaintext, one header", async () => {
         // Get all the hashes we need
-        let plaintext_hash = DataHasher(TEST_HTTP);
+        let plaintext_hash = DataHasher(http_response_plaintext);
 
         // Compute the HTTP info digest
-        let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
-        let header_0_digest = PolynomialDigest(TEST_HTTP_HEADER_0, plaintext_hash);
-        let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
+        let start_line_digest = PolynomialDigest(http_start_line, plaintext_hash);
+        let header_0_digest = PolynomialDigest(http_header_0, plaintext_hash);
+        let body_digest = PolynomialDigest(http_body, plaintext_hash);
+        let step_out = poseidon2([body_digest, plaintext_hash]);
 
         // Run the HTTP circuit
         // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
         let http_nivc_compute = await HTTPVerification.compute({
             step_in: plaintext_hash,
-            data: TEST_HTTP,
+            data: http_response_plaintext,
             main_digests: [start_line_digest, header_0_digest].concat(Array(1).fill(0)),
-            body_digest: body_digest,
         }, ["step_out"]);
         // I fucking hate circomkit
-        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], body_digest);
-
-
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], step_out);
     });
 
-    it("witness: TEST_HTTP, two headers", async () => {
+    it("witness: http_response_plaintext, two headers", async () => {
         // Get all the hashes we need
-        let plaintext_hash = DataHasher(TEST_HTTP);
+        let plaintext_hash = DataHasher(http_response_plaintext);
 
         // Compute the HTTP info digest
-        let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
-        let header_0_digest = PolynomialDigest(TEST_HTTP_HEADER_0, plaintext_hash);
-        let header_1_digest = PolynomialDigest(TEST_HTTP_HEADER_1, plaintext_hash);
-        let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
+        let start_line_digest = PolynomialDigest(http_start_line, plaintext_hash);
+        let header_0_digest = PolynomialDigest(http_header_0, plaintext_hash);
+        let header_1_digest = PolynomialDigest(http_header_1, plaintext_hash);
+        let body_digest = PolynomialDigest(http_body, plaintext_hash);
+        let step_out = poseidon2([body_digest, plaintext_hash]);
 
         // Run the HTTP circuit
         // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
         let http_nivc_compute = await HTTPVerification.compute({
             step_in: plaintext_hash,
-            data: TEST_HTTP,
+            data: http_response_plaintext,
             main_digests: [start_line_digest, header_0_digest, header_1_digest],
-            body_digest: body_digest,
         }, ["step_out"]);
         // I fucking hate circomkit
-        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], body_digest);
-
-
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], step_out);
     });
 
-    it("witness: TEST_HTTP, two headers, order does not matter", async () => {
+    it("witness: http_response_plaintext, two headers, order does not matter", async () => {
         // Get all the hashes we need
-        let plaintext_hash = DataHasher(TEST_HTTP);
+        let plaintext_hash = DataHasher(http_response_plaintext);
 
         // Compute the HTTP info digest
-        let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
-        let header_0_digest = PolynomialDigest(TEST_HTTP_HEADER_0, plaintext_hash);
-        let header_1_digest = PolynomialDigest(TEST_HTTP_HEADER_1, plaintext_hash);
-        let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
+        let start_line_digest = PolynomialDigest(http_start_line, plaintext_hash);
+        let header_0_digest = PolynomialDigest(http_header_0, plaintext_hash);
+        let header_1_digest = PolynomialDigest(http_header_1, plaintext_hash);
+        let body_digest = PolynomialDigest(http_body, plaintext_hash);
+        let step_out = poseidon2([body_digest, plaintext_hash]);
 
         // Run the HTTP circuit
         // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
         let http_nivc_compute = await HTTPVerification.compute({
             step_in: plaintext_hash,
-            data: TEST_HTTP,
+            data: http_response_plaintext,
             main_digests: [header_1_digest, start_line_digest, header_0_digest],
-            body_digest: body_digest,
         }, ["step_out"]);
         // I fucking hate circomkit
-        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], body_digest);
-
-
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], step_out);
     });
 });

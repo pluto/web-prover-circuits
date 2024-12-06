@@ -22,8 +22,6 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         num_to_match -= contained[i];
     }
 
-    signal input body_digest;
-
     component State[DATA_BYTES];
     State[0]                     = HttpStateUpdate();
     State[0].byte                <== data[0];
@@ -86,17 +84,17 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     signal body_accum[DATA_BYTES];
     body_accum[0] <== 0;
     signal body_switch[DATA_BYTES -1];
-    signal inner_body_digest[DATA_BYTES];
-    inner_body_digest[0] <== 0;
+    signal body_digest[DATA_BYTES];
+    body_digest[0] <== 0;
     for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
         body_accum[i + 1]        <== body_accum[i] + State[i + 1].parsing_body;
         body_switch[i]           <== IsEqual()([body_accum[i + 1], 1]);
         body_monomials[i + 1]    <== body_monomials[i] * step_in[0] + body_switch[i];
-        inner_body_digest[i + 1] <== inner_body_digest[i] + body_monomials[i + 1] * data[i + 1];
+        body_digest[i + 1] <== body_digest[i] + body_monomials[i + 1] * data[i + 1];
     }
-    inner_body_digest[DATA_BYTES - 1] === body_digest;
 
-    step_out[0] <== body_digest;
+    // TODO: This, for now, passes back out the hash of body_digest and the plaintext_hash so it can be properly verified in the JSON
+    step_out[0] <== PoseidonChainer()([body_digest[DATA_BYTES - 1], step_in[0]]);
 
     // Verify machine ends in a valid state
     State[DATA_BYTES - 1].next_parsing_start       === 0;

@@ -13,6 +13,8 @@ template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
     // Authenticate the (potentially further masked) plaintext we are passing in
     signal input data[DATA_BYTES];
     signal data_hash <== DataHasher(DATA_BYTES)(data);
+    log("step_in = ", step_in[0]);
+    log("data_hash = ", data_hash);
     data_hash === step_in[0];
 
     // flag determining whether this byte is matched value
