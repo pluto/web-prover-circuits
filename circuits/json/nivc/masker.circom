@@ -4,8 +4,6 @@ include "../interpreter.circom";
 include "../../utils/hash.circom";
 
 template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
-    assert(MAX_STACK_HEIGHT >= 2); // TODO (autoparallel): idk if we need this now
-    
     signal input step_in[1];
     signal input key[MAX_KEY_LENGTH];
     signal input keyLen;
@@ -51,7 +49,6 @@ template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
     signal masked[DATA_BYTES];
     masked[0] <== data[0] * is_value_match[0];
 
-    // TODO (autoparallel): it might be dumb to do this with the max key length but fuck it
     for(var data_idx = 1; data_idx < DATA_BYTES; data_idx++) {
         if(data_idx < DATA_BYTES - MAX_KEY_LENGTH) {
             State[data_idx]                  = StateUpdate(MAX_STACK_HEIGHT);
@@ -98,8 +95,6 @@ template JsonMaskObjectNIVC(DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH) {
 }
 
 template JsonMaskArrayIndexNIVC(DATA_BYTES, MAX_STACK_HEIGHT) {
-    assert(MAX_STACK_HEIGHT >= 2); // TODO (autoparallel): idk if we need this now
-    
     signal input step_in[1];
     signal input index;
 
