@@ -84,7 +84,7 @@ function PolynomialDigest(coeffs: number[], input: bigint): bigint {
 }
 
 describe("HTTP Verfication", async () => {
-    let HTTPVerification: WitnessTester<["step_in", "data", "which_headers", "main_digest", "body_digest"], ["step_out"]>;
+    let HTTPVerification: WitnessTester<["step_in", "data", "main_digests", "body_digest"], ["step_out"]>;
     before(async () => {
         HTTPVerification = await circomkit.WitnessTester("http_nivc", {
             file: "http/verification",
@@ -96,79 +96,93 @@ describe("HTTP Verfication", async () => {
     it("witness: TEST_HTTP, no header", async () => {
         // Get all the hashes we need
         let plaintext_hash = DataHasher(TEST_HTTP);
-        // Compute the HTTP info digest
-        // let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
-        let main_digest = PolynomialDigest(TEST_HTTP_START_LINE, BigInt(2)); // TODO: For debugging purposes
-        console.log("start_line_digest = ", main_digest);
 
-        // let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
-        let body_digest = PolynomialDigest(TEST_HTTP_BODY, BigInt(2)); // TODO: For debugging purposes
-        console.log("body_digest = ", body_digest);
+        // Compute the HTTP info digest
+        let main_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
+        let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
 
         // Run the HTTP circuit
         // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
         let http_nivc_compute = await HTTPVerification.compute({
             step_in: plaintext_hash,
             data: TEST_HTTP,
-            which_headers: [0, 0],
-            main_digest,
+            main_digests: [main_digest].concat(Array(2).fill(0)),
             body_digest: body_digest,
         }, ["step_out"]);
-        // TODO: Readd this
-        // assert.deepEqual(http_nivc_compute.step_out, body_digest);
+        // I fucking hate circomkit
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], body_digest);
 
 
     });
 
-    // it("witness: TEST_HTTP, single header", async () => {
-    //     // Get all the hashes we need
-    //     // Get the data hash
-    //     let plaintext_hash = DataHasher(TEST_HTTP);
-    //     // Compute the HTTP info digest
-    //     // let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
-    //     let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, BigInt(2)); // For debugging purposes
-    //     console.log("start_line_digest = ", start_line_digest);
-    //     let header_0_digest = PolynomialDigest(TEST_HTTP_HEADER_0, plaintext_hash);
-    //     let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
+    it("witness: TEST_HTTP, one header", async () => {
+        // Get all the hashes we need
+        let plaintext_hash = DataHasher(TEST_HTTP);
 
-    //     // Run the HTTP circuit
-    //     // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
-    //     let http_nivc_compute = await HTTPVerification.compute({
-    //         step_in: plaintext_hash,
-    //         data: TEST_HTTP,
-    //         start_line_digest,
-    //         which_headers: [1, 0],
-    //         headers_digest: header_0_digest,
-    //         body_digest: body_digest,
-    //     }, ["step_out"]);
-    //     // TODO: Readd this
-    //     // assert.deepEqual(http_nivc_compute.step_out, body_digest);
+        // Compute the HTTP info digest
+        let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
+        let header_0_digest = PolynomialDigest(TEST_HTTP_HEADER_0, plaintext_hash);
+        let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
+
+        // Run the HTTP circuit
+        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
+        let http_nivc_compute = await HTTPVerification.compute({
+            step_in: plaintext_hash,
+            data: TEST_HTTP,
+            main_digests: [start_line_digest, header_0_digest].concat(Array(1).fill(0)),
+            body_digest: body_digest,
+        }, ["step_out"]);
+        // I fucking hate circomkit
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], body_digest);
 
 
-    // });
+    });
 
-    // it("witness: TEST_HTTP, two headers", async () => {
-    //     // Get all the hashes we need
-    //     // Get the data hash
-    //     let data_hash = await dataHasher.compute({ in: TEST_HTTP }, ["out"]);
-    //     // Get the start line hash
-    //     let start_line_hash = await dataHasher.compute({ in: TEST_HTTP_START_LINE }, ["out"])
-    //     // Get the header hashes
-    //     let header_0_hash = await dataHasher.compute({ in: TEST_HTTP_HEADER_0 }, ["out"]);
-    //     let header_1_hash = await dataHasher.compute({ in: TEST_HTTP_HEADER_1 }, ["out"]);
-    //     // Get the body hash
-    //     let body_hash = await dataHasher.compute({ in: TEST_HTTP_BODY }, ["out"]);
+    it("witness: TEST_HTTP, two headers", async () => {
+        // Get all the hashes we need
+        let plaintext_hash = DataHasher(TEST_HTTP);
 
-    //     // Run the HTTP circuit
-    //     // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
-    //     let http_nivc_compute = await httpNivc.compute({
-    //         step_in: data_hash.out,
-    //         data: TEST_HTTP,
-    //         start_line_hash: start_line_hash.out,
-    //         header_hashes: [header_0_hash.out, header_1_hash.out],
-    //         body_hash: body_hash.out,
-    //     }, ["step_out"]);
+        // Compute the HTTP info digest
+        let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
+        let header_0_digest = PolynomialDigest(TEST_HTTP_HEADER_0, plaintext_hash);
+        let header_1_digest = PolynomialDigest(TEST_HTTP_HEADER_1, plaintext_hash);
+        let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
 
-    //     assert.deepEqual(http_nivc_compute.step_out, body_hash.out);
-    // });
+        // Run the HTTP circuit
+        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
+        let http_nivc_compute = await HTTPVerification.compute({
+            step_in: plaintext_hash,
+            data: TEST_HTTP,
+            main_digests: [start_line_digest, header_0_digest, header_1_digest],
+            body_digest: body_digest,
+        }, ["step_out"]);
+        // I fucking hate circomkit
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], body_digest);
+
+
+    });
+
+    it("witness: TEST_HTTP, two headers, order does not matter", async () => {
+        // Get all the hashes we need
+        let plaintext_hash = DataHasher(TEST_HTTP);
+
+        // Compute the HTTP info digest
+        let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
+        let header_0_digest = PolynomialDigest(TEST_HTTP_HEADER_0, plaintext_hash);
+        let header_1_digest = PolynomialDigest(TEST_HTTP_HEADER_1, plaintext_hash);
+        let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
+
+        // Run the HTTP circuit
+        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
+        let http_nivc_compute = await HTTPVerification.compute({
+            step_in: plaintext_hash,
+            data: TEST_HTTP,
+            main_digests: [header_1_digest, start_line_digest, header_0_digest],
+            body_digest: body_digest,
+        }, ["step_out"]);
+        // I fucking hate circomkit
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], body_digest);
+
+
+    });
 });

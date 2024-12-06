@@ -1,6 +1,7 @@
 pragma circom 2.1.9;
 
 include "machine.circom";
+// TODO: we don't need this if we do a poly digest of the plaintext in authentication circuit
 include "../utils/hash.circom";
 
 template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
@@ -9,14 +10,20 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
 
     // Authenticate the plaintext we are passing in
     signal input data[DATA_BYTES];
+    // TODO: we don't need this if we do a poly digest of the plaintext in authentication circuit
     signal data_hash <== DataHasher(DATA_BYTES)(data);
     data_hash        === step_in[0];
 
-    signal input which_headers[MAX_NUMBER_OF_HEADERS]; // We could take this in as a field element and map it to bits for more efficiency
-    signal input main_digest;
+    signal input main_digests[MAX_NUMBER_OF_HEADERS + 1];  // Contains digests of start line and all intended headers (up to `MAX_NUMBER_OF_HEADERS`)
+    signal contained[MAX_NUMBER_OF_HEADERS + 1];
+    var num_to_match = MAX_NUMBER_OF_HEADERS + 1;
+    for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS + 1 ; i++) {
+        contained[i] <== IsZero()(main_digests[i]);
+        num_to_match -= contained[i];
+    }
+
     signal input body_digest;
 
-    // TODO: could just have a parser template and reduce code here
     component State[DATA_BYTES];
     State[0]                     = HttpStateUpdate();
     State[0].byte                <== data[0];
@@ -38,43 +45,40 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         State[data_idx].line_status         <== State[data_idx - 1].next_line_status;
     }
 
-    // Mask leaving only selected headers and start line
-    for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS ; i++) {
-        0 === which_headers[i] * (1 - which_headers[i]); // Assert this is a bit
-    }
-    signal include_header[DATA_BYTES];
-    signal not_parsing_start[DATA_BYTES];
-
     signal main_monomials[DATA_BYTES];
-    main_monomials[0] <== 1;
+    main_monomials[0] <== 1;    
 
-    signal is_line_change[DATA_BYTES];
-    signal was_cleared[DATA_BYTES];
-    signal start_line_or_chosen_header_and_not_line_change[DATA_BYTES];
+    signal is_line_change[DATA_BYTES-1];
+    signal was_cleared[DATA_BYTES-1];
+    signal not_body_and_not_line_change[DATA_BYTES-1];
 
-
+    signal rescaled_or_was_cleared[DATA_BYTES-1];
     for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
-        // log("------------------------------------------------------------------");
-        is_line_change[i] <== Contains(2)(data[i + 1], [10, 13]); // capture if we hit an end line sequence
-
-        not_parsing_start[i] <== IsZero()(State[i + 1].parsing_start);
-        include_header[i] <== IndexSelector(MAX_NUMBER_OF_HEADERS)(which_headers, State[i + 1].parsing_header - 1);
-        start_line_or_chosen_header_and_not_line_change[i] <== (1-is_line_change[i]) * ((1 - not_parsing_start[i]) + include_header[i]);
-
-        // TODO: use `step_in[0]` in the future, testing with `2` now
-        was_cleared[i] <== IsZero()(main_monomials[i]);
-        main_monomials[i + 1] <==  start_line_or_chosen_header_and_not_line_change[i] * (main_monomials[i] * 2 + was_cleared[i]);
-        // log("main_monomials[", i, "]           =", main_monomials[i]);
+        is_line_change[i]               <== Contains(2)(data[i + 1], [10, 13]); // capture if we hit an end line sequence
+        was_cleared[i]                  <== IsZero()(main_monomials[i]);
+        not_body_and_not_line_change[i] <== (1 - State[i + 1].parsing_body) * (1 - is_line_change[i]);
+        rescaled_or_was_cleared[i]      <== (main_monomials[i] * step_in[0] + was_cleared[i]);
+        main_monomials[i + 1]           <==  not_body_and_not_line_change[i] * rescaled_or_was_cleared[i];
     }
 
+    signal is_match[DATA_BYTES];
+    signal contains[DATA_BYTES];
+    signal is_zero[DATA_BYTES];
+    signal monomial_is_zero[DATA_BYTES];
+    signal accum_prev[DATA_BYTES];
+    var num_matched = 0;
     signal inner_main_digest[DATA_BYTES + 1];
     inner_main_digest[0] <== 0;
     for(var i = 0 ; i < DATA_BYTES ; i++) {
-        inner_main_digest[i+1] <== inner_main_digest[i] + data[i] * main_monomials[i];
-        // log("inner_main_digest[", i + 1,"] = ", inner_main_digest[i+1]);
+        monomial_is_zero[i]    <== IsZero()(main_monomials[i]);
+        accum_prev[i]          <== (1 - monomial_is_zero[i]) * inner_main_digest[i];
+        inner_main_digest[i+1] <== accum_prev[i] + data[i] * main_monomials[i];
+        is_zero[i]             <== IsZero()(inner_main_digest[i+1]);
+        contains[i]            <== Contains(MAX_NUMBER_OF_HEADERS + 1)(inner_main_digest[i+1], main_digests);
+        is_match[i]            <== (1 - is_zero[i]) * contains[i];
+        num_matched             += is_match[i];
     }
-    // log("inner_main_digest = ", inner_main_digest[DATA_BYTES]);
-    inner_main_digest[DATA_BYTES] === main_digest;
+    num_matched === num_to_match;
 
     // BODY
     signal body_monomials[DATA_BYTES];
@@ -85,16 +89,11 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     signal inner_body_digest[DATA_BYTES];
     inner_body_digest[0] <== 0;
     for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
-        log("------------------------------------------------------------------");
-        body_accum[i + 1] <== body_accum[i] + State[i + 1].parsing_body;
-        body_switch[i] <== IsEqual()([body_accum[i + 1], 1]);
-        log("data[", i+1,"]      =", data[i+1]);
-        log("body_switch[", i,"] =", body_switch[i]);
-        body_monomials[i + 1] <== body_monomials[i] * 2 + body_switch[i];
-        log("body_monomials[", i+1,"] =", body_monomials[i+1]);
+        body_accum[i + 1]        <== body_accum[i] + State[i + 1].parsing_body;
+        body_switch[i]           <== IsEqual()([body_accum[i + 1], 1]);
+        body_monomials[i + 1]    <== body_monomials[i] * step_in[0] + body_switch[i];
         inner_body_digest[i + 1] <== inner_body_digest[i] + body_monomials[i + 1] * data[i + 1];
     }
-    log("inner_body_digest = ", inner_body_digest[DATA_BYTES - 1]);
     inner_body_digest[DATA_BYTES - 1] === body_digest;
 
     step_out[0] <== body_digest;
