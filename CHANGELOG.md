@@ -5,8 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
+## [0.7.0] - 2024-12-3
+ 
+### Added
+### Changed
+#### Circuit Builds
+#### Artifacts
+### Notes
 
-## [UNRELEASED] [0.6.0] - 2024-12-3
+--- 
+
+## [0.6.0] - 2024-12-3
  
 ### Added
 
@@ -20,9 +29,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
     - `aes_gctr_nivc` and `chacha20-nivc` replaced with a more suitable name: `plaintext_authentication`
         - Runs with `512b` per fold
     - `http_nivc` replaced with more suitable name: `http_verification`
-
-### Fixed
-- TODO
 
 ### Notes
 - **Total circuits:** 5
