@@ -1,7 +1,0 @@
-{
-    "version": "HTTP/1.1",
-    "status": "200",
-    "message": "OK",
-    "headerName1": "content-type",
-    "headerValue1": "application/json; charset=utf-8"
-}

@@ -1,9 +1,0 @@
-{
-    "method": "GET",
-    "target": "/api",
-    "version": "HTTP/1.1",
-    "headerName1": "Host",
-    "headerValue1": "localhost",
-    "headerName2": "Accept",
-    "headerValue2": "application/json"
-}
