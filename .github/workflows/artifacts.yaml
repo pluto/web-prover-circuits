@@ -82,6 +82,12 @@ jobs:
         cargo install --path .
         echo $(which build-circuit)
 
+
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
+
     - name: Build circuits using Makefile
       run: |
         make debug  # Show what will be processed
@@ -97,23 +103,23 @@ jobs:
 
         # Build the parameter generator
         cargo build --release
-        
+
         # Generate parameters using makefile target
         make params
-        
+
         # Verify parameter files were created
         for target_dir in builds/target_*b; do
           size=$(basename "$target_dir" | sed 's/target_//')
           # Calculate ROM length the same way as in Makefile
           rom_length=$(echo "${size%b} / 16 + 16" | bc)
-          
+
           # List of expected files
           files=(
             "aux_params_${size}_rom_length_${rom_length}.bin"
             "prover_key_${size}_rom_length_${rom_length}.bin"
             "verifier_key_${size}_rom_length_${rom_length}.bin"
           )
-          
+
           for file in "${files[@]}"; do
             if [ ! -f "$target_dir/artifacts/$file" ]; then
               echo "Error: File not found: $file in $target_dir/artifacts"
@@ -122,7 +128,7 @@ jobs:
               echo "Successfully verified: $file"
             fi
           done
-          
+
           echo "Successfully generated all parameter files for ${size}"
         done
 
@@ -133,14 +139,14 @@ jobs:
           size=$(basename "$target_dir" | sed 's/target_//')
           # Calculate ROM length the same way as in Makefile
           rom_length=$(echo "${size%b} / 16 + 16" | bc)
-          
+
           # List of expected files
           files=(
             "aux_params_${size}_rom_length_${rom_length}.bin"
             "prover_key_${size}_rom_length_${rom_length}.bin"
             "verifier_key_${size}_rom_length_${rom_length}.bin"
           )
-          
+
           for file in "${files[@]}"; do
             if [ ! -f "$target_dir/artifacts/$file" ]; then
               echo "Error: File not found: $file in $target_dir/artifacts"
@@ -149,9 +155,9 @@ jobs:
               echo "Successfully verified: $file"
             fi
           done
-          
+
           echo "Successfully generated all parameter files for ${size}"
-          
+
           # Create zip archive for this target size
           if [ -d "$target_dir/artifacts" ]; then
             echo "Creating archive for $size"
