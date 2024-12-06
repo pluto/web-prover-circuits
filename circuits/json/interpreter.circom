@@ -393,10 +393,7 @@ template KeyMatchAtDepth(dataLen, n, keyLen, depth) {
     signal output out <== substring_match * is_parsing_correct_key_at_depth;
 }
 
-// TODO: Not checking start of key is quote since that is handled by `parsing_key`?
 template MatchPaddedKey(n) {
-    // TODO: If key is not padded at all, then `in[1]` will not contain an end quote.
-    // Perhaps we modify this to handle that, or just always pad the key at least once.
     signal input in[2][n];
     signal input keyLen;
     signal output out;
@@ -426,7 +423,6 @@ template MatchPaddedKey(n) {
     }
 
     signal isEndOfKeyEqualToQuote <== IsEqual()([endOfKeyAccum[n], 1]);
-    // log("isEndOfKeyEqualToQuote", isEndOfKeyEqualToQuote);
 
     component totalEqual = IsEqual();
     totalEqual.in[0] <== n;
@@ -470,10 +466,9 @@ template KeyMatchAtIndex(dataLen, maxKeyLen, index) {
     isSubstringMatch.in[0] <== paddedKey;
     isSubstringMatch.keyLen <== keyLen;
     for(var matcher_idx = 0; matcher_idx <= maxKeyLen; matcher_idx++) {
-        // log("matcher_idx", index, matcher_idx, data[index + matcher_idx]);
         isSubstringMatch.in[1][matcher_idx] <== data[index + matcher_idx];
     }
-    // log("keyMatchAtIndex", isParsingCorrectKey, isSubstringMatch.out);
+    _ <== data;
 
     signal output out <== isSubstringMatch.out * isParsingCorrectKey;
 }

@@ -1,5 +1,8 @@
 # HTTP Extractor
 
+> [!WARNING] Deprecated docs
+> These docs are out-of-date with current architecture which uses hash-based approach. Will be updated later. More details can be found in [circuits](../circuits/http/verification.circom)
+
 HTTP is a more strict and well-defined specification that JSON, and thus, it's parser is a lot easier than JSON.
 
 Proof generation for HTTP extractor is broken into:

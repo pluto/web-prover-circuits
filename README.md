@@ -1,37 +1,33 @@
 <h1 align="center">
-  Parser Attestor
+  Web-Prover Circuits
 </h1>
 
 <div align="center">
-  <a href="https://github.com/pluto/parser-attestor/graphs/contributors">
+  <a href="https://github.com/pluto/web-prover-circuits/graphs/contributors">
     <img src="https://img.shields.io/github/contributors/pluto/spark?style=flat-square&logo=github&logoColor=8b949e&labelColor=282f3b&color=32c955" alt="Contributors" />
   </a>
-  <a href="https://github.com/pluto/parser-attestor/actions/workflows/test.yaml">
+  <a href="https://github.com/pluto/web-prover-circuits/actions/workflows/test.yml">
     <img src="https://img.shields.io/badge/tests-passing-32c955?style=flat-square&logo=github-actions&logoColor=8b949e&labelColor=282f3b" alt="Tests" />
-  </a>
-  <a href="https://github.com/pluto/parser-attestor/actions/workflows/lint.yaml">
-    <img src="https://img.shields.io/badge/lint-passing-32c955?style=flat-square&logo=github-actions&logoColor=8b949e&labelColor=282f3b" alt="Lint" />
   </a>
 </div>
 
 ## Overview
 
-`parser-attestor` is a project focused on implementing parsers and extractors/selective-disclosure for various data formats inside of zero-knowledge circuits.
+`web-prover-circuits` is a project focused on implementing parsers and extractors/selective-disclosure for various data formats inside zero-knowledge circuits.
 
 ## Repository Structure
 
 - `circuits/`: Current implementation of circuits
+  - `chacha`: ChaCha encryption circuit
   - `http`: HTTP parser and extractor
   - `json`: JSON parser and extractor
     - `json` has its own documentation [here](docs/json.md)
   - `utils`: Utility circuits
   - `test`: Circuit tests
-- `src/`: Rust `pabuild` binary
-  - `pabuild` has its own documentation [here](docs/pabuild.md)
+- `src/`: Rust public-params creation binary
 - `examples/`: Reference examples for JSON and HTTP parsers
 
 Documentation, in general, can be found in the `docs` directory.
-We will add to this over time to make working with `parser-attestor` easier.
 
 ## Getting Started
 
@@ -92,9 +88,9 @@ npx circomkit help
 `circomkit` can essentially do everything you would want to do with these Circuits, though we can't guarantee all commands work properly.
 
 **Example:**
-For example, to compile the `json-parser`, you can run the following from the repository root:
+For example, to compile the `plaintext_authentication`, you can run the following from the repository root:
 ```
-npx circomkit compile json-parser
+npx circomkit compile plaintext_authentication_1024b
 ```
 which implicitly checks the `circuits.json` for an object that points to the circuit's code itself.
 
@@ -113,21 +109,6 @@ npx mocha
 ```
 will run every circuit test.
 To filter tests, you can use the `-g` flag (very helpful!).
-
-
-### Install `pabuild`
-From the root of this repository, run:
-```sh
-cargo install --path .
-```
-to install the `pabuild` binary.
-You can see a help menu with the subcommands by:
-```sh
-pabuild --help
-```
-This is our local Rust command line application.
-Please see the [documentation](docs/pabuild.md) for how to use this alongside the other tools.
-
 
 ## License
 
