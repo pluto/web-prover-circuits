@@ -103,7 +103,6 @@ describe("chacha20-nivc", () => {
                 ];
             let totalLength = 128;
             let paddedPlaintextBytes = plaintextBytes.concat(Array(totalLength - plaintextBytes.length).fill(-1));
-            console.log(paddedPlaintextBytes);
             const counterBits = uintArray32ToBits([1])[0]
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
@@ -149,7 +148,6 @@ describe("chacha20-nivc", () => {
                 toByte("Ladies and Gentlemen of the class of '99: If I could offer you only one tip ");
             let totalLength = 128;
             let paddedPlaintextBytes = plaintextBytes.concat(Array(totalLength - plaintextBytes.length).fill(-1));
-            console.log(paddedPlaintextBytes);
             const counterBits = uintArray32ToBits([1])[0]
             await circuit.expectFail({
                 key: toInput(Buffer.from(keyBytes)),
