@@ -44,14 +44,17 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     }
     signal include_header[DATA_BYTES];
     signal not_parsing_start[DATA_BYTES];
+
     signal main_monomials[DATA_BYTES];
     main_monomials[0] <== 1;
 
     signal is_line_change[DATA_BYTES];
     signal was_cleared[DATA_BYTES];
     signal start_line_or_chosen_header_and_not_line_change[DATA_BYTES];
+
+
     for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
-        log("------------------------------------------------------------------");
+        // log("------------------------------------------------------------------");
         is_line_change[i] <== Contains(2)(data[i + 1], [10, 13]); // capture if we hit an end line sequence
 
         not_parsing_start[i] <== IsZero()(State[i + 1].parsing_start);
@@ -61,32 +64,40 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         // TODO: use `step_in[0]` in the future, testing with `2` now
         was_cleared[i] <== IsZero()(main_monomials[i]);
         main_monomials[i + 1] <==  start_line_or_chosen_header_and_not_line_change[i] * (main_monomials[i] * 2 + was_cleared[i]);
-        log("main_monomials[", i, "]           =", main_monomials[i]);
+        // log("main_monomials[", i, "]           =", main_monomials[i]);
     }
 
     signal inner_main_digest[DATA_BYTES + 1];
     inner_main_digest[0] <== 0;
     for(var i = 0 ; i < DATA_BYTES ; i++) {
         inner_main_digest[i+1] <== inner_main_digest[i] + data[i] * main_monomials[i];
-        log("inner_main_digest[", i + 1,"] = ", inner_main_digest[i+1]);
+        // log("inner_main_digest[", i + 1,"] = ", inner_main_digest[i+1]);
     }
-    log("inner_main_digest = ", inner_main_digest[DATA_BYTES]);
+    // log("inner_main_digest = ", inner_main_digest[DATA_BYTES]);
     inner_main_digest[DATA_BYTES] === main_digest;
 
+    // BODY
+    signal body_monomials[DATA_BYTES];
+    body_monomials[0] <== 0;
+    signal body_accum[DATA_BYTES];
+    body_accum[0] <== 0;
+    signal body_switch[DATA_BYTES -1];
+    signal inner_body_digest[DATA_BYTES];
+    inner_body_digest[0] <== 0;
+    for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
+        log("------------------------------------------------------------------");
+        body_accum[i + 1] <== body_accum[i] + State[i + 1].parsing_body;
+        body_switch[i] <== IsEqual()([body_accum[i + 1], 1]);
+        log("data[", i+1,"]      =", data[i+1]);
+        log("body_switch[", i,"] =", body_switch[i]);
+        body_monomials[i + 1] <== body_monomials[i] * 2 + body_switch[i];
+        log("body_monomials[", i+1,"] =", body_monomials[i+1]);
+        inner_body_digest[i + 1] <== inner_body_digest[i] + body_monomials[i + 1] * data[i + 1];
+    }
+    log("inner_body_digest = ", inner_body_digest[DATA_BYTES - 1]);
+    inner_body_digest[DATA_BYTES - 1] === body_digest;
 
-    // TODO: Just hash all the bytes once? Also could pass in a body hash and all the header hashes we want and just assert that they get hit like we would with JSON. Then we don't have to hash the body and headers separately and can still output body hash
-    // we could go through, accumulate a hash, then clear when we change to a new thing. Then just assert that hash is in a list of header/body hashes.
-
-    // Get the body shit
-    // signal body[DATA_BYTES];
-    // for(var i = 0 ; i < DATA_BYTES ; i++) {
-    //     body[i] <== data[i] * State[i].parsing_body;
-    // }
-    // signal inner_body_digest       <== MaskedByteStreamDigest(DATA_BYTES)(body);
-    // signal body_digest_equal_check <== IsEqual()([inner_body_digest, body_digest]);
-    // body_digest_equal_check        === 1;
-
-    // step_out[0] <== inner_body_digest;
+    step_out[0] <== body_digest;
 
     // Verify machine ends in a valid state
     State[DATA_BYTES - 1].next_parsing_start       === 0;

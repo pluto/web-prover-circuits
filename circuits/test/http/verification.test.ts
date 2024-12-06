@@ -103,6 +103,7 @@ describe("HTTP Verfication", async () => {
 
         // let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
         let body_digest = PolynomialDigest(TEST_HTTP_BODY, BigInt(2)); // TODO: For debugging purposes
+        console.log("body_digest = ", body_digest);
 
         // Run the HTTP circuit
         // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
