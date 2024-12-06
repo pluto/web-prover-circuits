@@ -61,6 +61,11 @@ jobs:
       with:
         toolchain: nightly-2024-10-28
 
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
+
     - name: Install Circom
       run: |
         CIRCOM_VERSION=2.1.9
@@ -85,11 +90,6 @@ jobs:
         cd circom-witnesscalc
         cargo install --path .
         echo $(which build-circuit)
-
-    - name: Rust Cache
-      uses: Swatinem/rust-cache@v2
-      with:
-        cache-on-failure: true
 
     - name: Build circuits using Makefile
       run: |
