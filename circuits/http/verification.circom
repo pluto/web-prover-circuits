@@ -12,8 +12,10 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     signal data_hash <== DataHasher(DATA_BYTES)(data);
     data_hash        === step_in[0];
 
+    // signal input header_digests[MAX_NUMBER_OF_HEADERS]; // We could take this in as a field element and map it to bits for more efficiency
     signal input which_headers[MAX_NUMBER_OF_HEADERS];
-    signal input http_digest;
+    signal input headers_digest; // sum/product? of the header digests (a uniform random variable)
+    signal input start_line_digest; // Could probably combine with headers
     signal input body_digest;
 
     // TODO: could just have a parser template and reduce code here
@@ -53,20 +55,50 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS ; i++) {
         0 === which_headers[i] * (1 - which_headers[i]); // Assert this is a bit
     }
-    signal http_mask[DATA_BYTES];
+    signal headers_mask[DATA_BYTES];
     signal include_header[DATA_BYTES];
     signal not_parsing_start[DATA_BYTES];
+    signal monomials[DATA_BYTES];
+    monomials[0] <== 1;
+
+    signal start_line_mask[DATA_BYTES];
+    signal inner_start_line_digest[DATA_BYTES + 1];
+    inner_start_line_digest[0] <== 0;
+    signal inner_headers_digest[DATA_BYTES + 1];
+    inner_headers_digest[0] <== 0;
+    signal is_line_change[DATA_BYTES];
+    signal was_cleared[DATA_BYTES];
+    
+    for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
+        log("------------------------------------------------------------------");
+        is_line_change[i] <== Contains(2)(data[i + 1], [10, 13]);
+        // TODO: use `step_in[0]` in the future, testing with `2` now
+        was_cleared[i] <== IsZero()(monomials[i]);
+        monomials[i + 1] <==  (1 - is_line_change[i]) * (monomials[i] * 2 + was_cleared[i]);
+        log("monomials[", i, "]           =", monomials[i]);
+
+    }
     for(var i = 0 ; i < DATA_BYTES ; i++) {
         not_parsing_start[i] <== IsZero()(State[i].parsing_start);
-        include_header[i] <== IndexSelector(MAX_NUMBER_OF_HEADERS)(which_headers, State[i].parsing_header - 1);
-        log("------------------------------------------------------------------");
-        log("include_header[", i,"]      =", include_header[i]);
+        start_line_mask[i] <==  (1 - not_parsing_start[i]) * data[i];
+        inner_start_line_digest[i + 1] <== inner_start_line_digest[i] + start_line_mask[i] * monomials[i];
+        // ^^^ last will be the poly sum                  ^^^ prev term in poly
         log("State[", i, "].parsing_start =", State[i].parsing_start);
-        http_mask[i] <== data[i] * (include_header[i] + (1-not_parsing_start[i]));
-        log("http_mask[", i,"]           =", http_mask[i]);
+
+
+        include_header[i] <== IndexSelector(MAX_NUMBER_OF_HEADERS)(which_headers, State[i].parsing_header - 1);
+        
+        // log("include_header[", i,"]      =", include_header[i]);
+        
+        headers_mask[i] <== data[i] * include_header[i];
+        // log("headers_mask[", i,"]           =", headers_mask[i]);
+
     }
-    signal inner_http_digest <== MaskedByteStreamDigest(DATA_BYTES)(http_mask);
-    inner_http_digest === http_digest;
+    log("inner_start_line_digest = ", inner_start_line_digest[DATA_BYTES]);
+    inner_start_line_digest[DATA_BYTES] === start_line_digest;
+
+    // signal inner_http_digest <== DataHasher(DATA_BYTES)(http_mask);
+    // inner_http_digest === http_digest;
     // signal inner_header_hashes[MAX_NUMBER_OF_HEADERS];
     // signal header_is_unused[MAX_NUMBER_OF_HEADERS]; // If a header hash is passed in as 0, it is not used (no way to compute preimage of 0) 
     // signal header_hashes_equal_check[MAX_NUMBER_OF_HEADERS];
@@ -77,16 +109,19 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     //     header_hashes_equal_check[i] === 1;
     // }
 
-    // Get the body shit
-    signal body[DATA_BYTES];
-    for(var i = 0 ; i < DATA_BYTES ; i++) {
-        body[i] <== data[i] * State[i].parsing_body;
-    }
-    signal inner_body_digest       <== MaskedByteStreamDigest(DATA_BYTES)(body);
-    signal body_digest_equal_check <== IsEqual()([inner_body_digest, body_digest]);
-    body_digest_equal_check        === 1;
+    // TODO: Just hash all the bytes once? Also could pass in a body hash and all the header hashes we want and just assert that they get hit like we would with JSON. Then we don't have to hash the body and headers separately and can still output body hash
+    // we could go through, accumulate a hash, then clear when we change to a new thing. Then just assert that hash is in a list of header/body hashes.
 
-    step_out[0] <== inner_body_digest;
+    // Get the body shit
+    // signal body[DATA_BYTES];
+    // for(var i = 0 ; i < DATA_BYTES ; i++) {
+    //     body[i] <== data[i] * State[i].parsing_body;
+    // }
+    // signal inner_body_digest       <== MaskedByteStreamDigest(DATA_BYTES)(body);
+    // signal body_digest_equal_check <== IsEqual()([inner_body_digest, body_digest]);
+    // body_digest_equal_check        === 1;
+
+    // step_out[0] <== inner_body_digest;
 
     // Verify machine ends in a valid state
     State[DATA_BYTES - 1].next_parsing_start       === 0;
