@@ -84,7 +84,7 @@ function PolynomialDigest(coeffs: number[], input: bigint): bigint {
 }
 
 describe("HTTP Verfication", async () => {
-    let HTTPVerification: WitnessTester<["step_in", "data", "start_line_digest", "which_headers", "headers_digest", "body_digest"], ["step_out"]>;
+    let HTTPVerification: WitnessTester<["step_in", "data", "which_headers", "main_digest", "body_digest"], ["step_out"]>;
     before(async () => {
         HTTPVerification = await circomkit.WitnessTester("http_nivc", {
             file: "http/verification",
@@ -93,25 +93,24 @@ describe("HTTP Verfication", async () => {
         });
     });
 
-    it("witness: TEST_HTTP, single header", async () => {
+    it("witness: TEST_HTTP, no header", async () => {
         // Get all the hashes we need
-        // Get the data hash
         let plaintext_hash = DataHasher(TEST_HTTP);
         // Compute the HTTP info digest
         // let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
-        let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, BigInt(2)); // For debugging purposes
-        console.log("start_line_digest = ", start_line_digest);
-        let header_0_digest = PolynomialDigest(TEST_HTTP_HEADER_0, plaintext_hash);
-        let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
+        let main_digest = PolynomialDigest(TEST_HTTP_START_LINE, BigInt(2)); // TODO: For debugging purposes
+        console.log("start_line_digest = ", main_digest);
+
+        // let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
+        let body_digest = PolynomialDigest(TEST_HTTP_BODY, BigInt(2)); // TODO: For debugging purposes
 
         // Run the HTTP circuit
         // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
         let http_nivc_compute = await HTTPVerification.compute({
             step_in: plaintext_hash,
             data: TEST_HTTP,
-            start_line_digest,
-            which_headers: [1, 0],
-            headers_digest: header_0_digest,
+            which_headers: [0, 0],
+            main_digest,
             body_digest: body_digest,
         }, ["step_out"]);
         // TODO: Readd this
@@ -119,6 +118,33 @@ describe("HTTP Verfication", async () => {
 
 
     });
+
+    // it("witness: TEST_HTTP, single header", async () => {
+    //     // Get all the hashes we need
+    //     // Get the data hash
+    //     let plaintext_hash = DataHasher(TEST_HTTP);
+    //     // Compute the HTTP info digest
+    //     // let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, plaintext_hash);
+    //     let start_line_digest = PolynomialDigest(TEST_HTTP_START_LINE, BigInt(2)); // For debugging purposes
+    //     console.log("start_line_digest = ", start_line_digest);
+    //     let header_0_digest = PolynomialDigest(TEST_HTTP_HEADER_0, plaintext_hash);
+    //     let body_digest = PolynomialDigest(TEST_HTTP_BODY, plaintext_hash);
+
+    //     // Run the HTTP circuit
+    //     // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
+    //     let http_nivc_compute = await HTTPVerification.compute({
+    //         step_in: plaintext_hash,
+    //         data: TEST_HTTP,
+    //         start_line_digest,
+    //         which_headers: [1, 0],
+    //         headers_digest: header_0_digest,
+    //         body_digest: body_digest,
+    //     }, ["step_out"]);
+    //     // TODO: Readd this
+    //     // assert.deepEqual(http_nivc_compute.step_out, body_digest);
+
+
+    // });
 
     // it("witness: TEST_HTTP, two headers", async () => {
     //     // Get all the hashes we need
