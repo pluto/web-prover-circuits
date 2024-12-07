@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 #### Circuit Builds
 #### Artifacts
+- **Circuit sizes:**
+    - `http_verification_1024b` (with `--O1` build): 
+        - non-linear constaints: `128,653`
+        - linear-constraints: `77,400` 
+        - Theoretical storage size: `(128,653 + 77,400) * 3 * 32 bytes = 19,781,088 bytes ≈ 19.7 MB`
+        - R1CS file: `46.9MB`
+        - Graph file: N/A
+        - **WARNING:** Seems to not build with `--O2` flag. Need to investigate.
+
 ### Notes
 
 --- 
