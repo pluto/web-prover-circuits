@@ -266,3 +266,105 @@ template fromWords32ToLittleEndian() {
         }
     }
 }
+
+template AccumulateUnpadded(N) {
+    signal input in[N];
+    signal output out;
+
+    var total = 0;
+    for(var i = 0 ; i < N ; i++) {
+        for(var j = 0 ; j < i ; j++) {
+            total += in[i] != -1 ? in[i] : 0; 
+        }
+    }
+    out <-- total;
+}
+
+// template pushToFront(N) {
+//     signal input in[N];
+//     signal output out[N];
+//     // tally up start positions and lengths?
+//     signal isPadding[N];
+//     for (var i = 0 ; i < N ; i++) {
+//         isPadding[i] <== IsEqual()([in[i], -1]);
+
+//         // can we do this in an unconstrained way then verify we get back a correct thing?
+//     }
+// }
+
+// template CompactBytes(n) {
+//     signal input arr[n];
+//     signal output out[n];
+    
+//     // Array to track if each position is masked
+//     signal isMasked[n];
+//     for (var i = 0; i < n; i++) {
+//         isMasked[i] <== IsEqual()([arr[i], -1]);
+//     }
+    
+//     // Count total non-masked elements
+//     var validCount = 0;
+//     for (var i = 0; i < n; i++) {
+//         validCount += (1 - isMasked[i]);
+//     }
+    
+//     // Place non-masked elements at the front
+//     var nextPos = 0;
+//     for (var i = 0; i < n; i++) {
+//         // If current element is not masked, put it at nextPos
+//         out[nextPos] <-- isMasked[i] == 0 ? arr[i] : out[nextPos];
+//         nextPos += (1 - isMasked[i]);
+//     }
+    
+//     // // Fill remaining positions with -1
+//     // for (var i = validCount; i < n; i++) {
+//     //     out[i] <-- -1;
+//     // }
+    
+//     // // Constraints to ensure correctness
+    
+//     // // 1. Verify all output values are either valid bytes or -1
+//     // signal outIsMasked[n];
+//     // for (var i = 0; i < n; i++) {
+//     //     outIsMasked[i] <== IsEqual()([out[i], -1]);
+//     // }
+    
+//     // // 2. Verify same number of masked/unmasked values
+//     // var inMaskedCount = 0;
+//     // var outMaskedCount = 0;
+//     // for (var i = 0; i < n; i++) {
+//     //     inMaskedCount += isMasked[i];
+//     //     outMaskedCount += outIsMasked[i];
+//     // }
+//     // signal sameCount;
+//     // sameCount <== inMaskedCount - outMaskedCount;
+//     // sameCount === 0;
+    
+//     // // 3. Verify relative order of non-masked values is preserved
+//     // // For each non-masked value in input, find its position in output
+//     // signal positions[n];
+//     // for (var i = 0; i < n; i++) {
+//     //     var found = 0;
+//     //     var pos = 0;
+//     //     if (isMasked[i] == 0) {
+//     //         for (var j = 0; j < n; j++) {
+//     //             if (arr[i] == out[j]) {
+//     //                 found += 1;
+//     //                 pos += j;
+//     //             }
+//     //         }
+//     //         positions[i] <-- pos;
+//     //     } else {
+//     //         positions[i] <-- 0;
+//     //     }
+//     // }
+    
+//     // // Check that positions are monotonically increasing for non-masked values
+//     // for (var i = 1; i < n; i++) {
+//     //     signal orderCheck[n-1];
+//     //     orderCheck[i-1] <-- 
+//     //         (isMasked[i-1] == 0 && isMasked[i] == 0) ? 
+//     //         (positions[i] > positions[i-1] ? 1 : 0) : 1;
+//     //     orderCheck[i-1] === 1;
+//     // }
+// }
