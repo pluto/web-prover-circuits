@@ -1,6 +1,7 @@
 pragma circom 2.1.9;
 
 include "machine.circom";
+// TODO: we don't need this if we do a poly digest of the plaintext in authentication circuit
 include "../utils/hash.circom";
 
 template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
@@ -9,14 +10,18 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
 
     // Authenticate the plaintext we are passing in
     signal input data[DATA_BYTES];
+    // TODO: we don't need this if we do a poly digest of the plaintext in authentication circuit
     signal data_hash <== DataHasher(DATA_BYTES)(data);
     data_hash        === step_in[0];
 
-    signal input start_line_hash;
-    signal input header_hashes[MAX_NUMBER_OF_HEADERS];
-    signal input body_hash;
+    signal input main_digests[MAX_NUMBER_OF_HEADERS + 1];  // Contains digests of start line and all intended headers (up to `MAX_NUMBER_OF_HEADERS`)
+    signal contained[MAX_NUMBER_OF_HEADERS + 1];
+    var num_to_match = MAX_NUMBER_OF_HEADERS + 1;
+    for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS + 1 ; i++) {
+        contained[i] <== IsZero()(main_digests[i]);
+        num_to_match -= contained[i];
+    }
 
-    // TODO: could just have a parser template and reduce code here
     component State[DATA_BYTES];
     State[0]                     = HttpStateUpdate();
     State[0].byte                <== data[0];
@@ -38,46 +43,58 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         State[data_idx].line_status         <== State[data_idx - 1].next_line_status;
     }
 
-    // Get the start line shit
-    signal start_line[DATA_BYTES];
-    signal not_start_line_mask[DATA_BYTES];
+    signal main_monomials[DATA_BYTES];
+    main_monomials[0] <== 1;    
+
+    signal is_line_change[DATA_BYTES-1];
+    signal was_cleared[DATA_BYTES-1];
+    signal not_body_and_not_line_change[DATA_BYTES-1];
+
+    signal rescaled_or_was_cleared[DATA_BYTES-1];
+    for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
+        is_line_change[i]               <== Contains(2)(data[i + 1], [10, 13]); // capture if we hit an end line sequence
+        was_cleared[i]                  <== IsZero()(main_monomials[i]);
+        not_body_and_not_line_change[i] <== (1 - State[i + 1].parsing_body) * (1 - is_line_change[i]);
+        rescaled_or_was_cleared[i]      <== (main_monomials[i] * step_in[0] + was_cleared[i]);
+        main_monomials[i + 1]           <==  not_body_and_not_line_change[i] * rescaled_or_was_cleared[i];
+    }
+
+    signal is_match[DATA_BYTES];
+    signal contains[DATA_BYTES];
+    signal is_zero[DATA_BYTES];
+    signal monomial_is_zero[DATA_BYTES];
+    signal accum_prev[DATA_BYTES];
+    var num_matched = 0;
+    signal inner_main_digest[DATA_BYTES + 1];
+    inner_main_digest[0] <== 0;
     for(var i = 0 ; i < DATA_BYTES ; i++) {
-        not_start_line_mask[i] <== IsZero()(State[i].parsing_start);
-        start_line[i]          <== data[i] * (1 - not_start_line_mask[i]);
+        monomial_is_zero[i]    <== IsZero()(main_monomials[i]);
+        accum_prev[i]          <== (1 - monomial_is_zero[i]) * inner_main_digest[i];
+        inner_main_digest[i+1] <== accum_prev[i] + data[i] * main_monomials[i];
+        is_zero[i]             <== IsZero()(inner_main_digest[i+1]);
+        contains[i]            <== Contains(MAX_NUMBER_OF_HEADERS + 1)(inner_main_digest[i+1], main_digests);
+        is_match[i]            <== (1 - is_zero[i]) * contains[i];
+        num_matched             += is_match[i];
     }
-    signal inner_start_line_hash       <== DataHasher(DATA_BYTES)(start_line);
-    signal start_line_hash_equal_check <== IsEqual()([inner_start_line_hash, start_line_hash]);
-    start_line_hash_equal_check        === 1;
+    num_matched === num_to_match;
 
-    // Get the header shit
-    signal header[MAX_NUMBER_OF_HEADERS][DATA_BYTES];
-    signal header_masks[MAX_NUMBER_OF_HEADERS][DATA_BYTES];
-    for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS ; i++) {
-        for(var j = 0 ; j < DATA_BYTES ; j++) {
-            header_masks[i][j] <== IsEqual()([State[j].parsing_header, i + 1]);
-            header[i][j]       <== data[j] * header_masks[i][j];
-        }
-    }
-    signal inner_header_hashes[MAX_NUMBER_OF_HEADERS];
-    signal header_is_unused[MAX_NUMBER_OF_HEADERS]; // If a header hash is passed in as 0, it is not used (no way to compute preimage of 0) 
-    signal header_hashes_equal_check[MAX_NUMBER_OF_HEADERS];
-    for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS ; i++) {
-        header_is_unused[i]          <== IsZero()(header_hashes[i]);
-        inner_header_hashes[i]       <== DataHasher(DATA_BYTES)(header[i]);
-        header_hashes_equal_check[i] <== IsEqual()([(1 - header_is_unused[i]) * inner_header_hashes[i], header_hashes[i]]);
-        header_hashes_equal_check[i] === 1;
+    // BODY
+    signal body_monomials[DATA_BYTES];
+    body_monomials[0] <== 0;
+    signal body_accum[DATA_BYTES];
+    body_accum[0] <== 0;
+    signal body_switch[DATA_BYTES -1];
+    signal body_digest[DATA_BYTES];
+    body_digest[0] <== 0;
+    for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
+        body_accum[i + 1]        <== body_accum[i] + State[i + 1].parsing_body;
+        body_switch[i]           <== IsEqual()([body_accum[i + 1], 1]);
+        body_monomials[i + 1]    <== body_monomials[i] * step_in[0] + body_switch[i];
+        body_digest[i + 1] <== body_digest[i] + body_monomials[i + 1] * data[i + 1];
     }
 
-    // Get the body shit
-    signal body[DATA_BYTES];
-    for(var i = 0 ; i < DATA_BYTES ; i++) {
-        body[i] <== data[i] * State[i].parsing_body;
-    }
-    signal inner_body_hash       <== DataHasher(DATA_BYTES)(body);
-    signal body_hash_equal_check <== IsEqual()([inner_body_hash, body_hash]);
-    body_hash_equal_check        === 1;
-
-    step_out[0] <== inner_body_hash;
+    // TODO: This, for now, passes back out the hash of body_digest and the plaintext_hash so it can be properly verified in the JSON
+    step_out[0] <== PoseidonChainer()([body_digest[DATA_BYTES - 1], step_in[0]]);
 
     // Verify machine ends in a valid state
     State[DATA_BYTES - 1].next_parsing_start       === 0;
