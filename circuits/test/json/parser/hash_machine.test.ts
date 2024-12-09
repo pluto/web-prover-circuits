@@ -59,7 +59,6 @@ describe("hash_machine", () => {
     it(`spotify_input`, async () => {
         let filename = "spotify";
         let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, ["data"]);
-        console.log(input);
         circuit = await circomkit.WitnessTester(`Parser`, {
             file: "json/parser/hash_parser",
             template: "ParserHasher",
