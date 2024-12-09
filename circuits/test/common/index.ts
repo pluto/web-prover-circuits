@@ -26,7 +26,7 @@ export function generateDescription(input: any): string {
 }
 
 export function readJSONInputFile(filename: string, key: any[]): [number[], number[][], number[]] {
-    const valueStringPath = join(__dirname, "..", "..", "..", "examples", "json", "test", filename);
+    const valueStringPath = join(__dirname, "..", "..", "..", "examples", "json", filename);
 
     let input: number[] = [];
     let output: number[] = [];

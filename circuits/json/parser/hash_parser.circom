@@ -1,6 +1,6 @@
 pragma circom 2.1.9;
 
-include "../../utils/bytes.circom";
+include "../../utils/bits.circom";
 include "hash_machine.circom";
 
 template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {

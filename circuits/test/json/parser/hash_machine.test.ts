@@ -4,21 +4,21 @@ import { PoseidonModular } from "../../common/poseidon";
 describe("hash_machine", () => {
     let circuit: WitnessTester<["data"]>;
 
-    // it(`array_only_input`, async () => {
-    //     let filename = "array_only";
-    //     let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, [0]);
+    it(`array_only_input`, async () => {
+        let filename = "array_only";
+        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, [0]);
 
-    //     circuit = await circomkit.WitnessTester(`Parser`, {
-    //         file: "json/parser/hash_parser",
-    //         template: "ParserHasher",
-    //         params: [input.length, 3],
-    //     });
-    //     console.log("#constraints:", await circuit.getConstraintCount());
+        circuit = await circomkit.WitnessTester(`Parser`, {
+            file: "json/parser/hash_parser",
+            template: "ParserHasher",
+            params: [input.length, 3],
+        });
+        console.log("#constraints:", await circuit.getConstraintCount());
 
-    //     await circuit.expectPass({
-    //         data: input
-    //     });
-    // });
+        await circuit.expectPass({
+            data: input
+        });
+    });
 
     // Numbers for the 42 read in 0th index
     console.log("[0,\"4\"] hash: ", PoseidonModular([0, 52]));
@@ -59,7 +59,7 @@ describe("hash_machine", () => {
     it(`spotify_input`, async () => {
         let filename = "spotify";
         let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, ["data"]);
-
+        console.log(input);
         circuit = await circomkit.WitnessTester(`Parser`, {
             file: "json/parser/hash_parser",
             template: "ParserHasher",
