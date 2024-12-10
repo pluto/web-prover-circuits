@@ -1,7 +1,7 @@
 import { circomkit, WitnessTester, readJSONInputFile } from "../../common";
 
 describe("Hash Parser", () => {
-    let hash_parser: WitnessTester<["data"]>;
+    let hash_parser: WitnessTester<["data", "value"]>;
 
     it(`input: array_only`, async () => {
         let filename = "array_only";
@@ -15,7 +15,8 @@ describe("Hash Parser", () => {
         console.log("#constraints:", await hash_parser.getConstraintCount());
 
         await hash_parser.expectPass({
-            data: input
+            data: input,
+            value: 1
         });
     });
 

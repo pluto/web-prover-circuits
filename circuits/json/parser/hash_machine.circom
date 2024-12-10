@@ -52,6 +52,7 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     signal input stack[MAX_STACK_HEIGHT][2];
     signal input parsing_string;
     signal input parsing_number;
+    signal input value;
     signal input monomial;
     signal input tree_hash[MAX_STACK_HEIGHT][2];
 
@@ -160,6 +161,7 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     newStack.next_parsing_string <== next_parsing_string;
     newStack.next_parsing_number <== next_parsing_number;
     newStack.byte <== byte;
+    newStack.value <== value;
     // * set all the next state of the parser *
     next_stack                <== newStack.next_stack;
     next_tree_hash            <== newStack.next_tree_hash;
@@ -302,6 +304,7 @@ template RewriteStack(n) {
     signal input next_parsing_string;
     signal input next_parsing_number;
     signal input byte;
+    signal input value;
     signal input monomial;
 
     signal output next_monomial;
@@ -331,7 +334,7 @@ template RewriteStack(n) {
     signal isPush      <== IsEqual()([readStartBrace + readStartBracket, 1]);
     signal isPop       <== IsEqual()([readEndBrace + readEndBracket, 1]);
     signal nextPointer <== pointer + isPush - isPop;
-    // // * set an indicator array for where we are pushing to or popping from*
+    // // * set an indicator array for where we are pushing to or popping from *
     signal indicator[n];
     signal tree_hash_indicator[n][2];
     for(var i = 0; i < n; i++) {
@@ -362,21 +365,20 @@ template RewriteStack(n) {
     signal hash_0      <== is_object_key * stateHash[0].out; // TODO: I think these may not be needed
     signal hash_1      <== (is_object_value + is_array) * stateHash[1].out; // TODO: I think these may not be needed
     
-    // option_hash <== PoseidonChainer()([hash_0 + hash_1, byte]); 
     signal monomial_is_zero <== IsZero()(monomial);
-    next_monomial <== (1 - not_to_hash) * (monomial_is_zero + monomial * 2); // if monomial is zero and to_hash, then this treats monomial as if it is 1, else we increment the monomial
-    signal option_hash <== hash_0 + hash_1 + next_monomial; // TODO: Multiply by `byte`
+    signal increased_power  <== monomial * value;
+    next_monomial           <== (1 - not_to_hash) * (monomial_is_zero + increased_power); // if monomial is zero and to_hash, then this treats monomial as if it is 1, else we increment the monomial
+    signal option_hash      <== hash_0 + hash_1 + byte * next_monomial; 
     
     signal next_state_hash[2];
-    
     next_state_hash[0] <== not_to_hash * (stateHash[0].out - option_hash) + option_hash; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
     next_state_hash[1] <== not_to_hash * (stateHash[1].out - option_hash) + option_hash;
     // ^^^^ next_state_hash is the previous value (state_hash) or it is the newly computed value (option_hash)
 
-    log("hash_0   = ", hash_0);
-    log("hash_1   = ", hash_1);
-    log("to_hash: ", (1-not_to_hash));
-    log("option_hash = ", option_hash);
+    // log("hash_0   = ", hash_0);
+    // log("hash_1   = ", hash_1);
+    // log("to_hash: ", (1-not_to_hash));
+    // log("option_hash = ", option_hash);
     //--------------------------------------------------------------------------------------------//
 
     //--------------------------------------------------------------------------------------------//
@@ -386,7 +388,7 @@ template RewriteStack(n) {
     
     signal still_parsing_string <== parsing_string * next_parsing_string;
     signal to_change_zeroth     <== still_parsing_string * is_object_key;
-    signal end_kv               <== readComma + readEndBrace;// TODO: This is true if we hit a comma or an end brace (should also make sure we are not parsing string!)
+    signal end_kv               <== (1 - parsing_string) * (readComma + readEndBrace);
     signal not_array_and_not_end_kv <== (1 - is_array) * (1 - end_kv);
 
     signal not_end_char_for_first    <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
