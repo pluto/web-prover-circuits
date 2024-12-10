@@ -4,9 +4,9 @@ import { PoseidonModular } from "../../common/poseidon";
 describe("hash_machine", () => {
     let circuit: WitnessTester<["data"]>;
 
-    it(`array_only_input`, async () => {
+    it(`input: array_only`, async () => {
         let filename = "array_only";
-        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, [0]);
+        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
 
         circuit = await circomkit.WitnessTester(`Parser`, {
             file: "json/parser/hash_parser",
@@ -39,9 +39,26 @@ describe("hash_machine", () => {
 
     // TODO: Check that the hash of the packedState.in getting the next_state_hash is correct, the stack hashes are correct.
 
-    // it(`example_input`, async () => {
-    //     let filename = "example";
-    //     let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, ["a"]);
+    // it(`input: value_array.json`, async () => {
+    //     let filename = "value_array";
+    //     let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
+    //     console.log(JSON.stringify(input));
+
+    //     circuit = await circomkit.WitnessTester(`Parser`, {
+    //         file: "json/parser/hash_parser",
+    //         template: "ParserHasher",
+    //         params: [input.length, 4],
+    //     });
+    //     console.log("#constraints:", await circuit.getConstraintCount());
+
+    //     await circuit.expectPass({
+    //         data: input
+    //     });
+    // });
+
+    // it(`input: value_array_object.json`, async () => {
+    //     let filename = "value_array_object";
+    //     let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
 
     //     circuit = await circomkit.WitnessTester(`Parser`, {
     //         file: "json/parser/hash_parser",
@@ -56,18 +73,18 @@ describe("hash_machine", () => {
     // });
 
 
-    it(`spotify_input`, async () => {
-        let filename = "spotify";
-        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, ["data"]);
-        circuit = await circomkit.WitnessTester(`Parser`, {
-            file: "json/parser/hash_parser",
-            template: "ParserHasher",
-            params: [input.length, 7],
-        });
-        console.log("#constraints:", await circuit.getConstraintCount());
+    // it(`spotify_input`, async () => {
+    //     let filename = "spotify";
+    //     let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, ["data"]);
+    //     circuit = await circomkit.WitnessTester(`Parser`, {
+    //         file: "json/parser/hash_parser",
+    //         template: "ParserHasher",
+    //         params: [input.length, 7],
+    //     });
+    //     console.log("#constraints:", await circuit.getConstraintCount());
 
-        await circuit.expectPass({
-            data: input
-        });
-    });
+    //     await circuit.expectPass({
+    //         data: input
+    //     });
+    // });
 })

@@ -52,11 +52,13 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     signal input stack[MAX_STACK_HEIGHT][2];
     signal input parsing_string;
     signal input parsing_number;
+    signal input monomial;
     signal input tree_hash[MAX_STACK_HEIGHT][2];
 
     signal output next_stack[MAX_STACK_HEIGHT][2];
     signal output next_parsing_string;
     signal output next_parsing_number;
+    signal output next_monomial;
     signal output next_tree_hash[MAX_STACK_HEIGHT][2];
 
     component Command = Command();
@@ -154,12 +156,14 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     newStack.readQuote        <== readQuote.out;
     newStack.parsing_string <== parsing_string;
     newStack.parsing_number <== parsing_number;
+    newStack.monomial       <== monomial;
     newStack.next_parsing_string <== next_parsing_string;
     newStack.next_parsing_number <== next_parsing_number;
     newStack.byte <== byte;
     // * set all the next state of the parser *
     next_stack                <== newStack.next_stack;
     next_tree_hash            <== newStack.next_tree_hash;
+    next_monomial             <== newStack.next_monomial;
 
 
 
@@ -298,7 +302,9 @@ template RewriteStack(n) {
     signal input next_parsing_string;
     signal input next_parsing_number;
     signal input byte;
+    signal input monomial;
 
+    signal output next_monomial;
     signal output next_stack[n][2];
     signal output next_tree_hash[n][2];
 
@@ -348,16 +354,18 @@ template RewriteStack(n) {
         stateHash[1].in[i] <== tree_hash[i][1];        
     }
 
-    signal is_object_key <== IsEqualArray(2)([current_value,[1,0]]);
+    signal is_object_key   <== IsEqualArray(2)([current_value,[1,0]]);
     signal is_object_value <== IsEqualArray(2)([current_value,[1,1]]);
-    signal is_array <== IsEqual()([current_value[0], 2]);
+    signal is_array        <== IsEqual()([current_value[0], 2]);
 
     signal not_to_hash <== IsZero()(parsing_string * next_parsing_string + next_parsing_number);
-    signal hash_0 <== is_object_key * stateHash[0].out;
-    signal hash_1 <== (is_object_value + is_array) * stateHash[1].out; 
-    signal option_hash;
+    signal hash_0      <== is_object_key * stateHash[0].out; // TODO: I think these may not be needed
+    signal hash_1      <== (is_object_value + is_array) * stateHash[1].out; // TODO: I think these may not be needed
     
-    option_hash <== PoseidonChainer()([hash_0 + hash_1, byte]); 
+    // option_hash <== PoseidonChainer()([hash_0 + hash_1, byte]); 
+    signal monomial_is_zero <== IsZero()(monomial);
+    next_monomial <== (1 - not_to_hash) * (monomial_is_zero + monomial * 2); // if monomial is zero and to_hash, then this treats monomial as if it is 1, else we increment the monomial
+    signal option_hash <== hash_0 + hash_1 + next_monomial; // TODO: Multiply by `byte`
     
     signal next_state_hash[2];
     
@@ -365,7 +373,8 @@ template RewriteStack(n) {
     next_state_hash[1] <== not_to_hash * (stateHash[1].out - option_hash) + option_hash;
     // ^^^^ next_state_hash is the previous value (state_hash) or it is the newly computed value (option_hash)
 
-    log("hash_0 + hash_1 = ", hash_0 + hash_1);
+    log("hash_0   = ", hash_0);
+    log("hash_1   = ", hash_1);
     log("to_hash: ", (1-not_to_hash));
     log("option_hash = ", option_hash);
     //--------------------------------------------------------------------------------------------//
@@ -374,23 +383,21 @@ template RewriteStack(n) {
     // * loop to modify the stack and tree hash by rebuilding it *
     signal stack_change_value[2] <== [(isPush + isPop) * read_write_value, readColon + readCommaInArray - readCommaNotInArray];
     signal second_index_clear[n];
-    signal not_changed[n][2];
-
+    
     signal still_parsing_string <== parsing_string * next_parsing_string;
-    signal to_change_zeroth <== still_parsing_string * is_object_key;
-    signal end_kv <== readComma + readEndBrace;// TODO: This is true if we hit a comma or an end brace (should also make sure we are not parsing string!)
-    signal end_hash0[n];
+    signal to_change_zeroth     <== still_parsing_string * is_object_key;
+    signal end_kv               <== readComma + readEndBrace;// TODO: This is true if we hit a comma or an end brace (should also make sure we are not parsing string!)
+    signal not_array_and_not_end_kv <== (1 - is_array) * (1 - end_kv);
 
-    signal not_end_char_for_first <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
-    signal to_change_first <== (not_end_char_for_first + still_parsing_string) * (is_object_value + is_array);
-    signal tree_hash_change_value[2] <== [(1-end_kv) * next_state_hash[0], to_change_first * next_state_hash[1]];
+    signal not_end_char_for_first    <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
+    signal to_change_first           <== (not_end_char_for_first + still_parsing_string) * (is_object_value + is_array);
+    signal tree_hash_change_value[2] <== [not_array_and_not_end_kv * next_state_hash[0], to_change_first * next_state_hash[1]];
 
     for(var i = 0; i < n; i++) {
         next_stack[i][0]      <== stack[i][0] + indicator[i] * stack_change_value[0];
         second_index_clear[i] <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
         next_stack[i][1]      <== stack[i][1] + indicator[i] * (stack_change_value[1] - second_index_clear[i]);
 
-        end_hash0[i] <== tree_hash[i][0] * end_kv;
         next_tree_hash[i][0]  <== tree_hash[i][0] + tree_hash_indicator[i][0] * (tree_hash_change_value[0] - tree_hash[i][0]);
         next_tree_hash[i][1]  <== tree_hash[i][1] + tree_hash_indicator[i][1] * (tree_hash_change_value[1] - tree_hash[i][1]);
     }
