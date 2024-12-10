@@ -52,7 +52,7 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     signal input stack[MAX_STACK_HEIGHT][2];
     signal input parsing_string;
     signal input parsing_number;
-    signal input value;
+    signal input polynomial_input;
     signal input monomial;
     signal input tree_hash[MAX_STACK_HEIGHT][2];
 
@@ -155,13 +155,13 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     newStack.readColon        <== readColon.out;
     newStack.readComma        <== readComma.out;
     newStack.readQuote        <== readQuote.out;
-    newStack.parsing_string <== parsing_string;
-    newStack.parsing_number <== parsing_number;
-    newStack.monomial       <== monomial;
+    newStack.parsing_string   <== parsing_string;
+    newStack.parsing_number      <== parsing_number;
+    newStack.monomial            <== monomial;
     newStack.next_parsing_string <== next_parsing_string;
     newStack.next_parsing_number <== next_parsing_number;
-    newStack.byte <== byte;
-    newStack.value <== value;
+    newStack.byte                <== byte;
+    newStack.polynomial_input    <== polynomial_input;
     // * set all the next state of the parser *
     next_stack                <== newStack.next_stack;
     next_tree_hash            <== newStack.next_tree_hash;
@@ -304,7 +304,7 @@ template RewriteStack(n) {
     signal input next_parsing_string;
     signal input next_parsing_number;
     signal input byte;
-    signal input value;
+    signal input polynomial_input;
     signal input monomial;
 
     signal output next_monomial;
@@ -366,7 +366,7 @@ template RewriteStack(n) {
     signal hash_1      <== (is_object_value + is_array) * stateHash[1].out; // TODO: I think these may not be needed
     
     signal monomial_is_zero <== IsZero()(monomial);
-    signal increased_power  <== monomial * value;
+    signal increased_power  <== monomial * polynomial_input;
     next_monomial           <== (1 - not_to_hash) * (monomial_is_zero + increased_power); // if monomial is zero and to_hash, then this treats monomial as if it is 1, else we increment the monomial
     signal option_hash      <== hash_0 + hash_1 + byte * next_monomial; 
     

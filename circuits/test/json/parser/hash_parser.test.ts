@@ -1,7 +1,7 @@
 import { circomkit, WitnessTester, readJSONInputFile } from "../../common";
 
 describe("Hash Parser", () => {
-    let hash_parser: WitnessTester<["data", "value"]>;
+    let hash_parser: WitnessTester<["data", "polynomial_input", "sequence_digest"]>;
 
     it(`input: array_only`, async () => {
         let filename = "array_only";
@@ -16,7 +16,8 @@ describe("Hash Parser", () => {
 
         await hash_parser.expectPass({
             data: input,
-            value: 1
+            polynomial_input: 2,
+            sequence_digest: 1,
         });
     });
 

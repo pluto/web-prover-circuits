@@ -5,7 +5,8 @@ include "hash_machine.circom";
 
 template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal input data[DATA_BYTES];
-    signal input value;
+    signal input polynomial_input;
+    signal input sequence_digest;
 
     //--------------------------------------------------------------------------------------------//
     // Initialze the parser
@@ -15,11 +16,20 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
         State[0].stack[i]       <== [0,0];
         State[0].tree_hash[i]   <== [0,0];
     }
-    State[0].byte           <== data[0];
-    State[0].value          <== value;
-    State[0].monomial       <== 0;
-    State[0].parsing_string <== 0;
-    State[0].parsing_number <== 0;
+    State[0].byte             <== data[0];
+    State[0].polynomial_input <== polynomial_input;
+    State[0].monomial         <== 0;
+    State[0].parsing_string   <== 0;
+    State[0].parsing_number   <== 0;
+
+    // Set up monomials for stack/tree digesting
+    signal monomials[4 * MAX_STACK_HEIGHT];
+    monomials[0] <== 1;
+    for(var i = 1 ; i < 4 * MAX_STACK_HEIGHT ; i++) {
+        monomials[i] <== monomials[i - 1] * polynomial_input;
+    }
+    signal intermediate_digest[DATA_BYTES][4 * MAX_STACK_HEIGHT];
+    signal state_digest[DATA_BYTES];
     
     // Debugging
     for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
@@ -33,15 +43,30 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
     log("State[", 0, "].next_parsing_number  =", State[0].next_parsing_number);
     log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
+    var total_matches = 0;
+    signal is_matched[DATA_BYTES];
     for(var data_idx = 1; data_idx < DATA_BYTES; data_idx++) {
-        State[data_idx]                  = StateUpdateHasher(MAX_STACK_HEIGHT);
-        State[data_idx].byte           <== data[data_idx];
-        State[data_idx].value          <== value;
-        State[data_idx].stack          <== State[data_idx - 1].next_stack;
-        State[data_idx].parsing_string <== State[data_idx - 1].next_parsing_string;
-        State[data_idx].parsing_number <== State[data_idx - 1].next_parsing_number;
-        State[data_idx].monomial       <== State[data_idx - 1].next_monomial;
-        State[data_idx].tree_hash      <== State[data_idx - 1].next_tree_hash;
+        State[data_idx]                    = StateUpdateHasher(MAX_STACK_HEIGHT);
+        State[data_idx].byte             <== data[data_idx];
+        State[data_idx].polynomial_input <== polynomial_input;
+        State[data_idx].stack            <== State[data_idx - 1].next_stack;
+        State[data_idx].parsing_string   <== State[data_idx - 1].next_parsing_string;
+        State[data_idx].parsing_number   <== State[data_idx - 1].next_parsing_number;
+        State[data_idx].monomial         <== State[data_idx - 1].next_monomial;
+        State[data_idx].tree_hash        <== State[data_idx - 1].next_tree_hash;
+
+        // Digest the whole stack and tree hash
+        var accumulator = 0;
+        for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++) {
+            intermediate_digest[data_idx][4 * i]     <== State[data_idx].next_stack[i][0] * monomials[4 * i];
+            intermediate_digest[data_idx][4 * i + 1] <== State[data_idx].next_stack[i][1] * monomials[4 * i + 1];
+            intermediate_digest[data_idx][4 * i + 2] <== State[data_idx].next_tree_hash[i][0] * monomials[4 * i + 2];
+            intermediate_digest[data_idx][4 * i + 3] <== State[data_idx].next_tree_hash[i][1] * monomials[4 * i + 3];  
+            accumulator += intermediate_digest[data_idx][4 * i] + intermediate_digest[data_idx][4 * i + 1] + intermediate_digest[data_idx][4 * i + 2] + intermediate_digest[data_idx][4 * i + 3];
+        }
+        state_digest[data_idx] <== accumulator;
+        is_matched[data_idx] <== IsEqual()([state_digest[data_idx], sequence_digest]);
+        total_matches += is_matched[data_idx];
 
         // Debugging
         for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
@@ -53,8 +78,13 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
         log("State[", data_idx, "].next_monomial       =", State[data_idx].next_monomial);
         log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
         log("State[", data_idx, "].next_parsing_number =", State[data_idx].next_parsing_number);
+        log("++++++++++++++++++++++++++++++++++++++++++++++++");
+        log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
+        log("total_matches                   = ", total_matches);
         log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     }
+
+    // TODO: Assert something about total matches but keep in mind we should try to output the target value hash
 
     // TODO: Constrain to have valid JSON 
     // State[DATA_BYTES - 1].next_tree_depth === 0;
