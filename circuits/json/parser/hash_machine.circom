@@ -64,9 +64,9 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
 
     component Command = Command();
 
-    log("--------------------------------");
-    log("byte:         ", byte);
-    log("--------------------------------");
+    // log("--------------------------------");
+    // log("byte:         ", byte);
+    // log("--------------------------------");
 
     //--------------------------------------------------------------------------------------------//
     // Break down what was read
@@ -417,11 +417,11 @@ template RewriteStack(n) {
     }
     //--------------------------------------------------------------------------------------------//
 
-    log("to_clear_zeroth  = ", to_clear_zeroth);
-    log("to_clear_first   = ", to_clear_first);
-    log("to_change_zeroth = ", to_change_zeroth);
-    log("to_change_first  = ", to_change_first);
-    log("--------------------------------");
+    // log("to_clear_zeroth  = ", to_clear_zeroth);
+    // log("to_clear_first   = ", to_clear_first);
+    // log("to_change_zeroth = ", to_change_zeroth);
+    // log("to_change_first  = ", to_change_first);
+    // log("--------------------------------");
 
     //--------------------------------------------------------------------------------------------//
     // * check for under or overflow

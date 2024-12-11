@@ -32,16 +32,16 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal state_digest[DATA_BYTES];
     
     // Debugging
-    for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-        log("State[", 0, "].next_stack[", i,"]      = [",State[0].next_stack[i][0], "][", State[0].next_stack[i][1],"]" );
-    }
-    for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-        log("State[", 0, "].next_tree_hash[", i,"]  = [",State[0].next_tree_hash[i][0], "][", State[0].next_tree_hash[i][1],"]" );
-    }
-    log("State[", 0, "].next_monomial        =", State[0].next_monomial);
-    log("State[", 0, "].next_parsing_string  =", State[0].next_parsing_string);
-    log("State[", 0, "].next_parsing_number  =", State[0].next_parsing_number);
-    log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+    //     log("State[", 0, "].next_stack[", i,"]      = [",State[0].next_stack[i][0], "][", State[0].next_stack[i][1],"]" );
+    // }
+    // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+    //     log("State[", 0, "].next_tree_hash[", i,"]  = [",State[0].next_tree_hash[i][0], "][", State[0].next_tree_hash[i][1],"]" );
+    // }
+    // log("State[", 0, "].next_monomial        =", State[0].next_monomial);
+    // log("State[", 0, "].next_parsing_string  =", State[0].next_parsing_string);
+    // log("State[", 0, "].next_parsing_number  =", State[0].next_parsing_number);
+    // log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
     var total_matches = 0;
     signal is_matched[DATA_BYTES];
@@ -69,23 +69,27 @@ template ParserHasher(DATA_BYTES, MAX_STACK_HEIGHT) {
         total_matches += is_matched[data_idx];
 
         // Debugging
-        for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-            log("State[", data_idx, "].next_stack[", i,"]     = [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
-        }
-        for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-            log("State[", data_idx, "].next_tree_hash[", i,"] = [",State[data_idx].next_tree_hash[i][0], "][", State[data_idx].next_tree_hash[i][1],"]" );
-        }
-        log("State[", data_idx, "].next_monomial       =", State[data_idx].next_monomial);
-        log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
-        log("State[", data_idx, "].next_parsing_number =", State[data_idx].next_parsing_number);
-        log("++++++++++++++++++++++++++++++++++++++++++++++++");
-        log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
-        log("total_matches                   = ", total_matches);
-        log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+        // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+        //     log("State[", data_idx, "].next_stack[", i,"]     = [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
+        // }
+        // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+        //     log("State[", data_idx, "].next_tree_hash[", i,"] = [",State[data_idx].next_tree_hash[i][0], "][", State[data_idx].next_tree_hash[i][1],"]" );
+        // }
+        // log("State[", data_idx, "].next_monomial       =", State[data_idx].next_monomial);
+        // log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
+        // log("State[", data_idx, "].next_parsing_number =", State[data_idx].next_parsing_number);
+        // log("++++++++++++++++++++++++++++++++++++++++++++++++");
+        // log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
+        // log("total_matches                   = ", total_matches);
+        // log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     }
 
     // TODO: Assert something about total matches but keep in mind we should try to output the target value hash
+    total_matches === 1;
 
-    // TODO: Constrain to have valid JSON 
-    // State[DATA_BYTES - 1].next_tree_depth === 0;
+    // Constrain to have valid JSON
+    for(var i = 0; i < MAX_STACK_HEIGHT; i++) {
+        State[DATA_BYTES - 1].next_stack[i]      === [0,0];
+        State[DATA_BYTES - 1].next_tree_hash[i]  === [0,0];
+    }
 }

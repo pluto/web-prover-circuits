@@ -4,23 +4,49 @@ import { circomkit, WitnessTester, readJSONInputFile, strToBytes, JsonMaskType, 
 describe("Hash Parser", () => {
     let hash_parser: WitnessTester<["data", "polynomial_input", "sequence_digest"]>;
 
-    // it(`input: array_only`, async () => {
-    //     let filename = "array_only";
-    //     let [input, _keyUnicode, _output] = readJSONInputFile(`${filename}.json`, []);
+    it(`input: array_only`, async () => {
+        let filename = "array_only";
+        let [input, _keyUnicode, _output] = readJSONInputFile(`${filename}.json`, []);
+        const MAX_STACK_HEIGHT = 3;
 
-    //     hash_parser = await circomkit.WitnessTester(`Parser`, {
-    //         file: "json/parser/hash_parser",
-    //         template: "ParserHasher",
-    //         params: [input.length, 3],
-    //     });
-    //     console.log("#constraints:", await hash_parser.getConstraintCount());
+        hash_parser = await circomkit.WitnessTester(`Parser`, {
+            file: "json/parser/hash_parser",
+            template: "ParserHasher",
+            params: [input.length, MAX_STACK_HEIGHT],
+        });
+        console.log("#constraints:", await hash_parser.getConstraintCount());
 
-    //     await hash_parser.expectPass({
-    //         data: input,
-    //         polynomial_input: 2,
-    //         sequence_digest: 1, // TODO: This isn't useful
-    //     });
-    // });
+        // Test `42` in 0th slot
+        let polynomial_input = poseidon2([69, 420]);
+        let targetValue = strToBytes("42");
+        let keySequence: JsonMaskType[] = [
+            { type: "ArrayIndex", value: 0 },
+        ];
+        let [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
+        let sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
+        await hash_parser.expectPass({
+            data: input,
+            polynomial_input,
+            sequence_digest,
+        });
+        console.log("First subtest passed.");
+
+        // Test `"b"` in 1st slot object
+        polynomial_input = poseidon2([69, 420]);
+        targetValue = strToBytes("b");
+        keySequence = [
+            { type: "ArrayIndex", value: 1 },
+            { type: "Object", value: strToBytes("a") },
+        ];
+        [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
+        sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
+        await hash_parser.expectPass({
+            data: input,
+            polynomial_input,
+            sequence_digest,
+        });
+        console.log("Second subtest passed.");
+    });
 
     // it(`input: value_array.json`, async () => {
     //     let filename = "value_array";
@@ -66,9 +92,7 @@ describe("Hash Parser", () => {
         });
         console.log("#constraints:", await hash_parser.getConstraintCount());
 
-        let polynomial_input = poseidon2([69, 420]);
-        console.log("polynomial_input: ", polynomial_input);
-
+        const polynomial_input = poseidon2([69, 420]);
         const KEY0 = strToBytes("data");
         const KEY1 = strToBytes("items");
         const KEY2 = strToBytes("profile");
@@ -84,12 +108,12 @@ describe("Hash Parser", () => {
         ];
 
         const [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, 10);
-        const compressed = compressTreeHash(polynomial_input, [stack, treeHashes]);
+        const sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
 
         await hash_parser.expectPass({
             data: input,
             polynomial_input,
-            sequence_digest: compressed,
+            sequence_digest,
         });
     });
 })
