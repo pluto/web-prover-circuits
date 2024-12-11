@@ -1,5 +1,5 @@
 import { poseidon2 } from "poseidon-lite";
-import { circomkit, WitnessTester, readJSONInputFile, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash } from "../../common";
+import { circomkit, WitnessTester, readJSONInputFile, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash } from "../common";
 
 describe("Hash Parser", () => {
     let hash_parser: WitnessTester<["data", "polynomial_input", "sequence_digest"]>;

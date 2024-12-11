@@ -128,9 +128,6 @@ const json_key3_mask_hash = DataHasher(json_key3_mask);
 describe("Example NIVC Proof", async () => {
     let PlaintextAuthentication: WitnessTester<["key", "nonce", "counter", "plainText", "step_in"], ["step_out"]>;
     let HTTPVerification: WitnessTester<["step_in", "data", "main_digests"], ["step_out"]>;
-    let json_mask_object_circuit: WitnessTester<["step_in", "data", "key", "keyLen"], ["step_out"]>;
-    let json_mask_arr_circuit: WitnessTester<["step_in", "data", "index"], ["step_out"]>;
-    let extract_value_circuit: WitnessTester<["step_in", "data"], ["step_out"]>;
 
     const MAX_NUMBER_OF_HEADERS = 2;
     const DATA_BYTES = 320;
@@ -153,26 +150,6 @@ describe("Example NIVC Proof", async () => {
         });
         console.log("#constraints (HTTPVerification):", await HTTPVerification.getConstraintCount());
 
-        json_mask_object_circuit = await circomkit.WitnessTester(`JsonMaskObjectNIVC`, {
-            file: "json/nivc/masker",
-            template: "JsonMaskObjectNIVC",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, MAX_KEY_LENGTH],
-        });
-        console.log("#constraints (JSON-MASK-OBJECT):", await json_mask_object_circuit.getConstraintCount());
-
-        json_mask_arr_circuit = await circomkit.WitnessTester(`JsonMaskArrayIndexNIVC`, {
-            file: "json/nivc/masker",
-            template: "JsonMaskArrayIndexNIVC",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT],
-        });
-        console.log("#constraints (JSON-MASK-ARRAY-INDEX):", await json_mask_arr_circuit.getConstraintCount());
-
-        extract_value_circuit = await circomkit.WitnessTester(`JsonMaskExtractFinal`, {
-            file: "json/nivc/extractor",
-            template: "MaskExtractFinal",
-            params: [DATA_BYTES, MAX_VALUE_LENGTH],
-        });
-        console.log("#constraints (JSON-MASK-EXTRACT-FINAL):", await extract_value_circuit.getConstraintCount());
     });
 
     it("Spotify Example", async () => {

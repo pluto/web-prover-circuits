@@ -1,4 +1,4 @@
-import { circomkit, WitnessTester, generateDescription, readJSONInputFile } from "../../common";
+import { circomkit, WitnessTester, generateDescription, readJSONInputFile } from "../common";
 
 describe("json-parser", () => {
     let circuit: WitnessTester<["data"]>;
