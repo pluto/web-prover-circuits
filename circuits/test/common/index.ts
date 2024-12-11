@@ -328,3 +328,98 @@ export const http_body = [
     32, 32, 32, 32, 32, 32, 32, 32, 32, 125, 13, 10, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 125,
     13, 10, 32, 32, 32, 32, 32, 32, 32, 93, 13, 10, 32, 32, 32, 125, 13, 10, 125,
 ];
+
+export function strToBytes(str: string): number[] {
+    return Array.from(str.split('').map(c => c.charCodeAt(0)));
+}
+
+// Enum equivalent for JsonMaskType
+export type JsonMaskType =
+    | { type: "Object", value: number[] }  // Changed from Uint8Array to number[]
+    | { type: "ArrayIndex", value: number };
+
+// Constants for the field arithmetic
+const PRIME = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+const ONE = BigInt(1);
+const ZERO = BigInt(0);
+
+function modAdd(a: bigint, b: bigint): bigint {
+    return (a + b) % PRIME;
+}
+
+function modMul(a: bigint, b: bigint): bigint {
+    return (a * b) % PRIME;
+}
+
+export function jsonTreeHasher(
+    polynomialInput: bigint,
+    keySequence: JsonMaskType[],
+    targetValue: number[],  // Changed from Uint8Array to number[]
+    maxStackHeight: number
+): [Array<[bigint, bigint]>, Array<[bigint, bigint]>] {
+    if (keySequence.length >= maxStackHeight) {
+        throw new Error("Key sequence length exceeds max stack height");
+    }
+
+    const stack: Array<[bigint, bigint]> = [];
+    const treeHashes: Array<[bigint, bigint]> = [];
+
+    for (const valType of keySequence) {
+        if (valType.type === "Object") {
+            stack.push([ONE, ONE]);
+            let stringHash = ZERO;
+            let monomial = ONE;
+
+            for (const byte of valType.value) {
+                stringHash = modAdd(stringHash, modMul(monomial, BigInt(byte)));
+                monomial = modMul(monomial, polynomialInput);
+            }
+            treeHashes.push([stringHash, ZERO]);
+        } else { // ArrayIndex
+            treeHashes.push([ZERO, ZERO]);
+            stack.push([BigInt(2), BigInt(valType.value)]);
+        }
+    }
+
+    let targetValueHash = ZERO;
+    let monomial = ONE;
+
+    for (const byte of targetValue) {
+        targetValueHash = modAdd(targetValueHash, modMul(monomial, BigInt(byte)));
+        monomial = modMul(monomial, polynomialInput);
+    }
+
+    treeHashes[keySequence.length - 1] = [treeHashes[keySequence.length - 1][0], targetValueHash];
+
+    return [stack, treeHashes];
+}
+
+export function compressTreeHash(
+    polynomialInput: bigint,
+    stackAndTreeHashes: [Array<[bigint, bigint]>, Array<[bigint, bigint]>]
+): bigint {
+    const [stack, treeHashes] = stackAndTreeHashes;
+
+    if (stack.length !== treeHashes.length) {
+        throw new Error("Stack and tree hashes must have the same length");
+    }
+
+    let accumulated = ZERO;
+    let monomial = ONE;
+
+    for (let idx = 0; idx < stack.length; idx++) {
+        accumulated = modAdd(accumulated, modMul(stack[idx][0], monomial));
+        monomial = modMul(monomial, polynomialInput);
+
+        accumulated = modAdd(accumulated, modMul(stack[idx][1], monomial));
+        monomial = modMul(monomial, polynomialInput);
+
+        accumulated = modAdd(accumulated, modMul(treeHashes[idx][0], monomial));
+        monomial = modMul(monomial, polynomialInput);
+
+        accumulated = modAdd(accumulated, modMul(treeHashes[idx][1], monomial));
+        monomial = modMul(monomial, polynomialInput);
+    }
+
+    return accumulated;
+}

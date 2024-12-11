@@ -1,4 +1,5 @@
-import { circomkit, WitnessTester, readJSONInputFile } from "../../common";
+import { poseidon2 } from "poseidon-lite";
+import { circomkit, WitnessTester, readJSONInputFile, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash } from "../../common";
 
 describe("Hash Parser", () => {
     let hash_parser: WitnessTester<["data", "polynomial_input", "sequence_digest"]>;
@@ -65,10 +66,30 @@ describe("Hash Parser", () => {
         });
         console.log("#constraints:", await hash_parser.getConstraintCount());
 
+        let polynomial_input = poseidon2([69, 420]);
+        console.log("polynomial_input: ", polynomial_input);
+
+        const KEY0 = strToBytes("data");
+        const KEY1 = strToBytes("items");
+        const KEY2 = strToBytes("profile");
+        const KEY3 = strToBytes("name");
+        const targetValue = strToBytes("Taylor Swift");
+
+        const keySequence: JsonMaskType[] = [
+            { type: "Object", value: KEY0 },
+            { type: "Object", value: KEY1 },
+            { type: "ArrayIndex", value: 0 },
+            { type: "Object", value: KEY2 },
+            { type: "Object", value: KEY3 },
+        ];
+
+        const [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, 10);
+        const compressed = compressTreeHash(polynomial_input, [stack, treeHashes]);
+
         await hash_parser.expectPass({
             data: input,
-            polynomial_input: 2,
-            sequence_digest: 234435029355,
+            polynomial_input,
+            sequence_digest: compressed,
         });
     });
 })
