@@ -29,7 +29,7 @@ describe("Hash Parser", () => {
             polynomial_input,
             sequence_digest,
         });
-        console.log("First subtest passed.");
+        console.log("> First subtest passed.");
 
         // Test `"b"` in 1st slot object
         polynomial_input = poseidon2([69, 420]);
@@ -45,44 +45,87 @@ describe("Hash Parser", () => {
             polynomial_input,
             sequence_digest,
         });
-        console.log("Second subtest passed.");
+        console.log("> Second subtest passed.");
     });
 
-    // it(`input: value_array.json`, async () => {
-    //     let filename = "value_array";
-    //     let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
-    //     console.log(JSON.stringify(input));
+    it(`input: value_array`, async () => {
+        let filename = "value_array";
+        let [input, _keyUnicode, _output] = readJSONInputFile(`${filename}.json`, []);
+        const MAX_STACK_HEIGHT = 3;
 
-    //     circuit = await circomkit.WitnessTester(`Parser`, {
-    //         file: "json/parser/hash_parser",
-    //         template: "ParserHasher",
-    //         params: [input.length, 4],
-    //     });
-    //     console.log("#constraints:", await circuit.getConstraintCount());
+        hash_parser = await circomkit.WitnessTester(`Parser`, {
+            file: "json/parser/hash_parser",
+            template: "ParserHasher",
+            params: [input.length, MAX_STACK_HEIGHT],
+        });
+        console.log("#constraints:", await hash_parser.getConstraintCount());
 
-    //     await circuit.expectPass({
-    //         data: input
-    //     });
-    // });
+        // Test `420` in "k"'s 0th slot
+        let polynomial_input = poseidon2([69, 420]);
+        let targetValue = strToBytes("420");
+        let keySequence: JsonMaskType[] = [
+            { type: "Object", value: strToBytes("k") },
+            { type: "ArrayIndex", value: 0 },
+        ];
+        let [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
+        let sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
+        await hash_parser.expectPass({
+            data: input,
+            polynomial_input,
+            sequence_digest,
+        });
+        console.log("> First subtest passed.");
 
-    // it(`input: value_array_object.json`, async () => {
-    //     let filename = "value_array_object";
-    //     let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
+        // Test `"d"` in "b"'s 3rd slot
+        polynomial_input = poseidon2([69, 420]);
+        targetValue = strToBytes("d");
+        keySequence = [
+            { type: "Object", value: strToBytes("b") },
+            { type: "ArrayIndex", value: 3 },
+        ];
+        [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
+        sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
+        await hash_parser.expectPass({
+            data: input,
+            polynomial_input,
+            sequence_digest,
+        });
+        console.log("> Second subtest passed.");
+    });
 
-    //     circuit = await circomkit.WitnessTester(`Parser`, {
-    //         file: "json/parser/hash_parser",
-    //         template: "ParserHasher",
-    //         params: [input.length, 7],
-    //     });
-    //     console.log("#constraints:", await circuit.getConstraintCount());
+    it(`input: value_array_object`, async () => {
+        let filename = "value_array_object";
+        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
+        hash_parser = await circomkit.WitnessTester(`Parser`, {
+            file: "json/parser/hash_parser",
+            template: "ParserHasher",
+            params: [input.length, 5],
+        });
+        console.log("#constraints:", await hash_parser.getConstraintCount());
 
-    //     await circuit.expectPass({
-    //         data: input
-    //     });
-    // });
+        const polynomial_input = poseidon2([69, 420]);
+        const KEY0 = strToBytes("a");
+        const KEY1 = strToBytes("b");
+        const targetValue = strToBytes("4");
 
+        const keySequence: JsonMaskType[] = [
+            { type: "Object", value: KEY0 },
+            { type: "ArrayIndex", value: 0 },
+            { type: "Object", value: KEY1 },
+            { type: "ArrayIndex", value: 1 },
+        ];
 
-    it(`spotify_input`, async () => {
+        const [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, 10);
+        const sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
+
+        await hash_parser.expectPass({
+            data: input,
+            polynomial_input,
+            sequence_digest,
+        });
+    });
+
+    it(`input: spotify`, async () => {
         let filename = "spotify";
         let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
         hash_parser = await circomkit.WitnessTester(`Parser`, {
