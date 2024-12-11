@@ -14,39 +14,7 @@
       25
     ]
   },
-  "json_mask_object_1024b": {
-    "file": "json/nivc/masker",
-    "template": "JsonMaskObjectNIVC",
-    "params": [
-      1024,
-      10,
-      10
-    ]
-  },
-  "json_mask_array_index_1024b": {
-    "file": "json/nivc/masker",
-    "template": "JsonMaskArrayIndexNIVC",
-    "params": [
-      1024,
-      10
-    ]
-  },
-  "json_extract_value_1024b": {
-    "file": "json/nivc/extractor",
-    "template": "MaskExtractFinal",
-    "params": [
-      1024,
-      50
-    ]
-  },
-  "hash_machine": {
-    "file": "json/parser/hash_machine",
-    "template": "StateUpdateHasher",
-    "params": [
-      10
-    ]
-  },
-  "hash_parser": {
+  "json_extraction_1024b": {
     "file": "json/parser/hash_parser",
     "template": "ParserHasher",
     "params": [
