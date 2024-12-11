@@ -35,7 +35,7 @@ template ChaCha20_NIVC(DATA_BYTES) {
   // in => N 32-bit words => N 4 byte words
   signal input plainText[DATA_BYTES];
 
-  // step_in should be the ciphertext digest
+  // step_in should be the ciphertext digest + the HTTP digests
   signal input step_in[1];
 
   // step_out should be the plaintext digest

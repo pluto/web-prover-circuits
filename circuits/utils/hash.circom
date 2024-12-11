@@ -112,3 +112,22 @@ template DataHasher(DATA_BYTES) {
     }
     out <== hashes[DATA_BYTES \ 16];
 }
+
+template PolynomialDigest(N) {
+    signal input bytes[N];
+    signal input polynomial_input;
+
+    signal output digest;
+
+    signal monomials[N];
+    signal terms[N];
+    monomials[0] <== 1;
+    terms[0]     <== bytes[0] * monomials[0];
+    var accumulation = terms[0];
+    for(var i = 1 ; i < N ; i++) {
+        monomials[i] <== monomials[i - 1] * polynomial_input;
+        terms[i]     <== monomials[i] * bytes[i];
+        accumulation  += terms[i];
+    }
+    digest <== accumulation;
+}
