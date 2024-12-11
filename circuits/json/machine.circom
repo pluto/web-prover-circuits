@@ -23,10 +23,8 @@ Tests for this module are located in the files: `circuits/test/parser/*.test.ts
 
 pragma circom 2.1.9;
 
-include "../../utils/array.circom";
-include "../../utils/bits.circom";
-include "../../utils/operators.circom";
-include "../../utils/hash.circom";
+include "../utils/array.circom";
+include "../utils/operators.circom";
 include "language.circom";
 
 /*
@@ -46,58 +44,50 @@ This template is for updating the state of the parser from a current state to a 
  - `next_parsing_number`            : a bool flag that indicates whether the parser is currently parsing a string or not after reading `byte`.
  - `next_parsing_number`            : a bool flag that indicates whether the parser is currently parsing a number or not after reading `byte`.
 */
-template StateUpdateHasher(MAX_STACK_HEIGHT) {
-    signal input byte; 
-    
+template StateUpdate(MAX_STACK_HEIGHT) {
+    signal input byte; // TODO: Does this need to be constrained within here?
+
     signal input stack[MAX_STACK_HEIGHT][2];
     signal input parsing_string;
     signal input parsing_number;
-    signal input polynomial_input;
-    signal input monomial;
-    signal input tree_hash[MAX_STACK_HEIGHT][2];
 
     signal output next_stack[MAX_STACK_HEIGHT][2];
     signal output next_parsing_string;
     signal output next_parsing_number;
-    signal output next_monomial;
-    signal output next_tree_hash[MAX_STACK_HEIGHT][2];
 
     component Command = Command();
-
-    // log("--------------------------------");
-    // log("byte:         ", byte);
-    // log("--------------------------------");
+    component Syntax  = Syntax();
 
     //--------------------------------------------------------------------------------------------//
     // Break down what was read
     // * read in a start brace `{` *
     component readStartBrace   = IsEqual();
-    readStartBrace.in        <== [byte, 123];
+    readStartBrace.in        <== [byte, Syntax.START_BRACE];
     // * read in an end brace `}` *
     component readEndBrace     = IsEqual();
-    readEndBrace.in          <== [byte, 125];
+    readEndBrace.in          <== [byte, Syntax.END_BRACE];
     // * read in a start bracket `[` *
     component readStartBracket = IsEqual();
-    readStartBracket.in      <== [byte, 91];
+    readStartBracket.in      <== [byte, Syntax.START_BRACKET];
     // * read in an end bracket `]` *
     component readEndBracket   = IsEqual();
-    readEndBracket.in        <== [byte, 93];
+    readEndBracket.in        <== [byte, Syntax.END_BRACKET];
     // * read in a colon `:` *
     component readColon        = IsEqual();
-    readColon.in             <== [byte, 58];
+    readColon.in             <== [byte, Syntax.COLON];
     // * read in a comma `,` *
     component readComma        = IsEqual();
-    readComma.in             <== [byte, 44];
+    readComma.in             <== [byte, Syntax.COMMA];
     // * read in some delimeter *
     signal readDelimeter     <== readStartBrace.out + readEndBrace.out + readStartBracket.out + readEndBracket.out
                                + readColon.out + readComma.out;
     // * read in some number *
     component readNumber       = InRange(8);
     readNumber.in            <== byte;
-    readNumber.range         <== [48, 57]; // This is the range where ASCII digits are
+    readNumber.range         <== [Syntax.NUMBER_START, Syntax.NUMBER_END]; // This is the range where ASCII digits are
     // * read in a quote `"` *
     component readQuote        = IsEqual();
-    readQuote.in             <== [byte, 34];
+    readQuote.in             <== [byte, Syntax.QUOTE];
     component readOther        = IsZero();
     readOther.in             <== readDelimeter + readNumber.out + readQuote.out;
     //--------------------------------------------------------------------------------------------//
@@ -144,13 +134,9 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     component mulMaskAndOut    = ArrayMul(3);
     mulMaskAndOut.lhs        <== mask.out;
     mulMaskAndOut.rhs        <== [Instruction.out[0], Instruction.out[1], Instruction.out[2]  - readOther.out];
-
-    next_parsing_string       <== parsing_string + mulMaskAndOut.out[1];
-    next_parsing_number       <== parsing_number + mulMaskAndOut.out[2];
-
-    component newStack          = RewriteStack(MAX_STACK_HEIGHT);
+    // * compute the new stack *
+    component newStack         = RewriteStack(MAX_STACK_HEIGHT);
     newStack.stack            <== stack;
-    newStack.tree_hash        <== tree_hash;
     newStack.read_write_value <== mulMaskAndOut.out[0];
     newStack.readStartBrace   <== readStartBrace.out;
     newStack.readStartBracket <== readStartBracket.out;
@@ -158,18 +144,11 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     newStack.readEndBracket   <== readEndBracket.out;
     newStack.readColon        <== readColon.out;
     newStack.readComma        <== readComma.out;
-    newStack.readQuote        <== readQuote.out;
-    newStack.parsing_string   <== parsing_string;
-    newStack.parsing_number      <== parsing_number;
-    newStack.monomial            <== monomial;
-    newStack.next_parsing_string <== next_parsing_string;
-    newStack.next_parsing_number <== next_parsing_number;
-    newStack.byte                <== byte;
-    newStack.polynomial_input    <== polynomial_input;
     // * set all the next state of the parser *
     next_stack                <== newStack.next_stack;
-    next_tree_hash            <== newStack.next_tree_hash;
-    next_monomial             <== newStack.next_monomial;
+    next_parsing_string       <== parsing_string + mulMaskAndOut.out[1];
+    next_parsing_number       <== parsing_number + mulMaskAndOut.out[2];
+    //--------------------------------------------------------------------------------------------//
 }
 
 /*
@@ -287,7 +266,6 @@ This template is for updating the stack given the current stack and the byte we 
 template RewriteStack(n) {
     assert(n < 2**8);
     signal input stack[n][2];
-    signal input tree_hash[n][2];
     signal input read_write_value;
     signal input readStartBrace;
     signal input readStartBracket;
@@ -295,19 +273,8 @@ template RewriteStack(n) {
     signal input readEndBracket;
     signal input readColon;
     signal input readComma;
-    signal input readQuote;
 
-    signal input parsing_number;
-    signal input parsing_string;
-    signal input next_parsing_string;
-    signal input next_parsing_number;
-    signal input byte;
-    signal input polynomial_input;
-    signal input monomial;
-
-    signal output next_monomial;
     signal output next_stack[n][2];
-    signal output next_tree_hash[n][2];
 
     //--------------------------------------------------------------------------------------------//
     // * scan value on top of stack *
@@ -315,6 +282,7 @@ template RewriteStack(n) {
     topOfStack.stack        <== stack;
     signal pointer          <== topOfStack.pointer;
     signal current_value[2] <== topOfStack.value;
+    // * check if we are currently in a value of an object *
     // * check if value indicates currently in an array *
     component inArray         = IsEqual();
     inArray.in[0]           <== current_value[0];
@@ -329,103 +297,35 @@ template RewriteStack(n) {
 
     //--------------------------------------------------------------------------------------------//
     // * determine whether we are pushing or popping from the stack *
-    signal isPush      <== IsEqual()([readStartBrace + readStartBracket, 1]);
-    signal isPop       <== IsEqual()([readEndBrace + readEndBracket, 1]);
-    signal nextPointer <== pointer + isPush - isPop;
-    // // * set an indicator array for where we are pushing to or popping from *
-    signal indicator[n];
-    signal tree_hash_indicator[n];
+    component isPush       = IsEqual();
+    isPush.in            <== [readStartBrace + readStartBracket, 1];
+    component isPop        = IsEqual();
+    isPop.in             <== [readEndBrace + readEndBracket, 1];
+    // * set an indicator array for where we are pushing to or popping from*
+    component indicator[n];
     for(var i = 0; i < n; i++) {
-        indicator[i] <== IsZero()(pointer - isPop - readColon - readComma - i); // Note, pointer points to unallocated region!
-        tree_hash_indicator[i] <== IsZero()(pointer - i - 1); 
+        // Points
+        indicator[i]       = IsZero();
+        indicator[i].in  <== pointer - isPop.out - readColon - readComma - i; // Note, pointer points to unallocated region!
     }
     //--------------------------------------------------------------------------------------------//
 
     //--------------------------------------------------------------------------------------------//
-    // Hash the next_* states to produce hash we need
-    // TODO: This could be optimized -- we don't really need to do the index selector, we can just accumulate elsewhere
-    component stateHash[2];
-    stateHash[0] = IndexSelector(n);
-    stateHash[0].index <== pointer - 1;
-    stateHash[1] = IndexSelector(n);
-    stateHash[1].index <== pointer - 1;
-    for(var i = 0 ; i < n ; i++) {
-        stateHash[0].in[i] <== tree_hash[i][0];
-        stateHash[1].in[i] <== tree_hash[i][1];        
-    }
-
-    signal is_object_key   <== IsEqualArray(2)([current_value,[1,0]]);
-    signal is_object_value <== IsEqualArray(2)([current_value,[1,1]]);
-    signal is_array        <== IsEqual()([current_value[0], 2]);
-
-    signal not_to_hash <== IsZero()(parsing_string * next_parsing_string + next_parsing_number);
-    signal hash_0      <== is_object_key * stateHash[0].out; // TODO: I think these may not be needed
-    signal hash_1      <== (is_object_value + is_array) * stateHash[1].out; // TODO: I think these may not be needed
-    
-    signal monomial_is_zero <== IsZero()(monomial);
-    signal increased_power  <== monomial * polynomial_input;
-    next_monomial           <== (1 - not_to_hash) * (monomial_is_zero + increased_power); // if monomial is zero and to_hash, then this treats monomial as if it is 1, else we increment the monomial
-    signal option_hash      <== hash_0 + hash_1 + byte * next_monomial; 
-    
-    signal next_state_hash[2];
-    next_state_hash[0] <== not_to_hash * (stateHash[0].out - option_hash) + option_hash; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
-    next_state_hash[1] <== not_to_hash * (stateHash[1].out - option_hash) + option_hash;
-    // ^^^^ next_state_hash is the previous value (state_hash) or it is the newly computed value (option_hash)
-    //--------------------------------------------------------------------------------------------//
-
-    //--------------------------------------------------------------------------------------------//
-    // * loop to modify the stack and tree hash by rebuilding it *
-    signal stack_change_value[2] <== [(isPush + isPop) * read_write_value, readColon + readCommaInArray - readCommaNotInArray];
+    // * loop to modify the stack by rebuilding it *
+    signal stack_change_value[2] <== [(isPush.out + isPop.out) * read_write_value, readColon + readCommaInArray - readCommaNotInArray];
     signal second_index_clear[n];
-    
-    signal still_parsing_string <== parsing_string * next_parsing_string;
-    signal still_parsing_object_key     <== still_parsing_string * is_object_key;
-    signal end_kv               <== (1 - parsing_string) * (readComma + readEndBrace + readEndBracket);
-    // signal not_array_and_not_object_value <== (1 - is_array) * (1 - is_object_value);
-    // signal not_array_and_not_object_value_and_not_end_kv <== not_array_and_not_object_value * (1 - end_kv);
-    // signal not_array_and_not_end_kv <== (1 - is_array) * (1 - end_kv);
-    signal to_change_zeroth         <== (1 - is_array) * still_parsing_object_key + end_kv;
-
-    signal not_end_char_for_first    <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
-    signal maintain_zeroth           <== is_object_value * stateHash[0].out;
-    signal to_change_first           <== is_object_value + is_array;
-    // signal tree_hash_change_value[2] <== [not_array_and_not_object_value_and_not_end_kv * next_state_hash[0], to_change_first * next_state_hash[1]];
-
-    signal to_clear_zeroth <== end_kv;
-    signal stopped_parsing_number <== IsEqual()([(parsing_number - next_parsing_number), 1]);
-    signal not_to_clear_first <== IsZero()(end_kv + readQuote * parsing_string + stopped_parsing_number);
-    signal to_clear_first <== (1 - not_to_clear_first);
-    signal tree_hash_change_value[2] <== [(1 - to_clear_zeroth) * next_state_hash[0], (1 - to_clear_first) * next_state_hash[1]];
-
-    signal to_update_hash[n][2];
-    for(var i = 0 ; i < n ; i++) {
-        to_update_hash[i][0] <== tree_hash_indicator[i] * to_change_zeroth;
-        to_update_hash[i][1] <== tree_hash_indicator[i] * to_change_first;
-    }
-    /* 
-    NOTE: 
-    - The thing to do now is to make this so it clears off the value when we want and update it when we want.
-    - Let's us a "to_change_zeroth" and "to_clear_zeroth" together. You will need both to clear, just "change" to update
-    */
     for(var i = 0; i < n; i++) {
-        next_stack[i][0]      <== stack[i][0] + indicator[i] * stack_change_value[0];
-        second_index_clear[i] <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
-        next_stack[i][1]      <== stack[i][1] + indicator[i] * (stack_change_value[1] - second_index_clear[i]);
-
-        next_tree_hash[i][0]  <== tree_hash[i][0] + to_update_hash[i][0] * (tree_hash_change_value[0] - tree_hash[i][0]);
-        next_tree_hash[i][1]  <== tree_hash[i][1] + to_update_hash[i][1] * (tree_hash_change_value[1] - tree_hash[i][1]);
+        next_stack[i][0]         <== stack[i][0] + indicator[i].out * stack_change_value[0];
+        second_index_clear[i]    <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
+        next_stack[i][1]         <== stack[i][1] + indicator[i].out * (stack_change_value[1] - second_index_clear[i]);
     }
     //--------------------------------------------------------------------------------------------//
-
-    // log("to_clear_zeroth  = ", to_clear_zeroth);
-    // log("to_clear_first   = ", to_clear_first);
-    // log("to_change_zeroth = ", to_change_zeroth);
-    // log("to_change_first  = ", to_change_first);
-    // log("--------------------------------");
 
     //--------------------------------------------------------------------------------------------//
     // * check for under or overflow
-    signal isUnderflowOrOverflow <== InRange(8)(pointer - isPop + isPush, [0,n]);
-    isUnderflowOrOverflow        === 1;
+    component isUnderflowOrOverflow = InRange(8);
+    isUnderflowOrOverflow.in     <== pointer - isPop.out + isPush.out;
+    isUnderflowOrOverflow.range  <== [0,n];
+    isUnderflowOrOverflow.out    === 1;
     //--------------------------------------------------------------------------------------------//
 }

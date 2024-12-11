@@ -10,8 +10,8 @@ describe("Hash Parser", () => {
         const MAX_STACK_HEIGHT = 3;
 
         hash_parser = await circomkit.WitnessTester(`Parser`, {
-            file: "json/parser/hash_parser",
-            template: "ParserHasher",
+            file: "json/extraction",
+            template: "JSONExtraction",
             params: [input.length, MAX_STACK_HEIGHT],
         });
         console.log("#constraints:", await hash_parser.getConstraintCount());
@@ -54,8 +54,8 @@ describe("Hash Parser", () => {
         const MAX_STACK_HEIGHT = 3;
 
         hash_parser = await circomkit.WitnessTester(`Parser`, {
-            file: "json/parser/hash_parser",
-            template: "ParserHasher",
+            file: "json/extraction",
+            template: "JSONExtraction",
             params: [input.length, MAX_STACK_HEIGHT],
         });
         console.log("#constraints:", await hash_parser.getConstraintCount());
@@ -97,8 +97,8 @@ describe("Hash Parser", () => {
         let filename = "value_array_object";
         let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
         hash_parser = await circomkit.WitnessTester(`Parser`, {
-            file: "json/parser/hash_parser",
-            template: "ParserHasher",
+            file: "json/extraction",
+            template: "JSONExtraction",
             params: [input.length, 5],
         });
         console.log("#constraints:", await hash_parser.getConstraintCount());
@@ -129,8 +129,8 @@ describe("Hash Parser", () => {
         let filename = "spotify";
         let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
         hash_parser = await circomkit.WitnessTester(`Parser`, {
-            file: "json/parser/hash_parser",
-            template: "ParserHasher",
+            file: "json/extraction",
+            template: "JSONExtraction",
             params: [input.length, 5],
         });
         console.log("#constraints:", await hash_parser.getConstraintCount());

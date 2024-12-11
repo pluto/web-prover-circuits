@@ -8,7 +8,7 @@ describe("json-parser", () => {
         let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, [0]);
 
         circuit = await circomkit.WitnessTester(`Parser`, {
-            file: "json/parser/parser",
+            file: "json/parser",
             template: "Parser",
             params: [input.length, 2],
         });
@@ -24,7 +24,7 @@ describe("json-parser", () => {
         let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, ["a"]);
 
         circuit = await circomkit.WitnessTester(`Parser`, {
-            file: "json/parser/parser",
+            file: "json/parser",
             template: "Parser",
             params: [input.length, 3],
         });
