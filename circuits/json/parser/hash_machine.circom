@@ -64,6 +64,10 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
 
     component Command = Command();
 
+    log("--------------------------------");
+    log("byte:         ", byte);
+    log("--------------------------------");
+
     //--------------------------------------------------------------------------------------------//
     // Break down what was read
     // * read in a start brace `{` *
@@ -166,12 +170,6 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     next_stack                <== newStack.next_stack;
     next_tree_hash            <== newStack.next_tree_hash;
     next_monomial             <== newStack.next_monomial;
-
-
-
-    log("--------------------------------");
-    log("byte:         ", byte);
-    log("--------------------------------");
 }
 
 /*
@@ -336,11 +334,10 @@ template RewriteStack(n) {
     signal nextPointer <== pointer + isPush - isPop;
     // // * set an indicator array for where we are pushing to or popping from *
     signal indicator[n];
-    signal tree_hash_indicator[n][2];
+    signal tree_hash_indicator[n];
     for(var i = 0; i < n; i++) {
         indicator[i] <== IsZero()(pointer - isPop - readColon - readComma - i); // Note, pointer points to unallocated region!
-        tree_hash_indicator[i][0] <== IsZero()(pointer - i - 1); 
-        tree_hash_indicator[i][1] <== IsZero()(pointer - i - 1); 
+        tree_hash_indicator[i] <== IsZero()(pointer - i - 1); 
     }
     //--------------------------------------------------------------------------------------------//
 
@@ -374,11 +371,6 @@ template RewriteStack(n) {
     next_state_hash[0] <== not_to_hash * (stateHash[0].out - option_hash) + option_hash; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
     next_state_hash[1] <== not_to_hash * (stateHash[1].out - option_hash) + option_hash;
     // ^^^^ next_state_hash is the previous value (state_hash) or it is the newly computed value (option_hash)
-
-    // log("hash_0   = ", hash_0);
-    // log("hash_1   = ", hash_1);
-    // log("to_hash: ", (1-not_to_hash));
-    // log("option_hash = ", option_hash);
     //--------------------------------------------------------------------------------------------//
 
     //--------------------------------------------------------------------------------------------//
@@ -387,23 +379,49 @@ template RewriteStack(n) {
     signal second_index_clear[n];
     
     signal still_parsing_string <== parsing_string * next_parsing_string;
-    signal to_change_zeroth     <== still_parsing_string * is_object_key;
-    signal end_kv               <== (1 - parsing_string) * (readComma + readEndBrace);
-    signal not_array_and_not_end_kv <== (1 - is_array) * (1 - end_kv);
+    signal still_parsing_object_key     <== still_parsing_string * is_object_key;
+    signal end_kv               <== (1 - parsing_string) * (readComma + readEndBrace + readEndBracket);
+    // signal not_array_and_not_object_value <== (1 - is_array) * (1 - is_object_value);
+    // signal not_array_and_not_object_value_and_not_end_kv <== not_array_and_not_object_value * (1 - end_kv);
+    // signal not_array_and_not_end_kv <== (1 - is_array) * (1 - end_kv);
+    signal to_change_zeroth         <== (1 - is_array) * still_parsing_object_key + end_kv;
 
     signal not_end_char_for_first    <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
-    signal to_change_first           <== (not_end_char_for_first + still_parsing_string) * (is_object_value + is_array);
-    signal tree_hash_change_value[2] <== [not_array_and_not_end_kv * next_state_hash[0], to_change_first * next_state_hash[1]];
+    signal maintain_zeroth           <== is_object_value * stateHash[0].out;
+    signal to_change_first           <== is_object_value + is_array;
+    // signal tree_hash_change_value[2] <== [not_array_and_not_object_value_and_not_end_kv * next_state_hash[0], to_change_first * next_state_hash[1]];
 
+    signal to_clear_zeroth <== end_kv;
+    signal stopped_parsing_number <== IsEqual()([(parsing_number - next_parsing_number), 1]);
+    signal not_to_clear_first <== IsZero()(end_kv + readQuote * parsing_string + stopped_parsing_number);
+    signal to_clear_first <== (1 - not_to_clear_first);
+    signal tree_hash_change_value[2] <== [(1 - to_clear_zeroth) * next_state_hash[0], (1 - to_clear_first) * next_state_hash[1]];
+
+    signal to_update_hash[n][2];
+    for(var i = 0 ; i < n ; i++) {
+        to_update_hash[i][0] <== tree_hash_indicator[i] * to_change_zeroth;
+        to_update_hash[i][1] <== tree_hash_indicator[i] * to_change_first;
+    }
+    /* 
+    NOTE: 
+    - The thing to do now is to make this so it clears off the value when we want and update it when we want.
+    - Let's us a "to_change_zeroth" and "to_clear_zeroth" together. You will need both to clear, just "change" to update
+    */
     for(var i = 0; i < n; i++) {
         next_stack[i][0]      <== stack[i][0] + indicator[i] * stack_change_value[0];
         second_index_clear[i] <== stack[i][1] * (readEndBrace + readEndBracket); // Checking if we read some end char
         next_stack[i][1]      <== stack[i][1] + indicator[i] * (stack_change_value[1] - second_index_clear[i]);
 
-        next_tree_hash[i][0]  <== tree_hash[i][0] + tree_hash_indicator[i][0] * (tree_hash_change_value[0] - tree_hash[i][0]);
-        next_tree_hash[i][1]  <== tree_hash[i][1] + tree_hash_indicator[i][1] * (tree_hash_change_value[1] - tree_hash[i][1]);
+        next_tree_hash[i][0]  <== tree_hash[i][0] + to_update_hash[i][0] * (tree_hash_change_value[0] - tree_hash[i][0]);
+        next_tree_hash[i][1]  <== tree_hash[i][1] + to_update_hash[i][1] * (tree_hash_change_value[1] - tree_hash[i][1]);
     }
     //--------------------------------------------------------------------------------------------//
+
+    log("to_clear_zeroth  = ", to_clear_zeroth);
+    log("to_clear_first   = ", to_clear_first);
+    log("to_change_zeroth = ", to_change_zeroth);
+    log("to_change_first  = ", to_change_first);
+    log("--------------------------------");
 
     //--------------------------------------------------------------------------------------------//
     // * check for under or overflow

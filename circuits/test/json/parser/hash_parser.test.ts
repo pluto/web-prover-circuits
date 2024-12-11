@@ -17,7 +17,7 @@ describe("Hash Parser", () => {
         await hash_parser.expectPass({
             data: input,
             polynomial_input: 2,
-            sequence_digest: 1,
+            sequence_digest: 1, // TODO: This isn't useful
         });
     });
 
@@ -57,16 +57,18 @@ describe("Hash Parser", () => {
 
     // it(`spotify_input`, async () => {
     //     let filename = "spotify";
-    //     let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, ["data"]);
-    //     circuit = await circomkit.WitnessTester(`Parser`, {
+    //     let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
+    //     hash_parser = await circomkit.WitnessTester(`Parser`, {
     //         file: "json/parser/hash_parser",
     //         template: "ParserHasher",
-    //         params: [input.length, 7],
+    //         params: [input.length, 5],
     //     });
-    //     console.log("#constraints:", await circuit.getConstraintCount());
+    //     console.log("#constraints:", await hash_parser.getConstraintCount());
 
-    //     await circuit.expectPass({
-    //         data: input
+    //     await hash_parser.expectPass({
+    //         data: input,
+    //         polynomial_input: 1,
+    //         sequence_digest: 234435029355,
     //     });
     // });
 })

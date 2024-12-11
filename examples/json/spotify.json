@@ -1,12 +1,17 @@
 {
-    "data": {
-        "items": [
-            {
-                "data": "Artist",
-                "profile": {
-                    "name": "Taylor Swift"
-                }
-            }
-        ]
-    }
+"data":
+{
+"items":
+[
+{
+"data":
+"Artist",
+"profile":
+{
+"name":
+"Taylor Swift"
+}
+}
+]
+}
 }
