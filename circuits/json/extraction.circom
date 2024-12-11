@@ -8,6 +8,12 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal input polynomial_input;
     signal input sequence_digest;
 
+    signal input step_in[1];
+    signal output step_out[1];
+
+    // TODO: Change this
+    step_out[0] <== step_in[0];
+
     //--------------------------------------------------------------------------------------------//
     // Initialze the parser
     component State[DATA_BYTES];

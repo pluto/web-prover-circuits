@@ -2,7 +2,7 @@ import { poseidon2 } from "poseidon-lite";
 import { circomkit, WitnessTester, readJSONInputFile, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash } from "../common";
 
 describe("Hash Parser", () => {
-    let hash_parser: WitnessTester<["data", "polynomial_input", "sequence_digest"]>;
+    let hash_parser: WitnessTester<["data", "polynomial_input", "sequence_digest", "step_in"]>;
 
     it(`input: array_only`, async () => {
         let filename = "array_only";
@@ -28,6 +28,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
+            step_in: 0
         });
         console.log("> First subtest passed.");
 
@@ -44,6 +45,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
+            step_in: 0
         });
         console.log("> Second subtest passed.");
     });
@@ -73,6 +75,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
+            step_in: 0
         });
         console.log("> First subtest passed.");
 
@@ -89,6 +92,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
+            step_in: 0
         });
         console.log("> Second subtest passed.");
     });
@@ -122,6 +126,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
+            step_in: 0
         });
     });
 
@@ -157,6 +162,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
+            step_in: 0
         });
     });
 })
