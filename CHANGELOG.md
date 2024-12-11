@@ -5,8 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
+## [0.7.0] - 2024-12-3
+ 
+### Added
+### Changed
+#### Circuit Builds
+#### Artifacts
+- **Circuit sizes:**
+    - `http_verification_1024b` (with `--O1` build): 
+        - non-linear constaints: `128,653`
+        - linear-constraints: `77,400` 
+        - Theoretical storage size: `(128,653 + 77,400) * 3 * 32 bytes = 19,781,088 bytes ≈ 19.7 MB`
+        - R1CS file: `46.9MB`
+        - Graph file: N/A
+        - **WARNING:** Seems to not build with `--O2` flag. Need to investigate.
 
-## [UNRELEASED] [0.6.0] - 2024-12-3
+### Notes
+
+--- 
+
+## [0.6.0] - 2024-12-3
  
 ### Added
 
@@ -20,9 +38,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
     - `aes_gctr_nivc` and `chacha20-nivc` replaced with a more suitable name: `plaintext_authentication`
         - Runs with `512b` per fold
     - `http_nivc` replaced with more suitable name: `http_verification`
-
-### Fixed
-- TODO
 
 ### Notes
 - **Total circuits:** 5

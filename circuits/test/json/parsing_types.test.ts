@@ -1,4 +1,4 @@
-import { circomkit, WitnessTester, generateDescription } from "../../common";
+import { circomkit, WitnessTester, generateDescription } from "../common";
 import { Delimiters, WhiteSpace, Numbers, Escape, INITIAL_IN, INITIAL_OUT } from '.';
 
 

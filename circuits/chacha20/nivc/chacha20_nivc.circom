@@ -141,6 +141,7 @@ template ChaCha20_NIVC(DATA_BYTES) {
     }
   }
 
+
   signal ciphertext_hash <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
   step_in[0]             === ciphertext_hash;
 
