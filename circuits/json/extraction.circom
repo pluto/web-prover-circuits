@@ -5,16 +5,13 @@ include "hash_machine.circom";
 
 template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal input data[DATA_BYTES];
-    signal input polynomial_input;
     signal input sequence_digest; 
+    signal input ciphertext_digest;
     // TODO: we need like a `value_digest` here too.
 
     signal input step_in[1];
     signal output step_out[1];
-
-    // TODO: Wrap the sequence_dig in poseidon. (Probably need to check other circuits for this proper now2)
-    signal sequence_digest_hash <== Poseidon(1)([sequence_digest]);
-    0 === step_in[0] - sequence_digest_hash;
+    
     // TODO: Change this
     step_out[0] <== step_in[0];
 
@@ -27,7 +24,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
         State[0].tree_hash[i]   <== [0,0];
     }
     State[0].byte             <== data[0];
-    State[0].polynomial_input <== polynomial_input;
+    State[0].polynomial_input <== ciphertext_digest;
     State[0].monomial         <== 0;
     State[0].parsing_string   <== 0;
     State[0].parsing_number   <== 0;
@@ -36,7 +33,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal monomials[4 * MAX_STACK_HEIGHT];
     monomials[0] <== 1;
     for(var i = 1 ; i < 4 * MAX_STACK_HEIGHT ; i++) {
-        monomials[i] <== monomials[i - 1] * polynomial_input;
+        monomials[i] <== monomials[i - 1] * ciphertext_digest;
     }
     signal intermediate_digest[DATA_BYTES][4 * MAX_STACK_HEIGHT];
     signal state_digest[DATA_BYTES];
@@ -58,7 +55,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
     for(var data_idx = 1; data_idx < DATA_BYTES; data_idx++) {
         State[data_idx]                    = StateUpdateHasher(MAX_STACK_HEIGHT);
         State[data_idx].byte             <== data[data_idx];
-        State[data_idx].polynomial_input <== polynomial_input;
+        State[data_idx].polynomial_input <== ciphertext_digest;
         State[data_idx].stack            <== State[data_idx - 1].next_stack;
         State[data_idx].parsing_string   <== State[data_idx - 1].next_parsing_string;
         State[data_idx].parsing_number   <== State[data_idx - 1].next_parsing_number;
@@ -103,5 +100,16 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
         State[DATA_BYTES - 1].next_tree_hash[i]  === [0,0];
     }
 
-    //
+    // Verify we have now processed all the data properly
+    // TODO: This data is now the HTTP body, consider renaming
+    signal isPadding[DATA_BYTES]; // == 1 in the case we hit padding number
+    signal zeroed_data[DATA_BYTES];
+    for (var i = 0 ; i < DATA_BYTES ; i++) {
+      isPadding[i]   <== IsEqual()([data[i], -1]);
+      zeroed_data[i] <== (1 - isPadding[i]) * data[i];
+    }
+    signal data_digest <== PolynomialDigest(DATA_BYTES)(zeroed_data, ciphertext_digest);
+    signal sequence_digest_hashed <== Poseidon(1)([sequence_digest]);
+    signal data_digest_hashed <== Poseidon(1)([data_digest]);
+    0 === step_in[0] - sequence_digest_hashed - data_digest_hashed;
 }

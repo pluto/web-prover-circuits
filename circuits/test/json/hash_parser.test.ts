@@ -1,8 +1,9 @@
 import { poseidon1, poseidon2 } from "poseidon-lite";
-import { circomkit, WitnessTester, readJSONInputFile, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash } from "../common";
+import { circomkit, WitnessTester, readJSONInputFile, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash, PolynomialDigest, modAdd } from "../common";
 
-describe("Hash Parser", () => {
-    let hash_parser: WitnessTester<["data", "polynomial_input", "sequence_digest", "step_in"]>;
+describe("JSON Extraction", () => {
+    let hash_parser: WitnessTester<["step_in", "ciphertext_digest", "data", "sequence_digest"]>;
+    const mock_ct_digest = poseidon2([69, 420]);
 
     it(`input: array_only`, async () => {
         let filename = "array_only";
@@ -17,37 +18,41 @@ describe("Hash Parser", () => {
         console.log("#constraints:", await hash_parser.getConstraintCount());
 
         // Test `42` in 0th slot
-        let polynomial_input = poseidon2([69, 420]);
         let targetValue = strToBytes("42");
         let keySequence: JsonMaskType[] = [
             { type: "ArrayIndex", value: 0 },
         ];
-        let [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
-        let sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
-        let sequence_digest_hash = poseidon1([sequence_digest]);
+        let [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, MAX_STACK_HEIGHT);
+        let sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
+        let sequence_digest_hashed = poseidon1([sequence_digest]);
+        let data_digest = PolynomialDigest(input, mock_ct_digest);
+        let data_digest_hashed = poseidon1([data_digest]);
+        let step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
+
         await hash_parser.expectPass({
             data: input,
-            polynomial_input,
+            ciphertext_digest: mock_ct_digest,
             sequence_digest,
-            step_in: sequence_digest_hash
+            step_in
         });
         console.log("> First subtest passed.");
 
         // Test `"b"` in 1st slot object
-        polynomial_input = poseidon2([69, 420]);
         targetValue = strToBytes("b");
         keySequence = [
             { type: "ArrayIndex", value: 1 },
             { type: "Object", value: strToBytes("a") },
         ];
-        [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
-        sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
-        sequence_digest_hash = poseidon1([sequence_digest]);
+        [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, MAX_STACK_HEIGHT);
+        sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
+        sequence_digest_hashed = poseidon1([sequence_digest]);
+        step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
+
         await hash_parser.expectPass({
             data: input,
-            polynomial_input,
+            ciphertext_digest: mock_ct_digest,
             sequence_digest,
-            step_in: sequence_digest_hash
+            step_in
         });
         console.log("> Second subtest passed.");
     });
@@ -65,38 +70,41 @@ describe("Hash Parser", () => {
         console.log("#constraints:", await hash_parser.getConstraintCount());
 
         // Test `420` in "k"'s 0th slot
-        let polynomial_input = poseidon2([69, 420]);
         let targetValue = strToBytes("420");
         let keySequence: JsonMaskType[] = [
             { type: "Object", value: strToBytes("k") },
             { type: "ArrayIndex", value: 0 },
         ];
-        let [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
-        let sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
-        let sequence_digest_hash = poseidon1([sequence_digest]);
+        let [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, MAX_STACK_HEIGHT);
+        let sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
+        let sequence_digest_hashed = poseidon1([sequence_digest]);
+        let data_digest = PolynomialDigest(input, mock_ct_digest);
+        let data_digest_hashed = poseidon1([data_digest]);
+        let step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
+
         await hash_parser.expectPass({
             data: input,
-            polynomial_input,
+            ciphertext_digest: mock_ct_digest,
             sequence_digest,
-            step_in: sequence_digest_hash
+            step_in
         });
         console.log("> First subtest passed.");
 
         // Test `"d"` in "b"'s 3rd slot
-        polynomial_input = poseidon2([69, 420]);
         targetValue = strToBytes("d");
         keySequence = [
             { type: "Object", value: strToBytes("b") },
             { type: "ArrayIndex", value: 3 },
         ];
-        [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
-        sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
-        sequence_digest_hash = poseidon1([sequence_digest]);
+        [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, MAX_STACK_HEIGHT);
+        sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
+        sequence_digest_hashed = poseidon1([sequence_digest]);
+        step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
         await hash_parser.expectPass({
             data: input,
-            polynomial_input,
+            ciphertext_digest: mock_ct_digest,
             sequence_digest,
-            step_in: sequence_digest_hash
+            step_in
         });
         console.log("> Second subtest passed.");
     });
@@ -111,7 +119,6 @@ describe("Hash Parser", () => {
         });
         console.log("#constraints:", await hash_parser.getConstraintCount());
 
-        const polynomial_input = poseidon2([69, 420]);
         const KEY0 = strToBytes("a");
         const KEY1 = strToBytes("b");
         const targetValue = strToBytes("4");
@@ -123,15 +130,18 @@ describe("Hash Parser", () => {
             { type: "ArrayIndex", value: 1 },
         ];
 
-        const [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, 10);
-        const sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
-        const sequence_digest_hash = poseidon1([sequence_digest]);
+        const [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, 10);
+        const sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
+        const sequence_digest_hashed = poseidon1([sequence_digest]);
+        const data_digest = PolynomialDigest(input, mock_ct_digest);
+        const data_digest_hashed = poseidon1([data_digest]);
+        const step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
 
         await hash_parser.expectPass({
             data: input,
-            polynomial_input,
+            ciphertext_digest: mock_ct_digest,
             sequence_digest,
-            step_in: sequence_digest_hash
+            step_in
         });
     });
 
@@ -145,7 +155,6 @@ describe("Hash Parser", () => {
         });
         console.log("#constraints:", await hash_parser.getConstraintCount());
 
-        const polynomial_input = poseidon2([69, 420]);
         const KEY0 = strToBytes("data");
         const KEY1 = strToBytes("items");
         const KEY2 = strToBytes("profile");
@@ -160,15 +169,18 @@ describe("Hash Parser", () => {
             { type: "Object", value: KEY3 },
         ];
 
-        const [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, 10);
-        const sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
-        const sequence_digest_hash = poseidon1([sequence_digest]);
+        const [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, 10);
+        const sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
+        const sequence_digest_hashed = poseidon1([sequence_digest]);
+        const data_digest = PolynomialDigest(input, mock_ct_digest);
+        const data_digest_hashed = poseidon1([data_digest]);
+        const step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
 
         await hash_parser.expectPass({
             data: input,
-            polynomial_input,
+            ciphertext_digest: mock_ct_digest,
             sequence_digest,
-            step_in: sequence_digest_hash
+            step_in
         });
     });
 })
