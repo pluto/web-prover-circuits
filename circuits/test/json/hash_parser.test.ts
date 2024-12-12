@@ -1,4 +1,4 @@
-import { poseidon2 } from "poseidon-lite";
+import { poseidon1, poseidon2 } from "poseidon-lite";
 import { circomkit, WitnessTester, readJSONInputFile, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash } from "../common";
 
 describe("Hash Parser", () => {
@@ -24,11 +24,12 @@ describe("Hash Parser", () => {
         ];
         let [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
         let sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
+        let sequence_digest_hash = poseidon1([sequence_digest]);
         await hash_parser.expectPass({
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: sequence_digest
+            step_in: sequence_digest_hash
         });
         console.log("> First subtest passed.");
 
@@ -41,11 +42,12 @@ describe("Hash Parser", () => {
         ];
         [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
         sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
+        sequence_digest_hash = poseidon1([sequence_digest]);
         await hash_parser.expectPass({
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: sequence_digest
+            step_in: sequence_digest_hash
         });
         console.log("> Second subtest passed.");
     });
@@ -71,11 +73,12 @@ describe("Hash Parser", () => {
         ];
         let [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
         let sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
+        let sequence_digest_hash = poseidon1([sequence_digest]);
         await hash_parser.expectPass({
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: sequence_digest
+            step_in: sequence_digest_hash
         });
         console.log("> First subtest passed.");
 
@@ -88,11 +91,12 @@ describe("Hash Parser", () => {
         ];
         [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, MAX_STACK_HEIGHT);
         sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
+        sequence_digest_hash = poseidon1([sequence_digest]);
         await hash_parser.expectPass({
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: sequence_digest
+            step_in: sequence_digest_hash
         });
         console.log("> Second subtest passed.");
     });
@@ -121,12 +125,13 @@ describe("Hash Parser", () => {
 
         const [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, 10);
         const sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
+        const sequence_digest_hash = poseidon1([sequence_digest]);
 
         await hash_parser.expectPass({
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: sequence_digest
+            step_in: sequence_digest_hash
         });
     });
 
@@ -157,12 +162,13 @@ describe("Hash Parser", () => {
 
         const [stack, treeHashes] = jsonTreeHasher(polynomial_input, keySequence, targetValue, 10);
         const sequence_digest = compressTreeHash(polynomial_input, [stack, treeHashes]);
+        const sequence_digest_hash = poseidon1([sequence_digest]);
 
         await hash_parser.expectPass({
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: sequence_digest
+            step_in: sequence_digest_hash
         });
     });
 })

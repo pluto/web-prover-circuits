@@ -6,13 +6,15 @@ include "hash_machine.circom";
 template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal input data[DATA_BYTES];
     signal input polynomial_input;
-    signal input sequence_digest;
+    signal input sequence_digest; 
+    // TODO: we need like a `value_digest` here too.
 
     signal input step_in[1];
     signal output step_out[1];
 
-    // TODO: Wrap the sequence_dig in poseidon. (Probably need to check other circuits for this proper now)
-    0 === step_in[0] - sequence_digest;
+    // TODO: Wrap the sequence_dig in poseidon. (Probably need to check other circuits for this proper now2)
+    signal sequence_digest_hash <== Poseidon(1)([sequence_digest]);
+    0 === step_in[0] - sequence_digest_hash;
     // TODO: Change this
     step_out[0] <== step_in[0];
 
@@ -100,4 +102,6 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
         State[DATA_BYTES - 1].next_stack[i]      === [0,0];
         State[DATA_BYTES - 1].next_tree_hash[i]  === [0,0];
     }
+
+    //
 }
