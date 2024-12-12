@@ -147,7 +147,7 @@ template ChaCha20_NIVC(DATA_BYTES) {
   signal zeroed_plaintext[DATA_BYTES];
   for(var i = 0 ; i < DATA_BYTES ; i++) {
      // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
-    zeroed_plaintext[i] <== isPadding[i] * plainText[i];
+    zeroed_plaintext[i] <== (1 - isPadding[i]) * plainText[i];
   }
   signal plaintext_hash   <== PolynomialDigest(DATA_BYTES)(zeroed_plaintext, ciphertext_digest);
   signal plaintext_digest <== Poseidon(1)([plaintext_hash]);
