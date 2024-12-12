@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import { circomkit, WitnessTester, toByte, uintArray32ToBits, http_response_plaintext, chacha20_http_response_ciphertext, http_start_line, http_header_0, http_header_1, http_body, PolynomialDigest, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash, modAdd } from "../common";
+import { circomkit, WitnessTester, toByte, uintArray32ToBits, http_response_plaintext, http_response_ciphertext, http_start_line, http_header_0, http_header_1, http_body, PolynomialDigest, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash, modAdd, InitialDigest, MockManifest } from "../common";
 import { DataHasher } from "../common/poseidon";
 import { toInput } from "../chacha20/chacha20-nivc.test";
 import { poseidon1 } from "poseidon-lite";
@@ -24,18 +24,23 @@ import { poseidon1 } from "poseidon-lite";
 
 // 320 bytes in the HTTP response
 
-// TODO: These are currently from Rust
-const ciphertext_digest = BigInt("5947802862726868637928743536818722886587721698845887498686185738472802646104");
-const init_nivc_input = BigInt("1004047589511714647691705222985203827421588749970619269541141824992822853087");
+const DATA_BYTES = 320;
+const MAX_NUMBER_OF_HEADERS = 2;
+const MAX_STACK_HEIGHT = 5;
+
+// These `check_*` are currently from Rust
+const check_ciphertext_digest = BigInt("5947802862726868637928743536818722886587721698845887498686185738472802646104");
+const check_init_nivc_input = BigInt("1004047589511714647691705222985203827421588749970619269541141824992822853087");
+
+const [ciphertext_digest, init_nivc_input] = InitialDigest(MockManifest(), http_response_ciphertext, strToBytes("Taylor Swift"), MAX_STACK_HEIGHT);
+assert.deepEqual(ciphertext_digest, check_ciphertext_digest);
+assert.deepEqual(init_nivc_input, check_init_nivc_input);
 
 describe("Example NIVC Proof", async () => {
     let PlaintextAuthentication: WitnessTester<["step_in", "plainText", "key", "nonce", "counter"], ["step_out"]>;
     let HTTPVerification: WitnessTester<["step_in", "ciphertext_digest", "data", "main_digests"], ["step_out"]>;
     let JSONExtraction: WitnessTester<["step_in", "ciphertext_digest", "data", "sequence_digest"], ["step_out"]>;
 
-    const DATA_BYTES = 320;
-    const MAX_NUMBER_OF_HEADERS = 2;
-    const MAX_STACK_HEIGHT = 5;
     before(async () => {
         PlaintextAuthentication = await circomkit.WitnessTester("PlaintextAuthentication", {
             file: "chacha20/nivc/chacha20_nivc",
@@ -71,13 +76,10 @@ describe("Example NIVC Proof", async () => {
             nonce: nonceIn,
             counter: counterBits,
         }, ["step_out"]);
-        console.log("PlaintextAuthentication `step_out`:", plaintext_authentication.step_out);
+        console.log("Plaintext Authentication `step_out`:", plaintext_authentication.step_out);
         const http_response_plaintext_digest = PolynomialDigest(http_response_plaintext, ciphertext_digest);
-        console.log("plaintext_digest =  ", http_response_plaintext_digest);
         const http_response_plaintext_digest_hashed = poseidon1([http_response_plaintext_digest]);
-        console.log("plaintext_digest_hashed =  ", http_response_plaintext_digest_hashed);
         const correct_plaintext_authentication_step_out = modAdd(init_nivc_input - ciphertext_digest, http_response_plaintext_digest_hashed);
-        console.log("correct_step_out: ", correct_plaintext_authentication_step_out);
         assert.deepEqual(plaintext_authentication.step_out, correct_plaintext_authentication_step_out);
 
         // Run HTTPVerification
@@ -95,14 +97,12 @@ describe("Example NIVC Proof", async () => {
         }, ["step_out"]);
         // (autoparallel) This next line gives me an aneurysm
         let http_verification_step_out = BigInt((http_verification.step_out as number[])[0]);
-        console.log("HttpNIVC `step_out`:", http_verification_step_out);
+        console.log("HTTP Verification `step_out`:", http_verification_step_out);
         const body_digest_hashed = poseidon1([PolynomialDigest(http_body, ciphertext_digest)]);
-        console.log("body_digest_hash = ", body_digest_hashed);
         const start_line_digest_digest_hashed = poseidon1([start_line_digest]);
         const header_0_digest_hashed = poseidon1([header_0_digest]);
         const header_1_digest_hashed = poseidon1([header_1_digest]);
         const correct_http_verification_step_out = modAdd(step_in - start_line_digest_digest_hashed - header_0_digest_hashed - header_1_digest_hashed - http_response_plaintext_digest_hashed, body_digest_hashed);
-        console.log("correct_step_out: ", correct_http_verification_step_out);
         assert.deepEqual(http_verification_step_out, correct_http_verification_step_out);
 
         // Run JSONExtraction

@@ -62,6 +62,8 @@ export function readJSONInputFile(filename: string, key: any[]): [number[], numb
 }
 
 import fs from 'fs';
+import { DataHasher } from './poseidon';
+import { poseidon1 } from 'poseidon-lite';
 
 export function readJsonFile<T>(filePath: string): T {
     // Read the file synchronously
@@ -286,7 +288,7 @@ export const http_response_plaintext = [
     10, 32, 32, 32, 125, 13, 10, 125,
 ];
 
-export const chacha20_http_response_ciphertext = [
+export const http_response_ciphertext = [
     2, 125, 219, 141, 140, 93, 49, 129, 95, 178, 135, 109, 48, 36, 194, 46, 239, 155, 160, 70, 208,
     147, 37, 212, 17, 195, 149, 190, 38, 215, 23, 241, 84, 204, 167, 184, 179, 172, 187, 145, 38, 75,
     123, 96, 81, 6, 149, 36, 135, 227, 226, 254, 177, 90, 241, 159, 0, 230, 183, 163, 210, 88, 133,
@@ -422,4 +424,101 @@ export function compressTreeHash(
     }
 
     return accumulated;
+}
+
+interface ManifestResponse {
+    version: string;
+    status: string;
+    message: string;
+    headers: Record<string, string[]>;
+    body: {
+        json: JsonMaskType[];
+    };
+}
+
+interface Manifest {
+    response: ManifestResponse;
+}
+
+function headersToBytes(headers: Record<string, string[]>): number[][] {
+    const result: number[][] = [];
+
+    for (const [key, values] of Object.entries(headers)) {
+        for (const value of values) {
+            // In HTTP/1.1, headers are formatted as "key: value"
+            const headerLine = `${key}: ${value}`;
+            result.push(strToBytes(headerLine));
+        }
+    }
+
+    return result;
+}
+
+export function InitialDigest(
+    manifest: Manifest,
+    ciphertext: number[],
+    targetValue: number[],
+    maxStackHeight: number
+): [bigint, bigint] {
+    // Create a digest of the ciphertext itself
+    const ciphertextDigest = DataHasher(ciphertext);
+
+    // Digest the start line using the ciphertext_digest as a random input
+    const startLineBytes = strToBytes(
+        `${manifest.response.version} ${manifest.response.status} ${manifest.response.message}`
+    );
+    const startLineDigest = PolynomialDigest(startLineBytes, ciphertextDigest);
+
+    // Digest all the headers
+    const headerBytes = headersToBytes(manifest.response.headers);
+    const headersDigest = headerBytes.map(bytes =>
+        PolynomialDigest(bytes, ciphertextDigest)
+    );
+
+    // Digest the JSON sequence
+    const jsonTreeHash = jsonTreeHasher(
+        ciphertextDigest,
+        manifest.response.body.json,
+        targetValue,
+        maxStackHeight
+    );
+    const jsonSequenceDigest = compressTreeHash(ciphertextDigest, jsonTreeHash);
+
+    // Put all the digests into an array
+    const allDigests: bigint[] = [jsonSequenceDigest, startLineDigest, ...headersDigest];
+
+    // Calculate manifest digest
+    const manifestDigest = modAdd(
+        ciphertextDigest,
+        allDigests.map(d => poseidon1([d])).reduce((a, b) => modAdd(a, b), ZERO)
+    );
+
+    return [ciphertextDigest, manifestDigest];
+}
+
+export function MockManifest(): Manifest {
+    const headers: Record<string, string[]> = {
+        "content-type": ["application/json; charset=utf-8"],
+        "content-encoding": ["gzip"]
+    };
+
+    const jsonSequence: JsonMaskType[] = [
+        { type: "Object", value: strToBytes("data") },
+        { type: "Object", value: strToBytes("items") },
+        { type: "ArrayIndex", value: 0 },
+        { type: "Object", value: strToBytes("profile") },
+        { type: "Object", value: strToBytes("name") }
+    ];
+
+    return {
+        response: {
+            status: "200",
+            version: "HTTP/1.1",
+            message: "OK",
+            headers: headers,
+            body: {
+                json: jsonSequence
+            }
+        }
+    };
 }
