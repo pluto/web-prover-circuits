@@ -344,7 +344,7 @@ const ONE = BigInt(1);
 const ZERO = BigInt(0);
 
 export function modAdd(a: bigint, b: bigint): bigint {
-    return (a + b) % PRIME;
+    return ((a + b) % PRIME + PRIME) % PRIME;
 }
 
 function modMul(a: bigint, b: bigint): bigint {

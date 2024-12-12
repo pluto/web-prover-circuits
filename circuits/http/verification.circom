@@ -20,11 +20,11 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     signal data_digest <== PolynomialDigest(DATA_BYTES)(zeroed_data, ciphertext_digest);
 
     signal input main_digests[MAX_NUMBER_OF_HEADERS + 1];  // Contains digests of start line and all intended headers (up to `MAX_NUMBER_OF_HEADERS`)
-    signal contained[MAX_NUMBER_OF_HEADERS + 1];
+    signal not_contained[MAX_NUMBER_OF_HEADERS + 1];
     var num_to_match = MAX_NUMBER_OF_HEADERS + 1;
     for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS + 1 ; i++) {
-        contained[i] <== IsZero()(main_digests[i]);
-        num_to_match -= contained[i];
+        not_contained[i] <== IsZero()(main_digests[i]);
+        num_to_match -= not_contained[i];
     }
 
     component State[DATA_BYTES];
@@ -107,5 +107,16 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     State[DATA_BYTES - 1].next_line_status         === 0;
 
     // TODO: Need to subtract all the header digests here and also wrap them in poseidon. We can use the ones from the input to make this cheaper since they're verified in this circuit!
-    step_out[0] <== step_in[0] + body_digest[DATA_BYTES - 1] - data_digest; // TODO: data_digest is really plaintext_digest from before, consider changing names
+    signal body_digest_hashed <== Poseidon(1)([body_digest[DATA_BYTES - 1]]);
+    signal data_digest_hashed <== Poseidon(1)([data_digest]);
+    signal option_hash[MAX_NUMBER_OF_HEADERS + 1];
+    signal main_digests_hashed[MAX_NUMBER_OF_HEADERS + 1];
+    var accumulated_main_digests_hashed = 0;
+    for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS + 1 ; i++) {
+        option_hash[i] <== Poseidon(1)([(1 - not_contained[i]) * main_digests[i]]);
+        main_digests_hashed[i] <== (1 - not_contained[i]) * option_hash[i];
+        accumulated_main_digests_hashed +=  main_digests_hashed[i];
+    }
+    
+    step_out[0] <== step_in[0] + body_digest_hashed - accumulated_main_digests_hashed - data_digest_hashed; // TODO: data_digest is really plaintext_digest from before, consider changing names
 }
