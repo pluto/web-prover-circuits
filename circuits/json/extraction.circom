@@ -111,5 +111,9 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal data_digest <== PolynomialDigest(DATA_BYTES)(zeroed_data, ciphertext_digest);
     signal sequence_digest_hashed <== Poseidon(1)([sequence_digest]);
     signal data_digest_hashed <== Poseidon(1)([data_digest]);
+
+    log("circuit: json_step_in = ", step_in[0]);
+    log("circuit: sequence_digest_hashed = ", sequence_digest_hashed);
+    log("circuit: data_digest_hashed = ", data_digest_hashed);
     0 === step_in[0] - sequence_digest_hashed - data_digest_hashed;
 }

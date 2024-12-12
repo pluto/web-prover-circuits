@@ -357,7 +357,7 @@ export function jsonTreeHasher(
     targetValue: number[],  // Changed from Uint8Array to number[]
     maxStackHeight: number
 ): [Array<[bigint, bigint]>, Array<[bigint, bigint]>] {
-    if (keySequence.length >= maxStackHeight) {
+    if (keySequence.length > maxStackHeight) {
         throw new Error("Key sequence length exceeds max stack height");
     }
 

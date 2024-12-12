@@ -143,14 +143,19 @@ template ChaCha20_NIVC(DATA_BYTES) {
   }
 
   signal ciphertext_digest <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
+  log("circuit: ciphertext_digest = ",ciphertext_digest);
 
   signal zeroed_plaintext[DATA_BYTES];
   for(var i = 0 ; i < DATA_BYTES ; i++) {
      // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
     zeroed_plaintext[i] <== (1 - isPadding[i]) * plainText[i];
   }
-  signal plaintext_hash   <== PolynomialDigest(DATA_BYTES)(zeroed_plaintext, ciphertext_digest);
-  signal plaintext_digest <== Poseidon(1)([plaintext_hash]);
+  signal plaintext_digest   <== PolynomialDigest(DATA_BYTES)(zeroed_plaintext, ciphertext_digest);
+  log("circuit: plaintext_digest = ", plaintext_digest);
+  signal plaintext_digest_hashed <== Poseidon(1)([plaintext_digest]);
+  log("circuit: plaintext_digest_hashed = ", plaintext_digest_hashed);
 
-  step_out[0] <== step_in[0] - ciphertext_digest + plaintext_digest;
+  // TODO: I'm not sure we need to subtract the CT digest
+  step_out[0] <== step_in[0] - ciphertext_digest + plaintext_digest_hashed;
+  log("circuit: step_out = ", step_out[0]);
 }

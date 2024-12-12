@@ -60,8 +60,8 @@ describe("chacha20-nivc", () => {
             }, (["step_out"]));
             // Output
             let ciphertext_digest = DataHasher(ciphertextBytes);
-            let plaintext_digest = poseidon1([PolynomialDigest(plaintextBytes, ciphertext_digest)]);
-            let output = modAdd(plaintext_digest - ciphertext_digest, BigInt(0));
+            let plaintext_digest_hashed = poseidon1([PolynomialDigest(plaintextBytes, ciphertext_digest)]);
+            let output = modAdd(plaintext_digest_hashed - ciphertext_digest, BigInt(0));
             assert.deepEqual(w.step_out, output);
         });
     });
