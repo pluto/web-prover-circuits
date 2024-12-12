@@ -11,6 +11,8 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal input step_in[1];
     signal output step_out[1];
 
+    // TODO: Wrap the sequence_dig in poseidon. (Probably need to check other circuits for this proper now)
+    0 === step_in[0] - sequence_digest;
     // TODO: Change this
     step_out[0] <== step_in[0];
 

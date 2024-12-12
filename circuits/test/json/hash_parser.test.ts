@@ -28,7 +28,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: 0
+            step_in: sequence_digest
         });
         console.log("> First subtest passed.");
 
@@ -45,7 +45,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: 0
+            step_in: sequence_digest
         });
         console.log("> Second subtest passed.");
     });
@@ -75,7 +75,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: 0
+            step_in: sequence_digest
         });
         console.log("> First subtest passed.");
 
@@ -92,7 +92,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: 0
+            step_in: sequence_digest
         });
         console.log("> Second subtest passed.");
     });
@@ -126,7 +126,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: 0
+            step_in: sequence_digest
         });
     });
 
@@ -162,7 +162,7 @@ describe("Hash Parser", () => {
             data: input,
             polynomial_input,
             sequence_digest,
-            step_in: 0
+            step_in: sequence_digest
         });
     });
 })

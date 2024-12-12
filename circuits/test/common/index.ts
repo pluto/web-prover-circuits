@@ -343,7 +343,7 @@ const PRIME = BigInt("2188824287183927522224640574525727508854836440041603434369
 const ONE = BigInt(1);
 const ZERO = BigInt(0);
 
-function modAdd(a: bigint, b: bigint): bigint {
+export function modAdd(a: bigint, b: bigint): bigint {
     return (a + b) % PRIME;
 }
 
