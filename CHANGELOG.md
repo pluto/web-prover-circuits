@@ -12,27 +12,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 #### Circuit Builds
 #### Artifacts
 - **Circuit sizes:**
-    - `plaintext_authentication_1024b` (with `--O1` build): 
-        - non-linear constaints: `383,300`
-        - linear-constraints: `27,418` 
-        - R1CS file: `83.9MB`
-        - Graph file: `20.7MB`
-    - `http_verification_1024b` (with `--O1` build): 
-        - non-linear constaints: `121,835`
-        - linear-constraints: `64,974` 
-        - R1CS file: `25.7MB`
-        - Graph file: `5MB`
+    - `plaintext_authentication_1024b`: 
+        - non-linear constaints: `383,102`
+        - R1CS file: `123.4MB`
+        - Graph file: `19.9MB`
+    - `http_verification_1024b`: 
+        - non-linear constaints: `121,376`
+        - R1CS file: `80.7MB`
+        - Graph file: `4.4MB`
         - **WARNING:** Extremely slow build with `--O2` flag. Need to investigate.
-    - `json_extraction_1024b` (with `--O1` build): 
-        - non-linear constaints: `460,102`
-        - linear-constraints: `225,781` 
-        - R1CS file: `95.3MB`
-        - Graph file: `13.1MB`
+    - `json_extraction_1024b`: 
+        - non-linear constaints: `452,683`
+        - R1CS file: `90.3MB`
+        - Graph file: `13.2MB`
     - **Total size:** `243.7MB`
 - **Circuit param file sizes (SNARK):**
-    - `aux_params`: `112.5MB`
-    - `prover_key`: `100.7MB`
-    - `verifier_key`: `321.3MB`         
+    - `aux_params`: `62.2MB`
+    - `prover_key`: `50.3MB`
+    - `verifier_key`: `415.3MB`         
 
 ### Notes
 
