@@ -1,4 +1,5 @@
 import { circomkit, WitnessTester } from "../common";
+
 describe("IsEqualArray", () => {
   let circuit: WitnessTester<["in"], ["out"]>;
   before(async () => {
@@ -7,7 +8,6 @@ describe("IsEqualArray", () => {
       template: "IsEqualArray",
       params: [3],
     });
-    console.log("#constraints:", await circuit.getConstraintCount());
   });
 
   it("witness: [[0,0,0],[0,0,0]]", async () => {
@@ -61,7 +61,6 @@ describe("Contains", () => {
       template: "Contains",
       params: [3],
     });
-    console.log("#constraints:", await circuit.getConstraintCount());
   });
 
   it("witness: in = 0, array = [0,1,2]", async () => {
@@ -102,7 +101,6 @@ describe("ArrayAdd", () => {
       template: "ArrayAdd",
       params: [3],
     });
-    console.log("#constraints:", await circuit.getConstraintCount());
   });
 
   it("witness: lhs = [0,1,2], rhs = [3,5,7]", async () => {
@@ -122,7 +120,6 @@ describe("ArrayMul", () => {
       template: "ArrayMul",
       params: [3],
     });
-    console.log("#constraints:", await circuit.getConstraintCount());
   });
 
   it("witness: lhs = [0,1,2], rhs = [3,5,7]", async () => {
@@ -142,7 +139,6 @@ describe("GenericArrayAdd", () => {
       template: "GenericArrayAdd",
       params: [3, 2],
     });
-    console.log("#constraints:", await circuit.getConstraintCount());
   });
 
   it("witness: arrays = [[0,1,2],[3,5,7]]", async () => {
@@ -161,7 +157,6 @@ describe("fromLittleEndianToWords32", () => {
       file: "utils/array",
       template: "fromLittleEndianToWords32",
     });
-    console.log("#constraints:", await circuit.getConstraintCount());
 
     let input = [
       0, 1, 0, 1, 0, 0, 0, 0, 0,
@@ -180,7 +175,6 @@ describe("fromWords32ToLittleEndian", () => {
       file: "utils/array",
       template: "fromWords32ToLittleEndian",
     });
-    console.log("#constraints:", await circuit.getConstraintCount());
 
     let input = [72, 84, 84, 80];
     await circuit.expectPass({ words: input }, {

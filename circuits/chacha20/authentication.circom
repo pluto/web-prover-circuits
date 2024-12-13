@@ -2,11 +2,11 @@
 // modified for our needs
 pragma circom 2.1.9;
 
-include "../chacha-round.circom";
-include "../chacha-qr.circom";
-include "../../utils/bits.circom";
-include "../../utils/hash.circom";
-include "../../utils/array.circom";
+include "chacha-round.circom";
+include "chacha-qr.circom";
+include "../utils/bits.circom";
+include "../utils/hash.circom";
+include "../utils/array.circom";
 include "circomlib/circuits/poseidon.circom";
 
 
@@ -24,7 +24,7 @@ include "circomlib/circuits/poseidon.circom";
 // | # | N | N | N |
 // +---+---+---+---+
 // paramaterized by `DATA_BYTES` which is the plaintext length in bytes
-template ChaCha20_NIVC(DATA_BYTES) {
+template PlaintextAuthentication(DATA_BYTES) {
   // key => 8 32-bit words = 32 bytes
   signal input key[8][32];
   // nonce => 3 32-bit words = 12 bytes
@@ -34,7 +34,7 @@ template ChaCha20_NIVC(DATA_BYTES) {
 
   // the below can be both ciphertext or plaintext depending on the direction
   // in => N 32-bit words => N 4 byte words
-  signal input plainText[DATA_BYTES];
+  signal input plaintext[DATA_BYTES];
 
   // step_in should be the ciphertext digest + the HTTP digests + JSON seq digest
   signal input step_in[1];
@@ -48,8 +48,8 @@ template ChaCha20_NIVC(DATA_BYTES) {
   for (var i = 0 ; i < DATA_BYTES / 4 ; i++) {
     toBits[i] = fromWords32ToLittleEndian();
     for (var j = 0 ; j < 4 ; j++) {
-      isPadding[i * 4 + j]         <== IsEqual()([plainText[i * 4 + j], -1]);
-      toBits[i].words[j] <== (1 - isPadding[i * 4 + j]) * plainText[i*4 + j];
+      isPadding[i * 4 + j]         <== IsEqual()([plaintext[i * 4 + j], -1]);
+      toBits[i].words[j] <== (1 - isPadding[i * 4 + j]) * plaintext[i*4 + j];
     }
     plaintextBits[i] <== toBits[i].data;
   }
@@ -147,7 +147,7 @@ template ChaCha20_NIVC(DATA_BYTES) {
   signal zeroed_plaintext[DATA_BYTES];
   for(var i = 0 ; i < DATA_BYTES ; i++) {
      // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
-    zeroed_plaintext[i] <== (1 - isPadding[i]) * plainText[i];
+    zeroed_plaintext[i] <== (1 - isPadding[i]) * plaintext[i];
   }
   signal plaintext_digest   <== PolynomialDigest(DATA_BYTES)(zeroed_plaintext, ciphertext_digest);
   signal plaintext_digest_hashed <== Poseidon(1)([plaintext_digest]);

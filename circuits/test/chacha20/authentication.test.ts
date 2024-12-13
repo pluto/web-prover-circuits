@@ -4,14 +4,13 @@ import { DataHasher } from "../common/poseidon";
 import { assert } from "chai";
 import { poseidon1 } from "poseidon-lite";
 
-
-describe("chacha20-nivc", () => {
-    let circuit: WitnessTester<["key", "nonce", "counter", "plainText", "step_in"], ["step_out"]>;
+describe("Plaintext Authentication", () => {
+    let circuit: WitnessTester<["key", "nonce", "counter", "plaintext", "step_in"], ["step_out"]>;
     describe("16 block test", () => {
         it("should perform encryption", async () => {
-            circuit = await circomkit.WitnessTester(`ChaCha20`, {
-                file: "chacha20/nivc/chacha20_nivc",
-                template: "ChaCha20_NIVC",
+            circuit = await circomkit.WitnessTester(`PlaintextAuthentication`, {
+                file: "chacha20/authentication",
+                template: "PlaintextAuthentication",
                 params: [64] // number of bytes for plaintext
             });
             // Test case from RCF https://www.rfc-editor.org/rfc/rfc7539.html#section-2.4.2
@@ -55,7 +54,7 @@ describe("chacha20-nivc", () => {
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
                 counter: counterBits,
-                plainText: plaintextBytes,
+                plaintext: plaintextBytes,
                 step_in: 0
             }, (["step_out"]));
             // Output
@@ -68,9 +67,9 @@ describe("chacha20-nivc", () => {
 
     describe("padded plaintext", () => {
         it("should perform encryption", async () => {
-            circuit = await circomkit.WitnessTester(`ChaCha20`, {
-                file: "chacha20/nivc/chacha20_nivc",
-                template: "ChaCha20_NIVC",
+            circuit = await circomkit.WitnessTester(`PlaintextAuthentication`, {
+                file: "chacha20/authentication",
+                template: "PlaintextAuthentication",
                 params: [128] // number of bytes in plaintext
             });
             // Test case from RCF https://www.rfc-editor.org/rfc/rfc7539.html#section-2.4.2
@@ -113,7 +112,7 @@ describe("chacha20-nivc", () => {
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
                 counter: counterBits,
-                plainText: paddedPlaintextBytes,
+                plaintext: paddedPlaintextBytes,
                 step_in: 0
             }, (["step_out"]));
             let ciphertext_digest = DataHasher(ciphertextBytes);

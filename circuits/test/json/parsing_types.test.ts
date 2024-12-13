@@ -1,7 +1,5 @@
 import { circomkit, WitnessTester, generateDescription } from "../common";
-import { Delimiters, WhiteSpace, Numbers, Escape, INITIAL_IN, INITIAL_OUT } from '.';
-
-
+import { Delimiters, WhiteSpace, INITIAL_IN, INITIAL_OUT } from '.';
 
 describe("StateUpdate", () => {
     let circuit: WitnessTester<
@@ -23,8 +21,6 @@ describe("StateUpdate", () => {
             template: "StateUpdate",
             params: [4],
         });
-        console.log("#constraints:", await circuit.getConstraintCount());
-
     });
 
     //-TEST_1----------------------------------------------------------//

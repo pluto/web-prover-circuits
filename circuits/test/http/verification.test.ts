@@ -1,7 +1,6 @@
 import { circomkit, WitnessTester, PolynomialDigest, http_response_plaintext, http_start_line, http_header_0, http_header_1, http_body, modAdd } from "../common";
 import { assert } from "chai";
-import { DataHasher } from "../common/poseidon";
-import { poseidon1, poseidon2 } from "poseidon-lite";
+import { poseidon1 } from "poseidon-lite";
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8

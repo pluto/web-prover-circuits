@@ -8,7 +8,6 @@ describe("SwitchArray", () => {
             template: "SwitchArray",
             params: [3, 2],
         });
-        console.log("#constraints:", await circuit.getConstraintCount());
     });
 
     it("witness: case = 0, branches = [0, 1, 2], vals = [[69,0], [420,1], [1337,2]]", async () => {
@@ -63,7 +62,6 @@ describe("Switch", () => {
             template: "Switch",
             params: [3],
         });
-        console.log("#constraints:", await circuit.getConstraintCount());
     });
 
     it("witness: case = 0, branches = [0, 1, 2], vals = [69, 420, 1337]", async () => {
@@ -105,7 +103,6 @@ describe("InRange", () => {
             template: "InRange",
             params: [8],
         });
-        console.log("#constraints:", await circuit.getConstraintCount());
     });
 
     it("witness: in = 1, range = [0,2]", async () => {

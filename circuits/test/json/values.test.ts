@@ -12,8 +12,8 @@ describe("StateUpdate :: Values", () => {
             template: "StateUpdate",
             params: [4],
         });
-        console.log("#constraints:", await circuit.getConstraintCount());
     });
+
     function generatePassCase(input: any, expected: any, desc: string) {
         const description = generateDescription(input);
 

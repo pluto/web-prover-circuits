@@ -9,7 +9,6 @@ describe("GetTopOfStack", () => {
             template: "GetTopOfStack",
             params: [4],
         });
-        console.log("#constraints:", await circuit.getConstraintCount());
     });
 
     function generatePassCase(input: any, expected: any) {
@@ -38,7 +37,6 @@ describe("StateUpdate :: RewriteStack", () => {
             template: "StateUpdate",
             params: [4],
         });
-        console.log("#constraints:", await circuit.getConstraintCount());
     });
 
     function generatePassCase(input: any, expected: any, desc: string) {

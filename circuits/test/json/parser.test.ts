@@ -1,6 +1,6 @@
-import { circomkit, WitnessTester, generateDescription, readJSONInputFile } from "../common";
+import { circomkit, WitnessTester, readJSONInputFile } from "../common";
 
-describe("json-parser", () => {
+describe("JSON Parser", () => {
     let circuit: WitnessTester<["data"]>;
 
     it(`array only input`, async () => {
@@ -12,7 +12,6 @@ describe("json-parser", () => {
             template: "Parser",
             params: [input.length, 2],
         });
-        console.log("#constraints:", await circuit.getConstraintCount());
 
         await circuit.expectPass({
             data: input
@@ -28,7 +27,6 @@ describe("json-parser", () => {
             template: "Parser",
             params: [input.length, 3],
         });
-        console.log("#constraints:", await circuit.getConstraintCount());
 
         await circuit.expectPass({
             data: input

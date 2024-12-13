@@ -15,7 +15,6 @@ describe("JSON Extraction", () => {
             template: "JSONExtraction",
             params: [input.length, MAX_STACK_HEIGHT],
         });
-        console.log("#constraints:", await hash_parser.getConstraintCount());
 
         // Test `42` in 0th slot
         let targetValue = strToBytes("42");
@@ -71,7 +70,6 @@ describe("JSON Extraction", () => {
             template: "JSONExtraction",
             params: [input.length, MAX_STACK_HEIGHT],
         });
-        console.log("#constraints:", await hash_parser.getConstraintCount());
 
         // Test `420` in "k"'s 0th slot
         let targetValue = strToBytes("420");
@@ -125,7 +123,6 @@ describe("JSON Extraction", () => {
             template: "JSONExtraction",
             params: [input.length, 5],
         });
-        console.log("#constraints:", await hash_parser.getConstraintCount());
 
         const KEY0 = strToBytes("a");
         const KEY1 = strToBytes("b");
@@ -163,7 +160,6 @@ describe("JSON Extraction", () => {
             template: "JSONExtraction",
             params: [input.length, 5],
         });
-        console.log("#constraints:", await hash_parser.getConstraintCount());
 
         const KEY0 = strToBytes("data");
         const KEY1 = strToBytes("items");
