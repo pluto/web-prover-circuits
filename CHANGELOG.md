@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
         - linear-constraints: `225,781` 
         - R1CS file: `95.3MB`
         - Graph file: `13.1MB`
+    - **Total size:** `243.7MB`
 - **Circuit param file sizes (SNARK):**
     - `aux_params`: `112.5MB`
     - `prover_key`: `100.7MB`

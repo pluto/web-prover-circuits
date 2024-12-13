@@ -119,5 +119,4 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     }
     
     step_out[0] <== step_in[0] + body_digest_hashed - accumulated_main_digests_hashed - data_digest_hashed; // TODO: data_digest is really plaintext_digest from before, consider changing names
-    log("circuit: http_step_out = ", step_out[0]);
 }

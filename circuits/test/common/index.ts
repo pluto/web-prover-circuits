@@ -356,15 +356,14 @@ function modMul(a: bigint, b: bigint): bigint {
 export function jsonTreeHasher(
     polynomialInput: bigint,
     keySequence: JsonMaskType[],
-    targetValue: number[],  // Changed from Uint8Array to number[]
     maxStackHeight: number
-): [Array<[bigint, bigint]>, Array<[bigint, bigint]>] {
+): [Array<[bigint, bigint]>, Array<bigint>] {
     if (keySequence.length > maxStackHeight) {
         throw new Error("Key sequence length exceeds max stack height");
     }
 
     const stack: Array<[bigint, bigint]> = [];
-    const treeHashes: Array<[bigint, bigint]> = [];
+    const treeHashes: Array<bigint> = [];
 
     for (const valType of keySequence) {
         if (valType.type === "Object") {
@@ -376,29 +375,19 @@ export function jsonTreeHasher(
                 stringHash = modAdd(stringHash, modMul(monomial, BigInt(byte)));
                 monomial = modMul(monomial, polynomialInput);
             }
-            treeHashes.push([stringHash, ZERO]);
+            treeHashes.push(stringHash);
         } else { // ArrayIndex
-            treeHashes.push([ZERO, ZERO]);
+            treeHashes.push(ZERO);
             stack.push([BigInt(2), BigInt(valType.value)]);
         }
     }
-
-    let targetValueHash = ZERO;
-    let monomial = ONE;
-
-    for (const byte of targetValue) {
-        targetValueHash = modAdd(targetValueHash, modMul(monomial, BigInt(byte)));
-        monomial = modMul(monomial, polynomialInput);
-    }
-
-    treeHashes[keySequence.length - 1] = [treeHashes[keySequence.length - 1][0], targetValueHash];
 
     return [stack, treeHashes];
 }
 
 export function compressTreeHash(
     polynomialInput: bigint,
-    stackAndTreeHashes: [Array<[bigint, bigint]>, Array<[bigint, bigint]>]
+    stackAndTreeHashes: [Array<[bigint, bigint]>, Array<bigint>]
 ): bigint {
     const [stack, treeHashes] = stackAndTreeHashes;
 
@@ -416,10 +405,7 @@ export function compressTreeHash(
         accumulated = modAdd(accumulated, modMul(stack[idx][1], monomial));
         monomial = modMul(monomial, polynomialInput);
 
-        accumulated = modAdd(accumulated, modMul(treeHashes[idx][0], monomial));
-        monomial = modMul(monomial, polynomialInput);
-
-        accumulated = modAdd(accumulated, modMul(treeHashes[idx][1], monomial));
+        accumulated = modAdd(accumulated, modMul(treeHashes[idx], monomial));
         monomial = modMul(monomial, polynomialInput);
     }
 
@@ -457,7 +443,6 @@ function headersToBytes(headers: Record<string, string[]>): number[][] {
 export function InitialDigest(
     manifest: Manifest,
     ciphertext: number[],
-    targetValue: number[],
     maxStackHeight: number
 ): [bigint, bigint] {
     // Create a digest of the ciphertext itself
@@ -479,7 +464,6 @@ export function InitialDigest(
     const jsonTreeHash = jsonTreeHasher(
         ciphertextDigest,
         manifest.response.body.json,
-        targetValue,
         maxStackHeight
     );
     const jsonSequenceDigest = compressTreeHash(ciphertextDigest, jsonTreeHash);

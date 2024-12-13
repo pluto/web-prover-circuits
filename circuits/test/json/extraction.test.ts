@@ -2,7 +2,7 @@ import { poseidon1, poseidon2 } from "poseidon-lite";
 import { circomkit, WitnessTester, readJSONInputFile, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash, PolynomialDigest, modAdd } from "../common";
 
 describe("JSON Extraction", () => {
-    let hash_parser: WitnessTester<["step_in", "ciphertext_digest", "data", "sequence_digest"]>;
+    let hash_parser: WitnessTester<["step_in", "ciphertext_digest", "data", "sequence_digest", "value_digest"]>;
     const mock_ct_digest = poseidon2([69, 420]);
 
     it(`input: array_only`, async () => {
@@ -22,9 +22,10 @@ describe("JSON Extraction", () => {
         let keySequence: JsonMaskType[] = [
             { type: "ArrayIndex", value: 0 },
         ];
-        let [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, MAX_STACK_HEIGHT);
+        let [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, MAX_STACK_HEIGHT);
         let sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         let sequence_digest_hashed = poseidon1([sequence_digest]);
+        let value_digest = PolynomialDigest(targetValue, mock_ct_digest);
         let data_digest = PolynomialDigest(input, mock_ct_digest);
         let data_digest_hashed = poseidon1([data_digest]);
         let step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
@@ -33,6 +34,7 @@ describe("JSON Extraction", () => {
             data: input,
             ciphertext_digest: mock_ct_digest,
             sequence_digest,
+            value_digest,
             step_in
         });
         console.log("> First subtest passed.");
@@ -43,15 +45,17 @@ describe("JSON Extraction", () => {
             { type: "ArrayIndex", value: 1 },
             { type: "Object", value: strToBytes("a") },
         ];
-        [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, MAX_STACK_HEIGHT);
+        [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, MAX_STACK_HEIGHT);
         sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         sequence_digest_hashed = poseidon1([sequence_digest]);
+        value_digest = PolynomialDigest(targetValue, mock_ct_digest);
         step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
 
         await hash_parser.expectPass({
             data: input,
             ciphertext_digest: mock_ct_digest,
             sequence_digest,
+            value_digest,
             step_in
         });
         console.log("> Second subtest passed.");
@@ -75,17 +79,19 @@ describe("JSON Extraction", () => {
             { type: "Object", value: strToBytes("k") },
             { type: "ArrayIndex", value: 0 },
         ];
-        let [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, MAX_STACK_HEIGHT);
+        let [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, MAX_STACK_HEIGHT);
         let sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         let sequence_digest_hashed = poseidon1([sequence_digest]);
         let data_digest = PolynomialDigest(input, mock_ct_digest);
         let data_digest_hashed = poseidon1([data_digest]);
+        let value_digest = PolynomialDigest(targetValue, mock_ct_digest);
         let step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
 
         await hash_parser.expectPass({
             data: input,
             ciphertext_digest: mock_ct_digest,
             sequence_digest,
+            value_digest,
             step_in
         });
         console.log("> First subtest passed.");
@@ -96,14 +102,16 @@ describe("JSON Extraction", () => {
             { type: "Object", value: strToBytes("b") },
             { type: "ArrayIndex", value: 3 },
         ];
-        [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, MAX_STACK_HEIGHT);
+        [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, MAX_STACK_HEIGHT);
         sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         sequence_digest_hashed = poseidon1([sequence_digest]);
+        value_digest = PolynomialDigest(targetValue, mock_ct_digest);
         step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
         await hash_parser.expectPass({
             data: input,
             ciphertext_digest: mock_ct_digest,
             sequence_digest,
+            value_digest,
             step_in
         });
         console.log("> Second subtest passed.");
@@ -130,17 +138,19 @@ describe("JSON Extraction", () => {
             { type: "ArrayIndex", value: 1 },
         ];
 
-        const [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, 10);
+        const [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, 10);
         const sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         const sequence_digest_hashed = poseidon1([sequence_digest]);
         const data_digest = PolynomialDigest(input, mock_ct_digest);
         const data_digest_hashed = poseidon1([data_digest]);
+        const value_digest = PolynomialDigest(targetValue, mock_ct_digest);
         const step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
 
         await hash_parser.expectPass({
             data: input,
             ciphertext_digest: mock_ct_digest,
             sequence_digest,
+            value_digest,
             step_in
         });
     });
@@ -169,17 +179,19 @@ describe("JSON Extraction", () => {
             { type: "Object", value: KEY3 },
         ];
 
-        const [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, targetValue, 10);
+        const [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, 10);
         const sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         const sequence_digest_hashed = poseidon1([sequence_digest]);
         const data_digest = PolynomialDigest(input, mock_ct_digest);
         const data_digest_hashed = poseidon1([data_digest]);
+        const value_digest = PolynomialDigest(targetValue, mock_ct_digest);
         const step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
 
         await hash_parser.expectPass({
             data: input,
             ciphertext_digest: mock_ct_digest,
             sequence_digest,
+            value_digest,
             step_in
         });
     });

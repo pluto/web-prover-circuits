@@ -15,8 +15,8 @@
     ]
   },
   "json_extraction_1024b": {
-    "file": "json/parser/hash_parser",
-    "template": "ParserHasher",
+    "file": "json/extraction",
+    "template": "JSONExtraction",
     "params": [
       1024,
       10
