@@ -13,18 +13,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal output step_out[1];
 
     //--------------------------------------------------------------------------------------------//
-    // Initialze the parser
     component State[DATA_BYTES];
-    State[0] = StateUpdateHasher(MAX_STACK_HEIGHT);
-    for(var i = 0; i < MAX_STACK_HEIGHT; i++) {
-        State[0].stack[i]       <== [0,0];
-        State[0].tree_hash[i]   <== [0,0];
-    }
-    State[0].byte             <== data[0];
-    State[0].polynomial_input <== ciphertext_digest;
-    State[0].monomial         <== 0;
-    State[0].parsing_string   <== 0;
-    State[0].parsing_number   <== 0;
 
     // Set up monomials for stack/tree digesting
     signal monomials[3 * MAX_STACK_HEIGHT];
@@ -51,15 +40,28 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal sequence_is_matched[DATA_BYTES];
     signal value_is_matched[DATA_BYTES];
     signal sequence_and_value_matched[DATA_BYTES];
-    for(var data_idx = 1; data_idx < DATA_BYTES; data_idx++) {
-        State[data_idx]                    = StateUpdateHasher(MAX_STACK_HEIGHT);
-        State[data_idx].byte             <== data[data_idx];
-        State[data_idx].polynomial_input <== ciphertext_digest;
-        State[data_idx].stack            <== State[data_idx - 1].next_stack;
-        State[data_idx].parsing_string   <== State[data_idx - 1].next_parsing_string;
-        State[data_idx].parsing_number   <== State[data_idx - 1].next_parsing_number;
-        State[data_idx].monomial         <== State[data_idx - 1].next_monomial;
-        State[data_idx].tree_hash        <== State[data_idx - 1].next_tree_hash;
+    for(var data_idx = 0; data_idx < DATA_BYTES; data_idx++) {
+        if(data_idx == 0) {
+            State[0] = StateUpdateHasher(MAX_STACK_HEIGHT);
+            for(var i = 0; i < MAX_STACK_HEIGHT; i++) {
+                State[0].stack[i]     <== [0,0];
+                State[0].tree_hash[i] <== [0,0];
+            }
+            State[0].byte             <== data[0];
+            State[0].polynomial_input <== ciphertext_digest;
+            State[0].monomial         <== 0;
+            State[0].parsing_string   <== 0;
+            State[0].parsing_number   <== 0;
+        } else {
+            State[data_idx]                    = StateUpdateHasher(MAX_STACK_HEIGHT);
+            State[data_idx].byte             <== data[data_idx];
+            State[data_idx].polynomial_input <== ciphertext_digest;
+            State[data_idx].stack            <== State[data_idx - 1].next_stack;
+            State[data_idx].parsing_string   <== State[data_idx - 1].next_parsing_string;
+            State[data_idx].parsing_number   <== State[data_idx - 1].next_parsing_number;
+            State[data_idx].monomial         <== State[data_idx - 1].next_monomial;
+            State[data_idx].tree_hash        <== State[data_idx - 1].next_tree_hash;
+        }
 
         // Digest the whole stack and key tree hash
         var accumulator = 0;
