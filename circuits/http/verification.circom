@@ -7,19 +7,24 @@ include "../utils/hash.circom";
 template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     signal input step_in[1];
     signal output step_out[1];
+    
+    signal input ciphertext_digest;
 
-    // Authenticate the plaintext we are passing in
     signal input data[DATA_BYTES];
-    // TODO: we don't need this if we do a poly digest of the plaintext in authentication circuit
-    signal data_hash <== DataHasher(DATA_BYTES)(data);
-    data_hash        === step_in[0];
+    signal isPadding[DATA_BYTES]; // == 1 in the case we hit padding number
+    signal zeroed_data[DATA_BYTES];
+    for (var i = 0 ; i < DATA_BYTES ; i++) {
+      isPadding[i]   <== IsEqual()([data[i], -1]);
+      zeroed_data[i] <== (1 - isPadding[i]) * data[i];
+    }
+    signal data_digest <== PolynomialDigest(DATA_BYTES)(zeroed_data, ciphertext_digest);
 
     signal input main_digests[MAX_NUMBER_OF_HEADERS + 1];  // Contains digests of start line and all intended headers (up to `MAX_NUMBER_OF_HEADERS`)
-    signal contained[MAX_NUMBER_OF_HEADERS + 1];
+    signal not_contained[MAX_NUMBER_OF_HEADERS + 1];
     var num_to_match = MAX_NUMBER_OF_HEADERS + 1;
     for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS + 1 ; i++) {
-        contained[i] <== IsZero()(main_digests[i]);
-        num_to_match -= contained[i];
+        not_contained[i] <== IsZero()(main_digests[i]);
+        num_to_match -= not_contained[i];
     }
 
     component State[DATA_BYTES];
@@ -55,7 +60,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         is_line_change[i]               <== Contains(2)(data[i + 1], [10, 13]); // capture if we hit an end line sequence
         was_cleared[i]                  <== IsZero()(main_monomials[i]);
         not_body_and_not_line_change[i] <== (1 - State[i + 1].parsing_body) * (1 - is_line_change[i]);
-        rescaled_or_was_cleared[i]      <== (main_monomials[i] * step_in[0] + was_cleared[i]);
+        rescaled_or_was_cleared[i]      <== (main_monomials[i] * ciphertext_digest + was_cleared[i]);
         main_monomials[i + 1]           <==  not_body_and_not_line_change[i] * rescaled_or_was_cleared[i];
     }
 
@@ -80,21 +85,18 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
 
     // BODY
     signal body_monomials[DATA_BYTES];
-    body_monomials[0] <== 0;
     signal body_accum[DATA_BYTES];
-    body_accum[0] <== 0;
     signal body_switch[DATA_BYTES -1];
     signal body_digest[DATA_BYTES];
-    body_digest[0] <== 0;
+    body_monomials[0] <== 0;
+    body_accum[0]     <== 0;
+    body_digest[0]    <== 0;
     for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
         body_accum[i + 1]        <== body_accum[i] + State[i + 1].parsing_body;
         body_switch[i]           <== IsEqual()([body_accum[i + 1], 1]);
-        body_monomials[i + 1]    <== body_monomials[i] * step_in[0] + body_switch[i];
-        body_digest[i + 1] <== body_digest[i] + body_monomials[i + 1] * data[i + 1];
+        body_monomials[i + 1]    <== body_monomials[i] * ciphertext_digest + body_switch[i];
+        body_digest[i + 1]       <== body_digest[i] + body_monomials[i + 1] * data[i + 1];
     }
-
-    // TODO: This, for now, passes back out the hash of body_digest and the plaintext_hash so it can be properly verified in the JSON
-    step_out[0] <== PoseidonChainer()([body_digest[DATA_BYTES - 1], step_in[0]]);
 
     // Verify machine ends in a valid state
     State[DATA_BYTES - 1].next_parsing_start       === 0;
@@ -103,4 +105,18 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     State[DATA_BYTES - 1].next_parsing_field_value === 0;
     State[DATA_BYTES - 1].next_parsing_body        === 1;
     State[DATA_BYTES - 1].next_line_status         === 0;
+
+    // TODO: Need to subtract all the header digests here and also wrap them in poseidon. We can use the ones from the input to make this cheaper since they're verified in this circuit!
+    signal body_digest_hashed <== Poseidon(1)([body_digest[DATA_BYTES - 1]]);
+    signal data_digest_hashed <== Poseidon(1)([data_digest]);
+    signal option_hash[MAX_NUMBER_OF_HEADERS + 1];
+    signal main_digests_hashed[MAX_NUMBER_OF_HEADERS + 1];
+    var accumulated_main_digests_hashed = 0;
+    for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS + 1 ; i++) {
+        option_hash[i] <== Poseidon(1)([(1 - not_contained[i]) * main_digests[i]]);
+        main_digests_hashed[i] <== (1 - not_contained[i]) * option_hash[i];
+        accumulated_main_digests_hashed +=  main_digests_hashed[i];
+    }
+    
+    step_out[0] <== step_in[0] + body_digest_hashed - accumulated_main_digests_hashed - data_digest_hashed; // TODO: data_digest is really plaintext_digest from before, consider changing names
 }

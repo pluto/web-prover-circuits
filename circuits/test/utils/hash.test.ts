@@ -1,6 +1,7 @@
 import assert from "assert";
-import { circomkit, WitnessTester } from "../common";
+import { circomkit, PolynomialDigest, WitnessTester } from "../common";
 import { DataHasher, PoseidonModular } from "../common/poseidon";
+import { poseidon1 } from "poseidon-lite";
 
 describe("hash", () => {
     describe("PoseidonModular_16", () => {
@@ -180,5 +181,50 @@ describe("hash", () => {
         it("witness: unpadded HTTP start line", async () => {
             await circuit_small.expectPass({ in: http_start_line.concat(Array(32 - http_start_line.length).fill(-1)) }, { out: hash });
         });
+    });
+
+    describe("PolynomialDigest", () => {
+        let circuit: WitnessTester<["bytes", "polynomial_input"], ["digest"]>;
+
+        before(async () => {
+            circuit = await circomkit.WitnessTester(`PolynomialDigest`, {
+                file: "utils/hash",
+                template: "PolynomialDigest",
+                params: [4],
+            });
+            console.log("#constraints:", await circuit.getConstraintCount());
+        });
+
+        it("witness: bytes = [0,0,0,0], polynomial_input = 1", async () => {
+            const bytes = [0, 0, 0, 0];
+            const polynomial_input = 0;
+
+            await circuit.expectPass(
+                { bytes, polynomial_input },
+                { digest: 0 }
+            );
+        });
+
+        it("witness: bytes = [1,2,3,4], polynomial_input = 7", async () => {
+            const bytes = [1, 2, 3, 4];
+            const polynomial_input = 7;
+
+            await circuit.expectPass(
+                { bytes, polynomial_input },
+                { digest: 1 + 2 * 7 + 3 * 7 ** 2 + 4 * 7 ** 3 }
+            );
+        });
+
+        it("witness: bytes = [4*random], polynomial_input = random", async () => {
+            const bytes = Array.from({ length: 4 }, () => Math.floor(Math.random() * 256));
+            const polynomial_input = poseidon1([BigInt(Math.floor(Math.random() * 694206942069420))]);
+            const digest = PolynomialDigest(bytes, polynomial_input);
+
+            await circuit.expectPass(
+                { bytes, polynomial_input },
+                { digest }
+            );
+        });
+
     });
 });

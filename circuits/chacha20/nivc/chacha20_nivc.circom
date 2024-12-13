@@ -7,6 +7,7 @@ include "../chacha-qr.circom";
 include "../../utils/bits.circom";
 include "../../utils/hash.circom";
 include "../../utils/array.circom";
+include "circomlib/circuits/poseidon.circom";
 
 
 /** ChaCha20 in counter mode */
@@ -35,13 +36,13 @@ template ChaCha20_NIVC(DATA_BYTES) {
   // in => N 32-bit words => N 4 byte words
   signal input plainText[DATA_BYTES];
 
-  // step_in should be the ciphertext digest
+  // step_in should be the ciphertext digest + the HTTP digests + JSON seq digest
   signal input step_in[1];
 
   // step_out should be the plaintext digest
   signal output step_out[1];
 
-  signal isPadding[DATA_BYTES];
+  signal isPadding[DATA_BYTES]; // == 1 in the case we hit padding number
   signal plaintextBits[DATA_BYTES / 4][32];
   component toBits[DATA_BYTES / 4];
   for (var i = 0 ; i < DATA_BYTES / 4 ; i++) {
@@ -141,10 +142,16 @@ template ChaCha20_NIVC(DATA_BYTES) {
     }
   }
 
+  signal ciphertext_digest <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
 
-  signal ciphertext_hash <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
-  step_in[0]             === ciphertext_hash;
+  signal zeroed_plaintext[DATA_BYTES];
+  for(var i = 0 ; i < DATA_BYTES ; i++) {
+     // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
+    zeroed_plaintext[i] <== (1 - isPadding[i]) * plainText[i];
+  }
+  signal plaintext_digest   <== PolynomialDigest(DATA_BYTES)(zeroed_plaintext, ciphertext_digest);
+  signal plaintext_digest_hashed <== Poseidon(1)([plaintext_digest]);
 
-  signal plaintext_hash <== DataHasher(DATA_BYTES)(plainText);
-  step_out[0]           <== plaintext_hash;
+  // TODO: I'm not sure we need to subtract the CT digest
+  step_out[0] <== step_in[0] - ciphertext_digest + plaintext_digest_hashed;
 }

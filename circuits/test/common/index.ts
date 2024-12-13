@@ -62,6 +62,8 @@ export function readJSONInputFile(filename: string, key: any[]): [number[], numb
 }
 
 import fs from 'fs';
+import { DataHasher } from './poseidon';
+import { poseidon1 } from 'poseidon-lite';
 
 export function readJsonFile<T>(filePath: string): T {
     // Read the file synchronously
@@ -286,7 +288,7 @@ export const http_response_plaintext = [
     10, 32, 32, 32, 125, 13, 10, 125,
 ];
 
-export const chacha20_http_response_ciphertext = [
+export const http_response_ciphertext = [
     2, 125, 219, 141, 140, 93, 49, 129, 95, 178, 135, 109, 48, 36, 194, 46, 239, 155, 160, 70, 208,
     147, 37, 212, 17, 195, 149, 190, 38, 215, 23, 241, 84, 204, 167, 184, 179, 172, 187, 145, 38, 75,
     123, 96, 81, 6, 149, 36, 135, 227, 226, 254, 177, 90, 241, 159, 0, 230, 183, 163, 210, 88, 133,
@@ -343,8 +345,8 @@ const PRIME = BigInt("2188824287183927522224640574525727508854836440041603434369
 const ONE = BigInt(1);
 const ZERO = BigInt(0);
 
-function modAdd(a: bigint, b: bigint): bigint {
-    return (a + b) % PRIME;
+export function modAdd(a: bigint, b: bigint): bigint {
+    return ((a + b) % PRIME + PRIME) % PRIME;
 }
 
 function modMul(a: bigint, b: bigint): bigint {
@@ -354,15 +356,14 @@ function modMul(a: bigint, b: bigint): bigint {
 export function jsonTreeHasher(
     polynomialInput: bigint,
     keySequence: JsonMaskType[],
-    targetValue: number[],  // Changed from Uint8Array to number[]
     maxStackHeight: number
-): [Array<[bigint, bigint]>, Array<[bigint, bigint]>] {
-    if (keySequence.length >= maxStackHeight) {
+): [Array<[bigint, bigint]>, Array<bigint>] {
+    if (keySequence.length > maxStackHeight) {
         throw new Error("Key sequence length exceeds max stack height");
     }
 
     const stack: Array<[bigint, bigint]> = [];
-    const treeHashes: Array<[bigint, bigint]> = [];
+    const treeHashes: Array<bigint> = [];
 
     for (const valType of keySequence) {
         if (valType.type === "Object") {
@@ -374,29 +375,19 @@ export function jsonTreeHasher(
                 stringHash = modAdd(stringHash, modMul(monomial, BigInt(byte)));
                 monomial = modMul(monomial, polynomialInput);
             }
-            treeHashes.push([stringHash, ZERO]);
+            treeHashes.push(stringHash);
         } else { // ArrayIndex
-            treeHashes.push([ZERO, ZERO]);
+            treeHashes.push(ZERO);
             stack.push([BigInt(2), BigInt(valType.value)]);
         }
     }
-
-    let targetValueHash = ZERO;
-    let monomial = ONE;
-
-    for (const byte of targetValue) {
-        targetValueHash = modAdd(targetValueHash, modMul(monomial, BigInt(byte)));
-        monomial = modMul(monomial, polynomialInput);
-    }
-
-    treeHashes[keySequence.length - 1] = [treeHashes[keySequence.length - 1][0], targetValueHash];
 
     return [stack, treeHashes];
 }
 
 export function compressTreeHash(
     polynomialInput: bigint,
-    stackAndTreeHashes: [Array<[bigint, bigint]>, Array<[bigint, bigint]>]
+    stackAndTreeHashes: [Array<[bigint, bigint]>, Array<bigint>]
 ): bigint {
     const [stack, treeHashes] = stackAndTreeHashes;
 
@@ -414,12 +405,104 @@ export function compressTreeHash(
         accumulated = modAdd(accumulated, modMul(stack[idx][1], monomial));
         monomial = modMul(monomial, polynomialInput);
 
-        accumulated = modAdd(accumulated, modMul(treeHashes[idx][0], monomial));
-        monomial = modMul(monomial, polynomialInput);
-
-        accumulated = modAdd(accumulated, modMul(treeHashes[idx][1], monomial));
+        accumulated = modAdd(accumulated, modMul(treeHashes[idx], monomial));
         monomial = modMul(monomial, polynomialInput);
     }
 
     return accumulated;
+}
+
+interface ManifestResponse {
+    version: string;
+    status: string;
+    message: string;
+    headers: Record<string, string[]>;
+    body: {
+        json: JsonMaskType[];
+    };
+}
+
+interface Manifest {
+    response: ManifestResponse;
+}
+
+function headersToBytes(headers: Record<string, string[]>): number[][] {
+    const result: number[][] = [];
+
+    for (const [key, values] of Object.entries(headers)) {
+        for (const value of values) {
+            // In HTTP/1.1, headers are formatted as "key: value"
+            const headerLine = `${key}: ${value}`;
+            result.push(strToBytes(headerLine));
+        }
+    }
+
+    return result;
+}
+
+export function InitialDigest(
+    manifest: Manifest,
+    ciphertext: number[],
+    maxStackHeight: number
+): [bigint, bigint] {
+    // Create a digest of the ciphertext itself
+    const ciphertextDigest = DataHasher(ciphertext);
+
+    // Digest the start line using the ciphertext_digest as a random input
+    const startLineBytes = strToBytes(
+        `${manifest.response.version} ${manifest.response.status} ${manifest.response.message}`
+    );
+    const startLineDigest = PolynomialDigest(startLineBytes, ciphertextDigest);
+
+    // Digest all the headers
+    const headerBytes = headersToBytes(manifest.response.headers);
+    const headersDigest = headerBytes.map(bytes =>
+        PolynomialDigest(bytes, ciphertextDigest)
+    );
+
+    // Digest the JSON sequence
+    const jsonTreeHash = jsonTreeHasher(
+        ciphertextDigest,
+        manifest.response.body.json,
+        maxStackHeight
+    );
+    const jsonSequenceDigest = compressTreeHash(ciphertextDigest, jsonTreeHash);
+
+    // Put all the digests into an array
+    const allDigests: bigint[] = [jsonSequenceDigest, startLineDigest, ...headersDigest];
+
+    // Calculate manifest digest
+    const manifestDigest = modAdd(
+        ciphertextDigest,
+        allDigests.map(d => poseidon1([d])).reduce((a, b) => modAdd(a, b), ZERO)
+    );
+
+    return [ciphertextDigest, manifestDigest];
+}
+
+export function MockManifest(): Manifest {
+    const headers: Record<string, string[]> = {
+        "content-type": ["application/json; charset=utf-8"],
+        "content-encoding": ["gzip"]
+    };
+
+    const jsonSequence: JsonMaskType[] = [
+        { type: "Object", value: strToBytes("data") },
+        { type: "Object", value: strToBytes("items") },
+        { type: "ArrayIndex", value: 0 },
+        { type: "Object", value: strToBytes("profile") },
+        { type: "Object", value: strToBytes("name") }
+    ];
+
+    return {
+        response: {
+            status: "200",
+            version: "HTTP/1.1",
+            message: "OK",
+            headers: headers,
+            body: {
+                json: jsonSequence
+            }
+        }
+    };
 }
