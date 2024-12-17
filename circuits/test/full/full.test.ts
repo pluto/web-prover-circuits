@@ -23,17 +23,14 @@ import { poseidon1 } from "poseidon-lite";
 
 // 320 bytes in the HTTP response
 
-const DATA_BYTES = 320;
-const MAX_NUMBER_OF_HEADERS = 2;
-const MAX_STACK_HEIGHT = 5;
+const DATA_BYTES = 1024;
+const MAX_NUMBER_OF_HEADERS = 25;
+const MAX_STACK_HEIGHT = 10;
 
 // These `check_*` are currently from Rust to ensure we have parity
 const check_ciphertext_digest = BigInt("5947802862726868637928743536818722886587721698845887498686185738472802646104");
 const check_init_nivc_input = BigInt("10288873638660630335427615297930270928433661836597941144520949467184902553219");
 
-const [ciphertext_digest, init_nivc_input] = InitialDigest(MockManifest(), http_response_ciphertext, MAX_STACK_HEIGHT);
-assert.deepEqual(ciphertext_digest, check_ciphertext_digest);
-assert.deepEqual(init_nivc_input, check_init_nivc_input);
 
 describe("Example NIVC Proof", async () => {
     let PlaintextAuthentication: WitnessTester<["step_in", "plaintext", "key", "nonce", "counter"], ["step_out"]>;
@@ -62,17 +59,28 @@ describe("Example NIVC Proof", async () => {
 
     it("Spotify Example", async () => {
         // Run PlaintextAuthentication
+
+        let http_response_padded = http_response_plaintext.concat(Array(DATA_BYTES - http_response_plaintext.length).fill(-1));
+        let http_response_0_padded = http_response_plaintext.concat(Array(DATA_BYTES - http_start_line.length).fill(0));
+        let ciphertext_padded = http_response_ciphertext.concat(Array(DATA_BYTES - http_response_ciphertext.length).fill(-1));
+
+
+        const [ciphertext_digest, init_nivc_input] = InitialDigest(MockManifest(), ciphertext_padded, MAX_STACK_HEIGHT);
+        assert.deepEqual(ciphertext_digest, check_ciphertext_digest);
+        assert.deepEqual(init_nivc_input, check_init_nivc_input);
+
         const counterBits = uintArray32ToBits([1])[0]
         const keyIn = toInput(Buffer.from(Array(32).fill(0)));
         const nonceIn = toInput(Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00]));
         let plaintext_authentication = await PlaintextAuthentication.compute({
             step_in: init_nivc_input,
-            plaintext: http_response_plaintext,
+            plaintext: http_response_padded,
             key: keyIn,
             nonce: nonceIn,
             counter: counterBits,
         }, ["step_out"]);
-        const http_response_plaintext_digest = PolynomialDigest(http_response_plaintext, ciphertext_digest);
+
+        const http_response_plaintext_digest = PolynomialDigest(http_response_0_padded, ciphertext_digest);
         const http_response_plaintext_digest_hashed = poseidon1([http_response_plaintext_digest]);
         const correct_plaintext_authentication_step_out = modAdd(init_nivc_input - ciphertext_digest, http_response_plaintext_digest_hashed);
         assert.deepEqual(plaintext_authentication.step_out, correct_plaintext_authentication_step_out);
@@ -81,17 +89,25 @@ describe("Example NIVC Proof", async () => {
         const start_line_digest = PolynomialDigest(http_start_line, ciphertext_digest);
         const header_0_digest = PolynomialDigest(http_header_0, ciphertext_digest);
         const header_1_digest = PolynomialDigest(http_header_1, ciphertext_digest);
-        const padded_http_body = http_body.concat(Array(320 - http_body.length).fill(-1));
+
+        let main_digests = Array(MAX_NUMBER_OF_HEADERS + 1).fill(0);
+        main_digests[0] = start_line_digest;
+        main_digests[1] = header_0_digest;
+        main_digests[2] = header_1_digest;
+
         let step_in = BigInt(plaintext_authentication.step_out.toString(10));
         let http_verification = await HTTPVerification.compute({
             step_in,
             ciphertext_digest,
-            data: http_response_plaintext,
-            main_digests: [start_line_digest, header_0_digest, header_1_digest],
+            data: http_response_padded,
+            main_digests,
         }, ["step_out"]);
-        // (autoparallel) This next line gives me an aneurysm
+
+        const padded_http_body = http_body.concat(Array(DATA_BYTES - http_body.length).fill(0));
         let http_verification_step_out = BigInt((http_verification.step_out as number[])[0]);
-        const body_digest_hashed = poseidon1([PolynomialDigest(http_body, ciphertext_digest)]);
+        let body_digest = PolynomialDigest(http_body, ciphertext_digest);
+
+        const body_digest_hashed = poseidon1([body_digest]);
         const start_line_digest_digest_hashed = poseidon1([start_line_digest]);
         const header_0_digest_hashed = poseidon1([header_0_digest]);
         const header_1_digest_hashed = poseidon1([header_1_digest]);
