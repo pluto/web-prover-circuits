@@ -131,7 +131,7 @@ template PlaintextAuthentication(DATA_BYTES) {
 
   component toCiphertextBytes[DATA_BYTES / 4];
   signal bigEndianCiphertext[DATA_BYTES];
-  
+
   for (var i = 0 ; i < DATA_BYTES / 4 ; i++) {
     toCiphertextBytes[i] = fromLittleEndianToWords32();
     for (var j = 0 ; j < 32 ; j++) {
@@ -151,7 +151,6 @@ template PlaintextAuthentication(DATA_BYTES) {
   }
   signal plaintext_digest   <== PolynomialDigest(DATA_BYTES)(zeroed_plaintext, ciphertext_digest);
   signal plaintext_digest_hashed <== Poseidon(1)([plaintext_digest]);
-
   // TODO: I'm not sure we need to subtract the CT digest
   step_out[0] <== step_in[0] - ciphertext_digest + plaintext_digest_hashed;
 }

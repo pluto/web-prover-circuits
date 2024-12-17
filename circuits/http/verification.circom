@@ -7,7 +7,7 @@ include "../utils/hash.circom";
 template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     signal input step_in[1];
     signal output step_out[1];
-    
+
     signal input ciphertext_digest;
 
     signal input data[DATA_BYTES];
@@ -49,7 +49,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     }
 
     signal main_monomials[DATA_BYTES];
-    main_monomials[0] <== 1;    
+    main_monomials[0] <== 1;
 
     signal is_line_change[DATA_BYTES-1];
     signal was_cleared[DATA_BYTES-1];
@@ -95,7 +95,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         body_accum[i + 1]        <== body_accum[i] + State[i + 1].parsing_body;
         body_switch[i]           <== IsEqual()([body_accum[i + 1], 1]);
         body_monomials[i + 1]    <== body_monomials[i] * ciphertext_digest + body_switch[i];
-        body_digest[i + 1]       <== body_digest[i] + body_monomials[i + 1] * data[i + 1];
+        body_digest[i + 1]       <== body_digest[i] + body_monomials[i + 1] * zeroed_data[i + 1];
     }
 
     // Verify machine ends in a valid state
@@ -117,6 +117,6 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
         main_digests_hashed[i] <== (1 - not_contained[i]) * option_hash[i];
         accumulated_main_digests_hashed +=  main_digests_hashed[i];
     }
-    
+
     step_out[0] <== step_in[0] + body_digest_hashed - accumulated_main_digests_hashed - data_digest_hashed; // TODO: data_digest is really plaintext_digest from before, consider changing names
 }
