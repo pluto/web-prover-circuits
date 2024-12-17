@@ -113,7 +113,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
     signal main_digests_hashed[MAX_NUMBER_OF_HEADERS + 1];
     var accumulated_main_digests_hashed = 0;
     for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS + 1 ; i++) {
-        option_hash[i] <== Poseidon(1)([(1 - not_contained[i]) * main_digests[i]]);
+        option_hash[i] <== Poseidon(1)([main_digests[i]]);
         main_digests_hashed[i] <== (1 - not_contained[i]) * option_hash[i];
         accumulated_main_digests_hashed +=  main_digests_hashed[i];
     }

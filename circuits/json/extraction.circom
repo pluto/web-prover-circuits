@@ -100,7 +100,6 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
         // log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     }
 
-    // TODO: Assert something about total matches but keep in mind we should try to output the target value hash
     total_matches === 1;
 
     // Constrain to have valid JSON

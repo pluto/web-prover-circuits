@@ -237,9 +237,8 @@ export function bytesToBigInt(bytes: number[] | Uint8Array): bigint {
     return result;
 }
 
+const prime = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 export function PolynomialDigest(coeffs: number[], input: bigint): bigint {
-    const prime = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
-
     let result = BigInt(0);
     let power = BigInt(1);
 
