@@ -14,29 +14,12 @@
       25
     ]
   },
-  "json_mask_object_1024b": {
-    "file": "json/nivc/masker",
-    "template": "JsonMaskObjectNIVC",
-    "params": [
-      1024,
-      10,
-      10
-    ]
-  },
-  "json_mask_array_index_1024b": {
-    "file": "json/nivc/masker",
-    "template": "JsonMaskArrayIndexNIVC",
+  "json_extraction_1024b": {
+    "file": "json/extraction",
+    "template": "JSONExtraction",
     "params": [
       1024,
       10
-    ]
-  },
-  "json_extract_value_1024b": {
-    "file": "json/nivc/extractor",
-    "template": "MaskExtractFinal",
-    "params": [
-      1024,
-      50
     ]
   }
 }

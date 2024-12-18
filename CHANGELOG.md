@@ -5,8 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
+## [0.7.0] - 2024-12-3
+ 
+### Added
+### Changed
+#### Circuit Builds
+#### Artifacts
+- **Circuit sizes:**
+    - `plaintext_authentication_1024b`: 
+        - non-linear constaints: `383,102`
+        - R1CS file: `123.4MB`
+        - Graph file: `19.9MB`
+    - `http_verification_1024b`: 
+        - non-linear constaints: `121,376`
+        - R1CS file: `80.7MB`
+        - Graph file: `4.4MB`
+        - **WARNING:** Extremely slow build with `--O2` flag. Need to investigate.
+    - `json_extraction_1024b`: 
+        - non-linear constaints: `452,683`
+        - R1CS file: `90.3MB`
+        - Graph file: `13.2MB`
+    - **Total size:** `243.7MB`
+- **Circuit param file sizes (SNARK):**
+    - `aux_params`: `62.2MB`
+    - `prover_key`: `50.3MB`
+    - `verifier_key`: `415.3MB`         
 
-## [UNRELEASED] [0.6.0] - 2024-12-3
+### Notes
+
+--- 
+
+## [0.6.0] - 2024-12-3
  
 ### Added
 
@@ -20,9 +49,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
     - `aes_gctr_nivc` and `chacha20-nivc` replaced with a more suitable name: `plaintext_authentication`
         - Runs with `512b` per fold
     - `http_nivc` replaced with more suitable name: `http_verification`
-
-### Fixed
-- TODO
 
 ### Notes
 - **Total circuits:** 5

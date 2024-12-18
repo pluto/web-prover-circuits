@@ -1,7 +1,5 @@
-import { circomkit, WitnessTester, generateDescription } from "../../common";
-import { Delimiters, WhiteSpace, Numbers, Escape, INITIAL_IN, INITIAL_OUT } from '.';
-
-
+import { circomkit, WitnessTester, generateDescription } from "../common";
+import { Delimiters, WhiteSpace, INITIAL_IN, INITIAL_OUT } from '.';
 
 describe("StateUpdate", () => {
     let circuit: WitnessTester<
@@ -19,12 +17,10 @@ describe("StateUpdate", () => {
 
     before(async () => {
         circuit = await circomkit.WitnessTester(`StateUpdate`, {
-            file: "json/parser/machine",
+            file: "json/machine",
             template: "StateUpdate",
             params: [4],
         });
-        console.log("#constraints:", await circuit.getConstraintCount());
-
     });
 
     //-TEST_1----------------------------------------------------------//

@@ -2,11 +2,12 @@
 // modified for our needs
 pragma circom 2.1.9;
 
-include "../chacha-round.circom";
-include "../chacha-qr.circom";
-include "../../utils/bits.circom";
-include "../../utils/hash.circom";
-include "../../utils/array.circom";
+include "chacha-round.circom";
+include "chacha-qr.circom";
+include "../utils/bits.circom";
+include "../utils/hash.circom";
+include "../utils/array.circom";
+include "circomlib/circuits/poseidon.circom";
 
 
 /** ChaCha20 in counter mode */
@@ -23,7 +24,7 @@ include "../../utils/array.circom";
 // | # | N | N | N |
 // +---+---+---+---+
 // paramaterized by `DATA_BYTES` which is the plaintext length in bytes
-template ChaCha20_NIVC(DATA_BYTES) {
+template PlaintextAuthentication(DATA_BYTES) {
   // key => 8 32-bit words = 32 bytes
   signal input key[8][32];
   // nonce => 3 32-bit words = 12 bytes
@@ -33,22 +34,22 @@ template ChaCha20_NIVC(DATA_BYTES) {
 
   // the below can be both ciphertext or plaintext depending on the direction
   // in => N 32-bit words => N 4 byte words
-  signal input plainText[DATA_BYTES];
+  signal input plaintext[DATA_BYTES];
 
-  // step_in should be the ciphertext digest
+  // step_in should be the ciphertext digest + the HTTP digests + JSON seq digest
   signal input step_in[1];
 
   // step_out should be the plaintext digest
   signal output step_out[1];
 
-  signal isPadding[DATA_BYTES];
+  signal isPadding[DATA_BYTES]; // == 1 in the case we hit padding number
   signal plaintextBits[DATA_BYTES / 4][32];
   component toBits[DATA_BYTES / 4];
   for (var i = 0 ; i < DATA_BYTES / 4 ; i++) {
     toBits[i] = fromWords32ToLittleEndian();
     for (var j = 0 ; j < 4 ; j++) {
-      isPadding[i * 4 + j]         <== IsEqual()([plainText[i * 4 + j], -1]);
-      toBits[i].words[j] <== (1 - isPadding[i * 4 + j]) * plainText[i*4 + j];
+      isPadding[i * 4 + j]         <== IsEqual()([plaintext[i * 4 + j], -1]);
+      toBits[i].words[j] <== (1 - isPadding[i * 4 + j]) * plaintext[i*4 + j];
     }
     plaintextBits[i] <== toBits[i].data;
   }
@@ -130,7 +131,7 @@ template ChaCha20_NIVC(DATA_BYTES) {
 
   component toCiphertextBytes[DATA_BYTES / 4];
   signal bigEndianCiphertext[DATA_BYTES];
-  
+
   for (var i = 0 ; i < DATA_BYTES / 4 ; i++) {
     toCiphertextBytes[i] = fromLittleEndianToWords32();
     for (var j = 0 ; j < 32 ; j++) {
@@ -141,9 +142,15 @@ template ChaCha20_NIVC(DATA_BYTES) {
     }
   }
 
-  signal ciphertext_hash <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
-  step_in[0]             === ciphertext_hash;
+  signal ciphertext_digest <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
 
-  signal plaintext_hash <== DataHasher(DATA_BYTES)(plainText);
-  step_out[0]           <== plaintext_hash;
+  signal zeroed_plaintext[DATA_BYTES];
+  for(var i = 0 ; i < DATA_BYTES ; i++) {
+     // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
+    zeroed_plaintext[i] <== (1 - isPadding[i]) * plaintext[i];
+  }
+  signal plaintext_digest   <== PolynomialDigest(DATA_BYTES)(zeroed_plaintext, ciphertext_digest);
+  signal plaintext_digest_hashed <== Poseidon(1)([plaintext_digest]);
+  // TODO: I'm not sure we need to subtract the CT digest
+  step_out[0] <== step_in[0] - ciphertext_digest + plaintext_digest_hashed;
 }

@@ -1,5 +1,5 @@
 pragma circom 2.1.9;
 
-include "../../circuits/chacha20/nivc/chacha20_nivc.circom";
+include "../../circuits/chacha20/authentication.circom";
 
-component main { public [step_in] } = ChaCha20_NIVC(1024);
+component main { public [step_in] } = PlaintextAuthentication(1024);
