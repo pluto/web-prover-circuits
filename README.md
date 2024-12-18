@@ -13,7 +13,10 @@
 
 ## Overview
 
-`web-prover-circuits` is a project focused on implementing parsers and extractors/selective-disclosure for various data formats inside zero-knowledge circuits.
+`web-prover-circuits` is a project focused on implementing parsers and extractors/selective-disclosure for various data formats inside zero-knowledge circuits. 
+Specifically, these are designed to be used in an NIVC folding scheme. 
+Currently, our program layout looks like this:
+![v0.7.0](docs/images/v0.7.0.png)
 
 ## Repository Structure
 
@@ -94,12 +97,7 @@ npx circomkit compile plaintext_authentication_1024b
 ```
 which implicitly checks the `circuits.json` for an object that points to the circuit's code itself.
 
-If you are having trouble with `circomkit`, consider:
-
-##### SNARKJS
-Likewise, `snarkjs` is used to handle proofs and verification under the hood.
-There is [documentation](https://docs.circom.io/getting-started/compiling-circuits/) on Circom's usage to work with this.
-We suggest starting at that link and carrying through to "Proving circuits with ZK".
+If you are having trouble with `circomkit`, consider
 
 ##### Mocha
 `mocha` will also be installed from before.
