@@ -47,25 +47,25 @@ template HttpStateUpdate() {
 
     //---------------------------------------------------------------------------------//
     // Take current state and CRLF info to update state
-    signal state[2] <== [parsing_start, parsing_header];
-    component stateChange    = StateChange();
-    stateChange.readCRLF <== readCRLF;
+    signal state[3]          <== [parsing_start, parsing_header, parsing_field_value];
+    component stateChange      = StateChange();
+    stateChange.readCRLF     <== readCRLF;
     stateChange.readCRLFCRLF <== readCRLFCRLF;
-    stateChange.readSP <== readSP.out;
-    stateChange.readColon <== readColon.out;
-    stateChange.state   <== state;
+    stateChange.readSP       <== readSP.out;
+    stateChange.readColon    <== readColon.out;
+    stateChange.state        <== state;
 
     component nextState   = ArrayAdd(5);
     nextState.lhs       <== [state[0], state[1], parsing_field_name, parsing_field_value, parsing_body];
     nextState.rhs       <== stateChange.out;
     //---------------------------------------------------------------------------------//
 
-    next_parsing_start  <== nextState.out[0];
-    next_parsing_header <== nextState.out[1];
-    next_parsing_field_name <== nextState.out[2];
+    next_parsing_start       <== nextState.out[0];
+    next_parsing_header      <== nextState.out[1];
+    next_parsing_field_name  <== nextState.out[2];
     next_parsing_field_value <== nextState.out[3];
-    next_parsing_body   <== nextState.out[4];
-    next_line_status    <== line_status + readCR.out + readCRLF + readCRLFCRLF - line_status * notCRAndLF;
+    next_parsing_body        <== nextState.out[4];
+    next_line_status         <== line_status + readCR.out + readCRLF + readCRLFCRLF - line_status * notCRAndLF;
 }
 
 // TODO:
@@ -77,7 +77,7 @@ template StateChange() {
     signal input readCRLFCRLF;
     signal input readSP;
     signal input readColon;
-    signal input state[2];
+    signal input state[3];
     signal output out[5];
 
     // GreaterEqThan(2) because start line can have at most 3 values for request or response
@@ -97,7 +97,8 @@ template StateChange() {
     // disable parsing header on reading CRLF-CRLF
     signal disableParsingHeader <== readCRLFCRLF * state[1];
     // parsing field value when parsing header and read Colon `:`
-    signal isParsingFieldValue <== isParsingHeader * readColon;
+    signal readColonNotInFieldValue <== readColon * (1 - state[2]);
+    signal isParsingFieldValue <== isParsingHeader * readColonNotInFieldValue;
 
     // parsing body when reading CRLF-CRLF and parsing header
     signal enableParsingBody <== readCRLFCRLF * isParsingHeader;
@@ -107,5 +108,11 @@ template StateChange() {
     // parsing_field_name  = out[2] = enable header + increment header - parsing field value - parsing body
     // parsing_field_value = out[3] = parsing field value - increment parsing header (zeroed every time new header starts)
     // parsing_body        = out[4] = enable body
-    out <== [incrementParsingStart - disableParsingStart, enableParsingHeader + incrementParsingHeader - disableParsingHeader, enableParsingHeader + incrementParsingHeader - isParsingFieldValue - enableParsingBody, isParsingFieldValue - incrementParsingHeader, enableParsingBody];
+    out <== [
+            incrementParsingStart - disableParsingStart, 
+            enableParsingHeader + incrementParsingHeader - disableParsingHeader,
+            enableParsingHeader + incrementParsingHeader - isParsingFieldValue - enableParsingBody,
+            isParsingFieldValue - incrementParsingHeader,
+            enableParsingBody
+            ];
 }
