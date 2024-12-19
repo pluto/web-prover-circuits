@@ -23,7 +23,7 @@ template Syntax() {
     // signal output SPACE         <== 32;
     //-Escape-------------------------------------------------------------------------------------//
     // - ASCII char: `\`
-    // signal output ESCAPE        <== 92;
+    signal output ESCAPE        <== 92;
     //-Number_Remapping---------------------------------------------------------------------------//
     signal output NUMBER_START  <== 48;
     signal output NUMBER_END    <== 57;
@@ -31,7 +31,7 @@ template Syntax() {
 }
 
 template Command() {
-    //            STATE              = [read_write_value, parsing_string, parsing_number]
+    //            STATE              = [read_write_value, parsing_string, parsing_number, escape]
     signal output START_BRACE[3]   <== [1,                0,              0             ]; // Command returned by switch if we hit a start brace `{`
     signal output END_BRACE[3]     <== [-1,               0,              -1            ]; // Command returned by switch if we hit a end brace `}`
     signal output START_BRACKET[3] <== [2,                0,              0             ]; // Command returned by switch if we hit a start bracket `[`

@@ -5,7 +5,7 @@ describe("JSON Parser", () => {
 
     it(`array only input`, async () => {
         let filename = "array_only";
-        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, [0]);
+        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
 
         circuit = await circomkit.WitnessTester(`Parser`, {
             file: "json/parser",
@@ -20,7 +20,22 @@ describe("JSON Parser", () => {
 
     it(`object input`, async () => {
         let filename = "value_object";
-        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, ["a"]);
+        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
+
+        circuit = await circomkit.WitnessTester(`Parser`, {
+            file: "json/parser",
+            template: "Parser",
+            params: [input.length, 3],
+        });
+
+        await circuit.expectPass({
+            data: input
+        });
+    });
+
+    it(`string_escape input`, async () => {
+        let filename = "string_escape";
+        let [input, keyUnicode, output] = readJSONInputFile(`${filename}.json`, []);
 
         circuit = await circomkit.WitnessTester(`Parser`, {
             file: "json/parser",
