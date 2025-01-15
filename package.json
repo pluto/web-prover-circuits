@@ -12,7 +12,6 @@
     "par-test": "npx mocha --parallel"
   },
   "dependencies": {
-    "@zk-email/circuits": "^6.1.1",
     "circomlib": "^2.0.5"
   },
   "devDependencies": {

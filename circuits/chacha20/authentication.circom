@@ -149,8 +149,9 @@ template PlaintextAuthentication(DATA_BYTES) {
      // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
     zeroed_plaintext[i] <== (1 - isPadding[i]) * plaintext[i];
   }
-  signal plaintext_digest   <== PolynomialDigest(DATA_BYTES)(zeroed_plaintext, ciphertext_digest);
-  signal plaintext_digest_hashed <== Poseidon(1)([plaintext_digest]);
+  // signal plaintext_digest   <== PolynomialDigest(DATA_BYTES)(zeroed_plaintext, ciphertext_digest);
+  // signal plaintext_digest_hashed <== Poseidon(1)([plaintext_digest]);
   // TODO: I'm not sure we need to subtract the CT digest
-  step_out[0] <== step_in[0] - ciphertext_digest + plaintext_digest_hashed;
+  step_out[0] <== step_in[0] - ciphertext_digest;
+  // + plaintext_digest_hashed;
 }

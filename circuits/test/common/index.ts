@@ -306,6 +306,24 @@ export const http_response_ciphertext = [
     220, 67, 16, 26,
 ];
 
+export const http_response_ciphertext_dup = [
+    42, 116, 77, 230, 223, 218, 155, 193, 244, 120, 237, 102, 105, 104, 214, 166, 100, 103, 49, 250,
+    27, 220, 88, 187, 119, 163, 183, 203, 168, 75, 35, 34, 214, 113, 114, 144, 20, 247, 6, 49, 27, 71,
+    135, 1, 10, 81, 0, 103, 59, 230, 49, 170, 19, 108, 235, 206, 146, 28, 74, 53, 86, 120, 113, 227, 44,
+    44, 199, 114, 221, 163, 36, 44, 224, 186, 135, 46, 227, 147, 76, 53, 29, 50, 101, 55, 154, 154, 51,
+    77, 254, 129, 49, 72, 247, 30, 186, 10, 95, 110, 181, 180, 173, 31, 220, 95, 0, 18, 9, 173, 119, 22,
+    165, 175, 230, 22, 195, 48, 51, 67, 149, 104, 40, 102, 238, 165, 45, 219, 59, 124, 174, 148, 26, 69,
+    104, 199, 174, 22, 219, 250, 22, 69, 50, 122, 83, 154, 89, 29, 99, 132, 4, 22, 22, 23, 66, 35, 235,
+    217, 233, 138, 174, 145, 64, 206, 60, 150, 226, 219, 36, 175, 145, 12, 211, 88, 162, 78, 146, 32, 82,
+    100, 222, 103, 86, 52, 23, 136, 60, 31, 240, 33, 108, 69, 96, 208, 15, 237, 122, 243, 137, 210, 225,
+    146, 27, 237, 204, 64, 49, 146, 119, 240, 59, 71, 124, 137, 197, 36, 85, 198, 47, 103, 121, 36, 227,
+    129, 229, 169, 209, 195, 100, 196, 101, 87, 148, 126, 233, 221, 236, 219, 127, 91, 230, 134, 70, 247,
+    194, 212, 254, 209, 13, 33, 83, 8, 99, 136, 45, 218, 123, 90, 125, 83, 213, 131, 142, 233, 71, 5, 220,
+    213, 115, 178, 191, 173, 30, 176, 72, 63, 240, 93, 53, 159, 252, 105, 142, 98, 186, 9, 233, 115, 99,
+    75, 187, 146, 38, 246, 208, 90, 111, 242, 98, 228, 192, 152, 32, 183, 194, 137, 217, 196, 235, 110, 168,
+    3, 23, 11, 45, 85, 227, 88, 227, 228, 176, 114
+];
+
 export const http_start_line = [72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75];
 
 export const http_header_0 = [
@@ -441,11 +459,17 @@ function headersToBytes(headers: Record<string, string[]>): number[][] {
 
 export function InitialDigest(
     manifest: Manifest,
-    ciphertext: number[],
+    ciphertexts: number[][],
     maxStackHeight: number
 ): [bigint, bigint] {
+    let ciphertextDigests: bigint[] = [];
     // Create a digest of the ciphertext itself
-    const ciphertextDigest = DataHasher(ciphertext);
+    ciphertexts.forEach(ciphertext => {
+        const ciphertextDigest = DataHasher(ciphertext);
+        ciphertextDigests.push(ciphertextDigest);
+    });
+
+    let ciphertextDigest = ciphertextDigests.reduce((a, b) => a + b, BigInt(0));
 
     // Digest the start line using the ciphertext_digest as a random input
     const startLineBytes = strToBytes(
