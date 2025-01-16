@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 
 struct CircuitFiles {
     r1cs_path: PathBuf,
-    graph_path: PathBuf,
 }
 
 const BASE_CIRCUIT_NAMES: &[&str] = &[
@@ -22,22 +21,15 @@ fn load_circuit_files(artifacts_dir: &Path, target_size: &str) -> Result<Vec<Cir
     BASE_CIRCUIT_NAMES
         .iter()
         .map(|name| {
-            let circuit_name = format!("{}_{}", name, target_size);
-            let r1cs_path = artifacts_dir.join(format!("{}.r1cs", circuit_name));
-            let graph_path = artifacts_dir.join(format!("{}.bin", circuit_name));
+            let circuit_name = format!("{name}_{target_size}");
+            let r1cs_path = artifacts_dir.join(format!("{circuit_name}.r1cs"));
 
             // Verify files exist before proceeding
             if !r1cs_path.exists() {
                 anyhow::bail!("R1CS file not found: {}", r1cs_path.display());
             }
-            if !graph_path.exists() {
-                anyhow::bail!("Graph file not found: {}", graph_path.display());
-            }
 
-            Ok(CircuitFiles {
-                r1cs_path,
-                graph_path,
-            })
+            Ok(CircuitFiles { r1cs_path })
         })
         .collect()
 }
@@ -57,91 +49,35 @@ fn main() -> Result<()> {
         .parse()
         .context("Failed to parse max_rom_length as number")?;
 
-    println!("Processing circuits for target size: {}", target_size);
+    println!("Processing circuits for target size: {target_size}");
     println!("Loading circuit files from: {}", artifacts_dir.display());
-    println!("Using max ROM length: {}", max_rom_length);
+    println!("Using max ROM length: {max_rom_length}");
 
     let circuit_files = load_circuit_files(&artifacts_dir, target_size)?;
 
-    let setup_data = proofs::program::data::SetupData {
-        r1cs_types: circuit_files
-            .iter()
-            .map(|cf| {
-                let data = read_file(&cf.r1cs_path)?;
-                Ok(proofs::program::data::R1CSType::Raw(data))
-            })
-            .collect::<Result<Vec<_>>>()?,
-
-        witness_generator_types: circuit_files
-            .iter()
-            .map(|cf| {
-                let data = read_file(&cf.graph_path)?;
-                Ok(proofs::program::data::WitnessGeneratorType::Raw(data))
-            })
-            .collect::<Result<Vec<_>>>()?,
-
-        max_rom_length,
-    };
+    let r1cs_files = circuit_files
+        .iter()
+        .map(|cf| {
+            let data = read_file(&cf.r1cs_path)?;
+            Ok(proofs::program::data::R1CSType::Raw(data))
+        })
+        .collect::<Result<Vec<_>>>()?;
 
     println!("Generating `BackendData`...");
 
-    let proofs::BackendData {
-        aux_params,
-        prover_key,
-        verifier_key,
-    } = proofs::setup_backend(setup_data).unwrap();
-
-    // Write out the `ProverKey`
-    let serialized_pk =
-        bincode::serialize(&prover_key).context("Failed to serialize auxiliary parameters")?;
+    let setup = proofs::setup::setup(&r1cs_files, max_rom_length);
 
     let output_file = artifacts_dir.join(format!(
-        "prover_key_{}_rom_length_{}.bin",
-        target_size, max_rom_length
+        "serialized_setup_{target_size}_rom_length_{max_rom_length}.bin",
     ));
     println!("Writing output to: {}", output_file.display());
 
     let mut file = File::create(&output_file)
         .with_context(|| format!("Failed to create output file: {}", output_file.display()))?;
 
-    file.write_all(&serialized_pk)
+    file.write_all(&setup)
         .with_context(|| format!("Failed to write to output file: {}", output_file.display()))?;
 
-    // Write out the `VerifierKey`
-    let serialized_vk =
-        bincode::serialize(&verifier_key).context("Failed to serialize auxiliary parameters")?;
-
-    let output_file = artifacts_dir.join(format!(
-        "verifier_key_{}_rom_length_{}.bin",
-        target_size, max_rom_length
-    ));
-    println!("Writing output to: {}", output_file.display());
-
-    let mut file = File::create(&output_file)
-        .with_context(|| format!("Failed to create output file: {}", output_file.display()))?;
-
-    file.write_all(&serialized_vk)
-        .with_context(|| format!("Failed to write to output file: {}", output_file.display()))?;
-
-    // Write out the `AuxParams`
-    let serialized_aux_params =
-        bincode::serialize(&aux_params).context("Failed to serialize auxiliary parameters")?;
-
-    let output_file = artifacts_dir.join(format!(
-        "aux_params_{}_rom_length_{}.bin",
-        target_size, max_rom_length
-    ));
-    println!("Writing output to: {}", output_file.display());
-
-    let mut file = File::create(&output_file)
-        .with_context(|| format!("Failed to create output file: {}", output_file.display()))?;
-
-    file.write_all(&serialized_aux_params)
-        .with_context(|| format!("Failed to write to output file: {}", output_file.display()))?;
-
-    println!(
-        "Successfully completed setup for target size: {}",
-        target_size
-    );
+    println!("Successfully completed setup for target size: {target_size}");
     Ok(())
 }
