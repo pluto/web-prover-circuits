@@ -105,9 +105,7 @@ jobs:
 
         # Generate parameters using makefile target
         make params
-
-          echo "Successfully generated all parameter files for ${size}"
-        done
+        echo "Successfully generated all parameter files for ${size}"
 
     - name: Create release artifacts
       run: |
