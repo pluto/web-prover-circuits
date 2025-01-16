@@ -81,10 +81,10 @@ jobs:
 
       - name: Prepare artifacts for Google Cloud Storage Bucket
         run: |
-          # Unzip, then gzip each individual file, delete zip files
+          # Unzip, then gzip each individual file (but remove .gz suffix), delete zip files
           for zip_file in artifacts/circom-artifacts-*-v${{ env.VERSION }}.zip; do
             unzip "$zip_file" -d "${zip_file%.zip}"
-            (cd "${zip_file%.zip}" && gzip -7 *)
+            (cd "${zip_file%.zip}" && gzip -7 * && for file in *.gz; do mv "$file" "${file%.gz}"; done)
           done
           rm *.zip
 
