@@ -24,8 +24,8 @@ describe("JSON Extraction", () => {
         let [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, MAX_STACK_HEIGHT);
         let sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         let sequence_digest_hashed = poseidon1([sequence_digest]);
-        let value_digest = PolynomialDigest(targetValue, mock_ct_digest);
-        let data_digest = PolynomialDigest(input, mock_ct_digest);
+        let value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
+        let data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
         let data_digest_hashed = poseidon1([data_digest]);
         let step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
 
@@ -47,7 +47,7 @@ describe("JSON Extraction", () => {
         [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, MAX_STACK_HEIGHT);
         sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         sequence_digest_hashed = poseidon1([sequence_digest]);
-        value_digest = PolynomialDigest(targetValue, mock_ct_digest);
+        value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
         step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
 
         await hash_parser.expectPass({
@@ -80,9 +80,9 @@ describe("JSON Extraction", () => {
         let [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, MAX_STACK_HEIGHT);
         let sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         let sequence_digest_hashed = poseidon1([sequence_digest]);
-        let data_digest = PolynomialDigest(input, mock_ct_digest);
+        let data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
         let data_digest_hashed = poseidon1([data_digest]);
-        let value_digest = PolynomialDigest(targetValue, mock_ct_digest);
+        let value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
         let step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
 
         await hash_parser.expectPass({
@@ -103,7 +103,7 @@ describe("JSON Extraction", () => {
         [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, MAX_STACK_HEIGHT);
         sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         sequence_digest_hashed = poseidon1([sequence_digest]);
-        value_digest = PolynomialDigest(targetValue, mock_ct_digest);
+        value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
         step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
         await hash_parser.expectPass({
             data: input,
@@ -138,9 +138,9 @@ describe("JSON Extraction", () => {
         const [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, 10);
         const sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         const sequence_digest_hashed = poseidon1([sequence_digest]);
-        const data_digest = PolynomialDigest(input, mock_ct_digest);
+        const data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
         const data_digest_hashed = poseidon1([data_digest]);
-        const value_digest = PolynomialDigest(targetValue, mock_ct_digest);
+        const value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
         const step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
 
         await hash_parser.expectPass({
@@ -178,9 +178,9 @@ describe("JSON Extraction", () => {
         const [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, 10);
         const sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
         const sequence_digest_hashed = poseidon1([sequence_digest]);
-        const data_digest = PolynomialDigest(input, mock_ct_digest);
+        const data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
         const data_digest_hashed = poseidon1([data_digest]);
-        const value_digest = PolynomialDigest(targetValue, mock_ct_digest);
+        const value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
         const step_in = modAdd(sequence_digest_hashed, data_digest_hashed);
 
         await hash_parser.expectPass({

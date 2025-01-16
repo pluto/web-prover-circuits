@@ -238,9 +238,13 @@ export function bytesToBigInt(bytes: number[] | Uint8Array): bigint {
 }
 
 const prime = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
-export function PolynomialDigest(coeffs: number[], input: bigint): bigint {
+export function PolynomialDigest(coeffs: number[], input: bigint, counter: bigint): bigint {
     let result = BigInt(0);
+    // input ** counter
     let power = BigInt(1);
+    for (let i = 0; i < counter; i++) {
+        power = (power * input) % prime;
+    }
 
     for (let i = 0; i < coeffs.length; i++) {
         result = (result + BigInt(coeffs[i]) * power) % prime;
@@ -307,21 +311,7 @@ export const http_response_ciphertext = [
 ];
 
 export const http_response_ciphertext_dup = [
-    42, 116, 77, 230, 223, 218, 155, 193, 244, 120, 237, 102, 105, 104, 214, 166, 100, 103, 49, 250,
-    27, 220, 88, 187, 119, 163, 183, 203, 168, 75, 35, 34, 214, 113, 114, 144, 20, 247, 6, 49, 27, 71,
-    135, 1, 10, 81, 0, 103, 59, 230, 49, 170, 19, 108, 235, 206, 146, 28, 74, 53, 86, 120, 113, 227, 44,
-    44, 199, 114, 221, 163, 36, 44, 224, 186, 135, 46, 227, 147, 76, 53, 29, 50, 101, 55, 154, 154, 51,
-    77, 254, 129, 49, 72, 247, 30, 186, 10, 95, 110, 181, 180, 173, 31, 220, 95, 0, 18, 9, 173, 119, 22,
-    165, 175, 230, 22, 195, 48, 51, 67, 149, 104, 40, 102, 238, 165, 45, 219, 59, 124, 174, 148, 26, 69,
-    104, 199, 174, 22, 219, 250, 22, 69, 50, 122, 83, 154, 89, 29, 99, 132, 4, 22, 22, 23, 66, 35, 235,
-    217, 233, 138, 174, 145, 64, 206, 60, 150, 226, 219, 36, 175, 145, 12, 211, 88, 162, 78, 146, 32, 82,
-    100, 222, 103, 86, 52, 23, 136, 60, 31, 240, 33, 108, 69, 96, 208, 15, 237, 122, 243, 137, 210, 225,
-    146, 27, 237, 204, 64, 49, 146, 119, 240, 59, 71, 124, 137, 197, 36, 85, 198, 47, 103, 121, 36, 227,
-    129, 229, 169, 209, 195, 100, 196, 101, 87, 148, 126, 233, 221, 236, 219, 127, 91, 230, 134, 70, 247,
-    194, 212, 254, 209, 13, 33, 83, 8, 99, 136, 45, 218, 123, 90, 125, 83, 213, 131, 142, 233, 71, 5, 220,
-    213, 115, 178, 191, 173, 30, 176, 72, 63, 240, 93, 53, 159, 252, 105, 142, 98, 186, 9, 233, 115, 99,
-    75, 187, 146, 38, 246, 208, 90, 111, 242, 98, 228, 192, 152, 32, 183, 194, 137, 217, 196, 235, 110, 168,
-    3, 23, 11, 45, 85, 227, 88, 227, 228, 176, 114
+    66, 0, 57, 150, 208, 144, 184, 250, 244, 106, 253, 118, 105, 7, 189, 139, 78, 36, 126, 180, 79, 153, 22, 237, 62, 182, 186, 218, 239, 75, 35, 97, 231, 115, 106, 144, 4, 226, 80, 116, 121, 35, 136, 75, 89, 30, 78, 124, 59, 165, 121, 235, 65, 63, 174, 154, 143, 75, 78, 33, 20, 38, 21, 133, 42, 97, 147, 38, 195, 192, 90, 33, 165, 244, 196, 97, 167, 218, 2, 114, 7, 50, 34, 109, 211, 202, 30, 101, 196, 146, 61, 67, 166, 66, 255, 90, 38, 74, 162, 187, 173, 9, 149, 98, 16, 65, 79, 186, 61, 110, 193, 228, 163, 82, 238, 26, 30, 105, 206, 69, 2, 102, 238, 165, 47, 159, 39, 5, 197, 150, 0, 69, 51, 234, 132, 22, 219, 250, 22, 69, 111, 87, 123, 211, 13, 88, 46, 215, 6, 12, 107, 65, 69, 9, 235, 217, 180, 167, 132, 204
 ];
 
 export const http_start_line = [72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75];
@@ -475,12 +465,12 @@ export function InitialDigest(
     const startLineBytes = strToBytes(
         `${manifest.response.version} ${manifest.response.status} ${manifest.response.message}`
     );
-    const startLineDigest = PolynomialDigest(startLineBytes, ciphertextDigest);
+    const startLineDigest = PolynomialDigest(startLineBytes, ciphertextDigest, BigInt(0));
 
     // Digest all the headers
     const headerBytes = headersToBytes(manifest.response.headers);
     const headersDigest = headerBytes.map(bytes =>
-        PolynomialDigest(bytes, ciphertextDigest)
+        PolynomialDigest(bytes, ciphertextDigest, BigInt(0))
     );
 
     // Digest the JSON sequence
