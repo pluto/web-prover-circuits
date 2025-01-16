@@ -30,9 +30,8 @@ build:
 params:
 	@for target_dir in $(TARGET_DIRS); do \
 		size=$$(basename "$$target_dir" | sed 's/target_//' | sed 's/b//'); \
-		rom_length=$$(echo "$$size / 16 + 16" | bc); \
-		echo "Generating parameters for $${size}b with ROM length $$rom_length..."; \
-		cargo +nightly run --release -- "$$target_dir/artifacts" "$${size}b" "$$rom_length" || exit 1; \
+		echo "Generating parameters for $${size}b with ROM length 5..."; \
+		cargo +nightly run --release -- "$$target_dir/artifacts" "$${size}b" "5" || exit 1; \
 	done
 
 # Clean target
