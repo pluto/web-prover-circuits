@@ -2,10 +2,9 @@ import { WitnessTester } from "circomkit";
 import { circomkit, PolynomialDigest, toByte, toUint32Array, uintArray32ToBits, modAdd } from "../common";
 import { DataHasher } from "../common/poseidon";
 import { assert } from "chai";
-import { poseidon1 } from "poseidon-lite";
 
 describe("Plaintext Authentication", () => {
-    let circuit: WitnessTester<["key", "nonce", "counter", "plaintext", "step_in"], ["step_out"]>;
+    let circuit: WitnessTester<["key", "nonce", "counter", "plaintext", "plaintext_index_counter", "ciphertext_digest", "step_in"], ["step_out"]>;
     describe("16 block test", () => {
         it("should perform encryption", async () => {
             circuit = await circomkit.WitnessTester(`PlaintextAuthentication`, {
@@ -49,18 +48,21 @@ describe("Plaintext Authentication", () => {
                     0xf9, 0x1b, 0x65, 0xc5, 0x52, 0x47, 0x33, 0xab, 0x8f, 0x59, 0x3d, 0xab, 0xcd, 0x62, 0xb3, 0x57,
                     0x16, 0x39, 0xd6, 0x24, 0xe6, 0x51, 0x52, 0xab, 0x8f, 0x53, 0x0c, 0x35, 0x9f, 0x08, 0x61, 0xd8
                 ];
-            const counterBits = uintArray32ToBits([1])[0]
+            const counterBits = uintArray32ToBits([1])[0];
+            let ciphertext_digest = DataHasher(ciphertextBytes);
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
                 counter: counterBits,
                 plaintext: plaintextBytes,
+                plaintext_index_counter: 0,
+                ciphertext_digest: ciphertext_digest,
                 step_in: 0
             }, (["step_out"]));
+
             // Output
-            let ciphertext_digest = DataHasher(ciphertextBytes);
-            let plaintext_digest_hashed = poseidon1([PolynomialDigest(plaintextBytes, ciphertext_digest)]);
-            let output = modAdd(plaintext_digest_hashed - ciphertext_digest, BigInt(0));
+            let plaintext_digest = PolynomialDigest(plaintextBytes, ciphertext_digest, BigInt(0));
+            let output = modAdd(plaintext_digest - ciphertext_digest, BigInt(0));
             assert.deepEqual(w.step_out, output);
         });
     });
@@ -107,16 +109,19 @@ describe("Plaintext Authentication", () => {
                 ];
             let totalLength = 128;
             let paddedPlaintextBytes = plaintextBytes.concat(Array(totalLength - plaintextBytes.length).fill(-1));
-            const counterBits = uintArray32ToBits([1])[0]
+            const counterBits = uintArray32ToBits([1])[0];
+            let ciphertext_digest = DataHasher(ciphertextBytes);
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
                 counter: counterBits,
                 plaintext: paddedPlaintextBytes,
-                step_in: 0
+                step_in: 0,
+                plaintext_index_counter: 0,
+                ciphertext_digest: ciphertext_digest,
             }, (["step_out"]));
-            let ciphertext_digest = DataHasher(ciphertextBytes);
-            let plaintext_digest = poseidon1([PolynomialDigest(plaintextBytes, ciphertext_digest)]);
+
+            let plaintext_digest = PolynomialDigest(plaintextBytes, ciphertext_digest, BigInt(0));
             let output = modAdd(plaintext_digest - ciphertext_digest, BigInt(0));
             assert.deepEqual(w.step_out, output);
         });
