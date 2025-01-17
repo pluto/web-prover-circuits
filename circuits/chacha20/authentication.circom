@@ -36,6 +36,9 @@ template PlaintextAuthentication(DATA_BYTES) {
   // in => N 32-bit words => N 4 byte words
   signal input plaintext[DATA_BYTES];
 
+  signal input ciphertext_digest;
+  signal input plaintext_index_counter;
+
   // step_in should be the ciphertext digest + the HTTP digests + JSON seq digest
   signal input step_in[1];
 
@@ -142,15 +145,13 @@ template PlaintextAuthentication(DATA_BYTES) {
     }
   }
 
-  signal ciphertext_digest <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
-
   signal zeroed_plaintext[DATA_BYTES];
   for(var i = 0 ; i < DATA_BYTES ; i++) {
      // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
     zeroed_plaintext[i] <== (1 - isPadding[i]) * plaintext[i];
   }
-  signal plaintext_digest   <== PolynomialDigest(DATA_BYTES)(zeroed_plaintext, ciphertext_digest);
-  signal plaintext_digest_hashed <== Poseidon(1)([plaintext_digest]);
-  // TODO: I'm not sure we need to subtract the CT digest
-  step_out[0] <== step_in[0] - ciphertext_digest + plaintext_digest_hashed;
+  signal part_ciphertext_digest <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
+  signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, plaintext_index_counter);
+
+  step_out[0] <== step_in[0] - part_ciphertext_digest + plaintext_digest;
 }

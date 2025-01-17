@@ -238,9 +238,13 @@ export function bytesToBigInt(bytes: number[] | Uint8Array): bigint {
 }
 
 const prime = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
-export function PolynomialDigest(coeffs: number[], input: bigint): bigint {
+export function PolynomialDigest(coeffs: number[], input: bigint, counter: bigint): bigint {
     let result = BigInt(0);
+    // input ** counter
     let power = BigInt(1);
+    for (let i = 0; i < counter; i++) {
+        power = (power * input) % prime;
+    }
 
     for (let i = 0; i < coeffs.length; i++) {
         result = (result + BigInt(coeffs[i]) * power) % prime;
@@ -304,6 +308,10 @@ export const http_response_ciphertext = [
     152, 212, 94, 97, 138, 162, 90, 185, 108, 221, 211, 247, 184, 253, 15, 16, 24, 32, 240, 240, 3,
     148, 89, 30, 54, 161, 131, 230, 161, 217, 29, 229, 251, 33, 220, 230, 102, 131, 245, 27, 141,
     220, 67, 16, 26,
+];
+
+export const http_response_ciphertext_dup = [
+    66, 0, 57, 150, 208, 144, 184, 250, 244, 106, 253, 118, 105, 7, 189, 139, 78, 36, 126, 180, 79, 153, 22, 237, 62, 182, 186, 218, 239, 75, 35, 97, 231, 115, 106, 144, 4, 226, 80, 116, 121, 35, 136, 75, 89, 30, 78, 124, 59, 165, 121, 235, 65, 63, 174, 154, 143, 75, 78, 33, 20, 38, 21, 133, 42, 97, 147, 38, 195, 192, 90, 33, 165, 244, 196, 97, 167, 218, 2, 114, 7, 50, 34, 109, 211, 202, 30, 101, 196, 146, 61, 67, 166, 66, 255, 90, 38, 74, 162, 187, 173, 9, 149, 98, 16, 65, 79, 186, 61, 110, 193, 228, 163, 82, 238, 26, 30, 105, 206, 69, 2, 102, 238, 165, 47, 159, 39, 5, 197, 150, 0, 69, 51, 234, 132, 22, 219, 250, 22, 69, 111, 87, 123, 211, 13, 88, 46, 215, 6, 12, 107, 65, 69, 9, 235, 217, 180, 167, 132, 204
 ];
 
 export const http_start_line = [72, 84, 84, 80, 47, 49, 46, 49, 32, 50, 48, 48, 32, 79, 75];
@@ -421,7 +429,7 @@ interface ManifestResponse {
     };
 }
 
-interface Manifest {
+export interface Manifest {
     response: ManifestResponse;
 }
 
@@ -441,22 +449,28 @@ function headersToBytes(headers: Record<string, string[]>): number[][] {
 
 export function InitialDigest(
     manifest: Manifest,
-    ciphertext: number[],
+    ciphertexts: number[][],
     maxStackHeight: number
 ): [bigint, bigint] {
+    let ciphertextDigests: bigint[] = [];
     // Create a digest of the ciphertext itself
-    const ciphertextDigest = DataHasher(ciphertext);
+    ciphertexts.forEach(ciphertext => {
+        const ciphertextDigest = DataHasher(ciphertext);
+        ciphertextDigests.push(ciphertextDigest);
+    });
+
+    let ciphertextDigest = ciphertextDigests.reduce((a, b) => a + b, BigInt(0));
 
     // Digest the start line using the ciphertext_digest as a random input
     const startLineBytes = strToBytes(
         `${manifest.response.version} ${manifest.response.status} ${manifest.response.message}`
     );
-    const startLineDigest = PolynomialDigest(startLineBytes, ciphertextDigest);
+    const startLineDigest = PolynomialDigest(startLineBytes, ciphertextDigest, BigInt(0));
 
     // Digest all the headers
     const headerBytes = headersToBytes(manifest.response.headers);
     const headersDigest = headerBytes.map(bytes =>
-        PolynomialDigest(bytes, ciphertextDigest)
+        PolynomialDigest(bytes, ciphertextDigest, BigInt(0))
     );
 
     // Digest the JSON sequence

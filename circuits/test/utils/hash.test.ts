@@ -129,7 +129,7 @@ describe("PolynomialDigest", () => {
     it("witness: bytes = [4*random], polynomial_input = random", async () => {
         const bytes = Array.from({ length: 4 }, () => Math.floor(Math.random() * 256));
         const polynomial_input = poseidon1([BigInt(Math.floor(Math.random() * 694206942069420))]);
-        const digest = PolynomialDigest(bytes, polynomial_input);
+        const digest = PolynomialDigest(bytes, polynomial_input, BigInt(0));
 
         await circuit.expectPass(
             { bytes, polynomial_input },
@@ -139,3 +139,34 @@ describe("PolynomialDigest", () => {
 
 });
 
+describe("PolynomialDigestWithCounter", () => {
+    let circuit: WitnessTester<["bytes", "polynomial_input", "counter"], ["digest"]>;
+
+    before(async () => {
+        circuit = await circomkit.WitnessTester(`PolynomialDigestWithCounter`, {
+            file: "utils/hash",
+            template: "PolynomialDigestWithCounter",
+            params: [4],
+        });
+    });
+
+    it("witness: bytes = [1,2,3,4], polynomial_input = 7, counter = 0", async () => {
+        const bytes = [1, 2, 3, 4];
+        const polynomial_input = 7;
+
+        await circuit.expectPass(
+            { bytes, polynomial_input, counter: 0 },
+            { digest: 1 + 2 * 7 + 3 * 7 ** 2 + 4 * 7 ** 3 }
+        );
+    });
+
+    it("witness: bytes = [1,2,3,4], polynomial_input = 7, counter = 2", async () => {
+        const bytes = [1, 2, 3, 4];
+        const polynomial_input = 7;
+
+        await circuit.expectPass(
+            { bytes, polynomial_input, counter: 2 },
+            { digest: 1 * 7 ** 2 + 2 * 7 ** 3 + 3 * 7 ** 4 + 4 * 7 ** 5 }
+        );
+    });
+});

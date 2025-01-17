@@ -2,6 +2,7 @@ pragma circom 2.1.9;
 
 include "circomlib/circuits/poseidon.circom";
 include "./array.circom";
+include "./functions.circom";
 
 template MaskedByteStreamDigest(DATA_BYTES) {
     signal input in[DATA_BYTES];
@@ -35,13 +36,13 @@ template DataHasher(DATA_BYTES) {
         var packedInput = 0;
         var isPaddedChunk = 0;
         for(var j = 0 ; j < 16 ; j++) {
-            /* 
+            /*
             If in[16 * i + j] is ever -1 we get `isPadding[16 * i + j] === 1` and since we add this
             we get zero which does not change `packedInput`.
             */
             isPadding[16 * i + j] <== IsEqual()([in[16 * i + j], -1]);
             isPaddedChunk          += isPadding[16 * i + j];
-            packedInput            += (in[16 * i + j] + isPadding[16 * i + j]) * 2**(8*j); 
+            packedInput            += (in[16 * i + j] + isPadding[16 * i + j]) * 2**(8*j);
         }
         not_to_hash[i] <== IsEqual()([isPaddedChunk, 16]);
         option_hash[i] <== Poseidon(2)([hashes[i],packedInput]);
@@ -59,6 +60,40 @@ template PolynomialDigest(N) {
     signal monomials[N];
     signal terms[N];
     monomials[0] <== 1;
+    terms[0]     <== bytes[0] * monomials[0];
+    var accumulation = terms[0];
+    for(var i = 1 ; i < N ; i++) {
+        monomials[i] <== monomials[i - 1] * polynomial_input;
+        terms[i]     <== monomials[i] * bytes[i];
+        accumulation  += terms[i];
+    }
+    digest <== accumulation;
+}
+
+template PolynomialDigestWithCounter(N) {
+    signal input bytes[N];
+    signal input polynomial_input;
+    signal input counter;
+
+    var logN = log2Ceil(N);
+
+    signal output digest;
+
+    signal monomials[N];
+    signal terms[N];
+
+    signal pow_accumulation[N+1];
+    pow_accumulation[0] <== 1;
+    signal isLessThanCounter[N];
+    signal multFactor[N];
+    for (var i = 0 ; i < N ; i++) {
+        isLessThanCounter[i] <== LessThan(logN)([i, counter]);
+        multFactor[i]        <== isLessThanCounter[i] * polynomial_input + (1 - isLessThanCounter[i]);
+        pow_accumulation[i+1] <== pow_accumulation[i] * multFactor[i];
+    }
+
+    // monomials[0] = polynomial_input ** counter
+    monomials[0] <== pow_accumulation[N];
     terms[0]     <== bytes[0] * monomials[0];
     var accumulation = terms[0];
     for(var i = 1 ; i < N ; i++) {

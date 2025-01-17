@@ -7,12 +7,13 @@ CIRCOM_FILES := $(wildcard $(addsuffix /*_*b.circom,$(TARGET_DIRS)))
 # Extract target sizes (e.g., "512b", "1024b") from directory names
 TARGET_SIZES := $(patsubst builds/target_%,%,$(TARGET_DIRS))
 
+
 # Create artifacts directories
 $(shell mkdir -p $(addsuffix /artifacts,$(TARGET_DIRS)))
 
 # Default target
 .PHONY: all clean
-all: build params
+all: build check params
 
 # Build target
 .PHONY: build
@@ -33,6 +34,22 @@ params:
 		echo "Generating parameters for $${size}b with ROM length 5..."; \
 		cargo +nightly run --release -- "$$target_dir/artifacts" "$${size}b" "5" || exit 1; \
 	done
+
+.PHONY: check
+check:
+	@echo "Checking that all .bin artifacts exist..."
+	@set -e; \
+	for circuit in $(CIRCOM_FILES); do \
+		f1="$$(dirname $${circuit})/artifacts/$$(basename $${circuit} .circom).bin"; \
+		f2="$$(dirname $${circuit})/artifacts/$$(basename $${circuit} .circom).r1cs"; \
+		if [ ! -f "$${f1}" ] || [ ! -f "$${f2}" ]; then \
+			echo "ERROR: Missing artifact '$${f1}', '$${f2}"; \
+			exit 1; \
+		else \
+			echo "OK: $${f1}, $${f2}"; \
+		fi; \
+	done
+	@echo "All artifacts present!"
 
 # Clean target
 clean:
