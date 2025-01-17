@@ -17,15 +17,15 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: "google-github-actions/auth@v2"
-        with:
-          project_id: "web-prover-circuits-fa4cf3"
-          workload_identity_provider: "projects/530011589985/locations/global/workloadIdentityPools/github/providers/web-prover-circuits"
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - uses: "google-github-actions/auth@v2"
+        with:
+          project_id: "web-prover-circuits-fa4cf3"
+          workload_identity_provider: "projects/530011589985/locations/global/workloadIdentityPools/github/providers/web-prover-circuits"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
