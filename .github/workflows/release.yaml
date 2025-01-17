@@ -95,5 +95,5 @@ jobs:
           parent: false
           gzip: false # already gzipped
           headers: |-
-            content-type: 'application/octet-stream'
-            content-encoding: 'gzip'
+            content-type: application/octet-stream
+            content-encoding: gzip
