@@ -9,6 +9,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  id-token: write
 
 jobs:
   release:
@@ -16,6 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
+      - uses: "google-github-actions/auth@v2"
+        with:
+          project_id: "web-prover-circuits-fa4cf3"
+          workload_identity_provider: "projects/530011589985/locations/global/workloadIdentityPools/github/providers/web-prover-circuits"
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -72,3 +78,22 @@ jobs:
           body_path: release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare artifacts for Google Cloud Storage Bucket
+        run: |
+          # Unzip, then gzip each individual file (but remove .gz suffix), delete zip files
+          for zip_file in artifacts/circom-artifacts-*-v${{ env.VERSION }}.zip; do
+            unzip "$zip_file" -d "${zip_file%.zip}"
+            (cd "${zip_file%.zip}" && gzip -7 * && for file in *.gz; do mv "$file" "${file%.gz}"; done)
+          done
+          rm *.zip
+
+      - uses: "google-github-actions/upload-cloud-storage@v2"
+        with:
+          path: "artifacts"
+          destination: "web-prover-circuits.pluto.xyz/${{ github.sha }}"
+          parent: false
+          gzip: false # already gzipped
+          headers: |-
+            content-type: 'application/octet-stream'
+            content-encoding: 'gzip'

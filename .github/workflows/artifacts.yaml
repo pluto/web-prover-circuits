@@ -120,6 +120,8 @@ jobs:
           if [ -d "$target_dir/artifacts" ]; then
             echo "Creating archive for $size"
             ( cd "$target_dir/artifacts" && \
+              find . -type f -name "*.wasm" -exec bash -c 'mv "$1" "$(dirname "$1")/../"' _ {} \; &&\
+              rm -rf *_js &&\
               zip -r "../../../circom-artifacts-${size}-v${{ env.VERSION }}.zip" . )
           fi
         done
@@ -134,4 +136,4 @@ jobs:
       with:
         name: circom-artifacts-v${{ env.VERSION }}
         path: circom-artifacts-*-v${{ env.VERSION }}.zip
-        retention-days: 5
+        retention-days: 14
