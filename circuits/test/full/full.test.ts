@@ -1,5 +1,7 @@
 import { assert } from "chai";
 import { circomkit, WitnessTester, uintArray32ToBits, http_response_plaintext, http_response_ciphertext, http_start_line, http_header_0, http_header_1, http_body, PolynomialDigest, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash, modAdd, InitialDigest, MockManifest, http_response_ciphertext_dup } from "../common";
+import { test_case, TestCaseManifest } from "./testCase.test";
+
 import { toInput } from "../chacha20/authentication.test";
 import { poseidon1 } from "poseidon-lite";
 import { DataHasher } from "../common/poseidon";
@@ -39,9 +41,9 @@ function to_nonce(iv: Uint8Array, seq: number): Uint8Array {
     let nonce = new Uint8Array(12);
     nonce.fill(0);
 
-    for (let i = 0; i < 8; i++) {
-        nonce[12 - i] = (seq >> (8 * i)) & 0xff;
-    }
+    //   nonce[4..].copy_from_slice(&seq.to_be_bytes());
+    const seqBytes = new Uint8Array(new BigUint64Array([BigInt(seq)]).buffer).reverse();
+    nonce.set(seqBytes, 4);
 
     nonce.forEach((_, i) => {
         nonce[i] ^= iv[i];
@@ -277,6 +279,112 @@ describe("Example NIVC Proof", async () => {
             value_digest,
             sequence_digest,
         }, ["step_out"]);
+        assert.deepEqual(json_extraction.step_out, value_digest);
+    });
+
+    it("github example", async () => {
+
+        let http_response_plaintext = test_case.plaintext;
+        let http_response_ciphertext = test_case.ciphertext;
+        let key = test_case.key;
+        let iv = test_case.iv;
+        let manifest = TestCaseManifest();
+
+        let http_response_combined = http_response_plaintext[0].concat(http_response_plaintext[1]);
+        let http_response_padded = http_response_combined.concat(Array(DATA_BYTES - http_response_combined.length).fill(-1));
+        let http_response1_padded = http_response_plaintext[0].concat(Array(DATA_BYTES - http_response_plaintext[0].length).fill(-1));
+        let http_response1_0_padded = http_response_plaintext[0].concat(Array(DATA_BYTES - http_response_plaintext[0].length).fill(0));
+        let http_response2_padded = http_response_plaintext[1].concat(Array(DATA_BYTES - http_response_plaintext[1].length).fill(-1));
+        let http_response2_0_padded = http_response_plaintext[1].concat(Array(DATA_BYTES - http_response_plaintext[1].length).fill(0));
+        let ciphertext1_padded = http_response_ciphertext[0].concat(Array(DATA_BYTES - http_response_ciphertext[0].length).fill(-1));
+        let ciphertext2_padded = http_response_ciphertext[1].concat(Array(DATA_BYTES - http_response_ciphertext[1].length).fill(-1));
+
+        const [ciphertext_digest, init_nivc_input] = InitialDigest(manifest, [ciphertext1_padded, ciphertext2_padded], MAX_STACK_HEIGHT);
+
+        const counterBits = uintArray32ToBits([1])[0];
+        const keyIn = toInput(Buffer.from(key));
+
+        let nonce1 = to_nonce(Uint8Array.from(iv), 1);
+        const nonceIn = toInput(Buffer.from(nonce1));
+        let plaintext_authentication1 = await PlaintextAuthentication.compute({
+            step_in: init_nivc_input,
+            plaintext: http_response1_padded,
+            key: keyIn,
+            nonce: nonceIn,
+            counter: counterBits,
+            plaintext_index_counter: 0,
+            ciphertext_digest,
+        }, ["step_out"]);
+
+        let pt1Digest = PolynomialDigest(http_response1_0_padded, ciphertext_digest, BigInt(0));
+        let ct1Digest = DataHasher(ciphertext1_padded);
+        assert.deepEqual(plaintext_authentication1.step_out, init_nivc_input - ct1Digest + pt1Digest);
+
+        let nonce2 = to_nonce(Uint8Array.from(iv), 2);
+        const nonceIn2 = toInput(Buffer.from(nonce2));
+        let plaintext_authentication2 = await PlaintextAuthentication.compute({
+            step_in: plaintext_authentication1.step_out,
+            plaintext: http_response2_padded,
+            key: keyIn,
+            nonce: nonceIn2,
+            counter: counterBits,
+            plaintext_index_counter: http_response_plaintext[0].length,
+            ciphertext_digest,
+        }, ["step_out"]);
+
+        let pt2Digest = PolynomialDigest(http_response2_0_padded, ciphertext_digest, BigInt(http_response_plaintext[0].length));
+        let ct2Digest = DataHasher(ciphertext2_padded);
+        assert.deepEqual(plaintext_authentication2.step_out, modAdd(init_nivc_input - ct1Digest - ct2Digest, pt1Digest + pt2Digest));
+
+        const http_response_plaintext_digest = PolynomialDigest(http_response_combined, ciphertext_digest, BigInt(0));
+
+        // Run HTTPVerification
+        const start_line_digest = PolynomialDigest(http_start_line, ciphertext_digest, BigInt(0));
+        let header_0 = test_case.header_0;
+        const header_0_digest = PolynomialDigest(header_0, ciphertext_digest, BigInt(0));
+
+        let main_digests = Array(MAX_NUMBER_OF_HEADERS + 1).fill(0);
+        main_digests[0] = start_line_digest;
+        main_digests[1] = header_0_digest;
+
+        let step_in = BigInt(plaintext_authentication2.step_out.toString(10));
+        let http_verification = await HTTPVerification.compute({
+            step_in,
+            ciphertext_digest,
+            data: http_response_padded,
+            main_digests,
+        }, ["step_out"]);
+        console.log("http_verification", http_verification.step_out);
+        let http_body = http_response_plaintext[1];
+        const padded_http_body = http_body.concat(Array(DATA_BYTES - http_body.length).fill(0));
+        let http_verification_step_out = BigInt((http_verification.step_out as number[])[0]);
+        let body_digest = PolynomialDigest(http_body, ciphertext_digest, BigInt(0));
+
+        const body_digest_hashed = poseidon1([body_digest]);
+        const start_line_digest_digest_hashed = poseidon1([start_line_digest]);
+        const header_0_digest_hashed = poseidon1([header_0_digest]);
+        const correct_http_verification_step_out = modAdd(step_in - http_response_plaintext_digest - start_line_digest_digest_hashed - header_0_digest_hashed, body_digest_hashed);
+        assert.deepEqual(http_verification_step_out, correct_http_verification_step_out);
+
+        // Run JSONExtraction
+        const KEY0 = strToBytes("hello");
+        const targetValue = strToBytes("world");
+        const keySequence: JsonMaskType[] = [
+            { type: "Object", value: KEY0 },
+        ];
+
+        const [stack, treeHashes] = jsonTreeHasher(ciphertext_digest, keySequence, MAX_STACK_HEIGHT);
+        const sequence_digest = compressTreeHash(ciphertext_digest, [stack, treeHashes]);
+        const value_digest = PolynomialDigest(targetValue, ciphertext_digest, BigInt(0));
+
+        let json_extraction = await JSONExtraction.compute({
+            step_in: http_verification_step_out,
+            ciphertext_digest,
+            data: padded_http_body,
+            value_digest,
+            sequence_digest,
+        }, ["step_out"]);
+        console.log("json_extraction", json_extraction.step_out);
         assert.deepEqual(json_extraction.step_out, value_digest);
     });
 });

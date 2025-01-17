@@ -429,7 +429,7 @@ interface ManifestResponse {
     };
 }
 
-interface Manifest {
+export interface Manifest {
     response: ManifestResponse;
 }
 
