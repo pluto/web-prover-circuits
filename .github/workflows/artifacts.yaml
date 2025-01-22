@@ -95,6 +95,7 @@ jobs:
       run: |
         make debug  # Show what will be processed
         make build  # Build the circuits
+        make check  # Check all circuits are built
 
     - name: Build and run parameter generator
       run: |
