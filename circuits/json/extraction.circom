@@ -6,7 +6,7 @@ include "hash_machine.circom";
 template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
     signal input data[DATA_BYTES];
     signal input ciphertext_digest;
-    signal input sequence_digest; 
+    signal input sequence_digest;
     signal input value_digest;
 
     signal input step_in[1];
@@ -23,7 +23,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
     }
     signal intermediate_digest[DATA_BYTES][3 * MAX_STACK_HEIGHT];
     signal state_digest[DATA_BYTES];
-    
+
     // Debugging
     // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
     //     log("State[", 0, "].next_stack[", i,"]      = [",State[0].next_stack[i][0], "][", State[0].next_stack[i][1],"]" );
@@ -73,8 +73,8 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT) {
         }
         state_digest[data_idx] <== accumulator;
         sequence_is_matched[data_idx] <== IsEqual()([state_digest[data_idx], sequence_digest]);
-        
-        // Now check for if the value digest appears 
+
+        // Now check for if the value digest appears
         var value_digest_in_stack = 0;
         for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++) {
             // A single value can be present only, and it is on index 1, so we can just accum

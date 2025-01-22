@@ -1,7 +1,7 @@
 {
   "name": "web-prover-circuits",
   "description": "ZK Circuits for WebProofs",
-  "version": "0.7.3",
+  "version": "0.8.0",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -12,7 +12,6 @@
     "par-test": "npx mocha --parallel"
   },
   "dependencies": {
-    "@zk-email/circuits": "^6.1.1",
     "circomlib": "^2.0.5"
   },
   "devDependencies": {
