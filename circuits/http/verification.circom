@@ -25,23 +25,21 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
       zeroed_data[i] <== (1 - isPadding[i]) * data[i];
       data_length   += 1 - isPadding[i];
     }
-    signal pt_digest <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_data, ciphertext_digest, data_length);
+    signal pt_digest <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_data, ciphertext_digest, step_in[2]);
 
     // Contains digests of start line and all intended headers (up to `MAX_NUMBER_OF_HEADERS`)
     signal input main_digests[MAX_NUMBER_OF_HEADERS + 1];
     signal not_contained[MAX_NUMBER_OF_HEADERS + 1];
-    var num_to_match = MAX_NUMBER_OF_HEADERS + 1;
     for(var i = 0 ; i < MAX_NUMBER_OF_HEADERS + 1 ; i++) {
         not_contained[i] <== IsZero()(main_digests[i]);
-        num_to_match -= not_contained[i];
     }
-
 
     // assertions:
     // - check step_in[3] = machine state hash digest
     signal machine_state_digest <== PolynomialDigest(6)(machine_state, ciphertext_digest);
     step_in[3] === machine_state_digest;
     // - check step_in[4] = start line hash digest + all header hash digests
+    // TODO: I don't like this `MAX_NUMBER_OF_HEADERS + 1` now. It should just be `NUMBER_OF_STATEMENTS_TO_LOCK` or something
     signal option_hash[MAX_NUMBER_OF_HEADERS + 1];
     signal main_digests_hashed[MAX_NUMBER_OF_HEADERS + 1];
     var accumulated_main_digests_hashed = 0;
@@ -107,7 +105,6 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
         is_match[i]            <== (1 - is_zero[i]) * contains[i];
         num_matched             += is_match[i];
     }
-    num_matched === num_to_match;
 
     // BODY
     signal body_monomials[DATA_BYTES];
@@ -136,7 +133,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     // pass machine state to next iteration
     step_out[3] <== PolynomialDigest(6)([State[DATA_BYTES - 1].next_parsing_start, State[DATA_BYTES - 1].next_parsing_header, State[DATA_BYTES - 1].next_parsing_field_name, State[DATA_BYTES - 1].next_parsing_field_value, State[DATA_BYTES - 1].next_parsing_body, State[DATA_BYTES - 1].next_line_status], ciphertext_digest);
     step_out[4] <== step_in[4];
-    step_out[5] <== step_in[5] - num_matched;
+    step_out[5] <== step_in[5] - num_matched; // No longer check above, subtract here so circuits later check
     for (var i = 6 ; i < PUBLIC_IO_LENGTH ; i++) {
         step_out[i] <== step_in[i];
     }
