@@ -156,7 +156,7 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
   signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, step_in[1]);
 
   step_out[0] <== step_in[0] - part_ciphertext_digest + plaintext_digest;
-  step_in[1] <== plaintext_length;
+  step_out[1] <== plaintext_length;
   for (var i = 2 ; i < PUBLIC_IO_LENGTH ; i++) {
     step_out[i] <== step_in[i];
   }

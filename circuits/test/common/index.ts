@@ -254,6 +254,8 @@ export function PolynomialDigest(coeffs: number[], input: bigint, counter: bigin
     return result;
 }
 
+export const PUBLIC_IO_VARIABLES = 9;
+
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
 // content-encoding: gzip
