@@ -24,7 +24,7 @@ include "circomlib/circuits/poseidon.circom";
 // | # | N | N | N |
 // +---+---+---+---+
 // paramaterized by `DATA_BYTES` which is the plaintext length in bytes
-template PlaintextAuthentication(DATA_BYTES) {
+template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
   // key => 8 32-bit words = 32 bytes
   signal input key[8][32];
   // nonce => 3 32-bit words = 12 bytes
@@ -37,13 +37,12 @@ template PlaintextAuthentication(DATA_BYTES) {
   signal input plaintext[DATA_BYTES];
 
   signal input ciphertext_digest;
-  signal input plaintext_index_counter;
 
   // step_in should be the ciphertext digest + the HTTP digests + JSON seq digest
-  signal input step_in[1];
+  signal input step_in[PUBLIC_IO_LENGTH];
 
   // step_out should be the plaintext digest
-  signal output step_out[1];
+  signal output step_out[PUBLIC_IO_LENGTH];
 
   signal isPadding[DATA_BYTES]; // == 1 in the case we hit padding number
   signal plaintextBits[DATA_BYTES / 4][32];
@@ -145,13 +144,20 @@ template PlaintextAuthentication(DATA_BYTES) {
     }
   }
 
+  // Count the number of non-padding bytes
+  var plaintext_length = step_in[1];
+  // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
   signal zeroed_plaintext[DATA_BYTES];
   for(var i = 0 ; i < DATA_BYTES ; i++) {
-     // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
     zeroed_plaintext[i] <== (1 - isPadding[i]) * plaintext[i];
+    plaintext_length += 1 - isPadding[i];
   }
   signal part_ciphertext_digest <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
-  signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, plaintext_index_counter);
+  signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, step_in[1]);
 
   step_out[0] <== step_in[0] - part_ciphertext_digest + plaintext_digest;
+  step_in[1] <== plaintext_length;
+  for (var i = 2 ; i < PUBLIC_IO_LENGTH ; i++) {
+    step_out[i] <== step_in[i];
+  }
 }

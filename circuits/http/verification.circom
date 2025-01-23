@@ -3,9 +3,9 @@ pragma circom 2.1.9;
 include "machine.circom";
 include "../utils/hash.circom";
 
-template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS) {
-    signal input step_in[1];
-    signal output step_out[1];
+template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
+    signal input step_in[PUBLIC_IO_LENGTH];
+    signal output step_out[PUBLIC_IO_LENGTH];
 
     signal input ciphertext_digest;
 
