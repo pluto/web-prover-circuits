@@ -1,16 +1,16 @@
 import { WitnessTester } from "circomkit";
-import { circomkit, PolynomialDigest, toByte, toUint32Array, uintArray32ToBits, modAdd } from "../common";
+import { circomkit, PolynomialDigest, toByte, toUint32Array, uintArray32ToBits, modAdd, PUBLIC_IO_VARIABLES } from "../common";
 import { DataHasher } from "../common/poseidon";
 import { assert } from "chai";
 
 describe("Plaintext Authentication", () => {
-    let circuit: WitnessTester<["key", "nonce", "counter", "plaintext", "plaintext_index_counter", "ciphertext_digest", "step_in"], ["step_out"]>;
+    let circuit: WitnessTester<["key", "nonce", "counter", "plaintext", "ciphertext_digest", "step_in"], ["step_out"]>;
     describe("16 block test", () => {
         it("should perform encryption", async () => {
             circuit = await circomkit.WitnessTester(`PlaintextAuthentication`, {
                 file: "chacha20/authentication",
                 template: "PlaintextAuthentication",
-                params: [64] // number of bytes for plaintext
+                params: [64, PUBLIC_IO_VARIABLES] // number of bytes for plaintext
             });
             // Test case from RCF https://www.rfc-editor.org/rfc/rfc7539.html#section-2.4.2
             // the input encoding here is not the most intuitive. inputs are serialized as little endian.
@@ -50,20 +50,21 @@ describe("Plaintext Authentication", () => {
                 ];
             const counterBits = uintArray32ToBits([1])[0];
             let ciphertext_digest = DataHasher(ciphertextBytes);
+            let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
                 counter: counterBits,
                 plaintext: plaintextBytes,
-                plaintext_index_counter: 0,
                 ciphertext_digest: ciphertext_digest,
-                step_in: 0
+                step_in,
             }, (["step_out"]));
 
             // Output
             let plaintext_digest = PolynomialDigest(plaintextBytes, ciphertext_digest, BigInt(0));
             let output = modAdd(plaintext_digest - ciphertext_digest, BigInt(0));
-            assert.deepEqual(w.step_out, output);
+            const stepOutArray = w.step_out as unknown as BigInt[];
+            assert.deepEqual(stepOutArray[0], output);
         });
     });
 
@@ -72,7 +73,7 @@ describe("Plaintext Authentication", () => {
             circuit = await circomkit.WitnessTester(`PlaintextAuthentication`, {
                 file: "chacha20/authentication",
                 template: "PlaintextAuthentication",
-                params: [128] // number of bytes in plaintext
+                params: [128, PUBLIC_IO_VARIABLES] // number of bytes in plaintext
             });
             // Test case from RCF https://www.rfc-editor.org/rfc/rfc7539.html#section-2.4.2
             // the input encoding here is not the most intuitive. inputs are serialized as little endian.
@@ -111,19 +112,20 @@ describe("Plaintext Authentication", () => {
             let paddedPlaintextBytes = plaintextBytes.concat(Array(totalLength - plaintextBytes.length).fill(-1));
             const counterBits = uintArray32ToBits([1])[0];
             let ciphertext_digest = DataHasher(ciphertextBytes);
+            let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
                 counter: counterBits,
                 plaintext: paddedPlaintextBytes,
-                step_in: 0,
-                plaintext_index_counter: 0,
+                step_in,
                 ciphertext_digest: ciphertext_digest,
             }, (["step_out"]));
 
             let plaintext_digest = PolynomialDigest(plaintextBytes, ciphertext_digest, BigInt(0));
             let output = modAdd(plaintext_digest - ciphertext_digest, BigInt(0));
-            assert.deepEqual(w.step_out, output);
+            const stepOutArray = w.step_out as unknown as BigInt[];
+            assert.deepEqual(stepOutArray[0], output);
         });
     });
 });
