@@ -1,5 +1,5 @@
 import { WitnessTester } from "circomkit";
-import { circomkit, PolynomialDigest, toByte, toUint32Array, uintArray32ToBits, modAdd, PUBLIC_IO_VARIABLES } from "../common";
+import { circomkit, PolynomialDigest, toByte, toUint32Array, modPow, uintArray32ToBits, modAdd, PUBLIC_IO_VARIABLES } from "../common";
 import { DataHasher } from "../common/poseidon";
 import { assert } from "chai";
 
@@ -51,6 +51,7 @@ describe("Plaintext Authentication", () => {
             const counterBits = uintArray32ToBits([1])[0];
             let ciphertext_digest = DataHasher(ciphertextBytes);
             let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
+            step_in[1] = BigInt(1);
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
@@ -113,6 +114,7 @@ describe("Plaintext Authentication", () => {
             const counterBits = uintArray32ToBits([1])[0];
             let ciphertext_digest = DataHasher(ciphertextBytes);
             let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
+            step_in[1] = BigInt(1);
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
@@ -175,6 +177,7 @@ describe("Plaintext Authentication", () => {
             let ciphertext_digest = DataHasher(ciphertextBytes);
             console.log("ciphertext_digest: ", ciphertext_digest);
             let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
+            step_in[1] = BigInt(1);
             let w_0 = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
@@ -198,6 +201,8 @@ describe("Plaintext Authentication", () => {
             let output = modAdd(plaintext_digest - ciphertext_digest, BigInt(0));
             const stepOutArray = w_1.step_out as unknown as BigInt[];
             assert.deepEqual(stepOutArray[0], output);
+            assert.deepEqual(stepOutArray[1], modPow(ciphertext_digest, BigInt(plaintextBytes.length)));
+            assert.deepEqual(stepOutArray[10], ciphertext_digest);
         });
     });
 });
