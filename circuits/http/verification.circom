@@ -9,13 +9,13 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     signal input step_in[PUBLIC_IO_LENGTH];
     signal output step_out[PUBLIC_IO_LENGTH];
 
-    // next_parsing_start, next_parsing_header, next_parsing_field_name, next_parsing_field_value, next_parsing_body, next_line_status
-    signal input machine_state[6];
+    // next_parsing_start, next_parsing_header, next_parsing_field_name, next_parsing_field_value, next_parsing_body, next_line_status, inner_main_digest, body_digest
+    signal input machine_state[8];
 
     signal input ciphertext_digest;
 
     // step_in[2] is the combined length of the data
-    var data_length = step_in[2];
+    var ctr = step_in[2];
 
     signal input data[DATA_BYTES];
     signal isPadding[DATA_BYTES]; // == 1 in the case we hit padding number
@@ -23,9 +23,10 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     for (var i = 0 ; i < DATA_BYTES ; i++) {
       isPadding[i]   <== IsEqual()([data[i], -1]);
       zeroed_data[i] <== (1 - isPadding[i]) * data[i];
-      data_length   += 1 - isPadding[i];
+      ctr            += 1 - isPadding[i];
     }
     signal pt_digest <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_data, ciphertext_digest, step_in[2]);
+    log("inner plaintext_digest: ", pt_digest);
 
     // Contains digests of start line and all intended headers (up to `MAX_NUMBER_OF_HEADERS`)
     signal input main_digests[MAX_NUMBER_OF_HEADERS + 1];
@@ -36,7 +37,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
 
     // assertions:
     // - check step_in[3] = machine state hash digest
-    signal machine_state_digest <== PolynomialDigest(6)(machine_state, ciphertext_digest);
+    signal machine_state_digest <== PolynomialDigest(8)(machine_state, ciphertext_digest);
     step_in[3] === machine_state_digest;
     // - check step_in[4] = start line hash digest + all header hash digests
     // TODO: I don't like this `MAX_NUMBER_OF_HEADERS + 1` now. It should just be `NUMBER_OF_STATEMENTS_TO_LOCK` or something
@@ -95,7 +96,8 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     signal accum_prev[DATA_BYTES];
     var num_matched = 0;
     signal inner_main_digest[DATA_BYTES + 1];
-    inner_main_digest[0] <== 0;
+    // Set this to what the previous digest was
+    inner_main_digest[0] <== machine_state[6];
     for(var i = 0 ; i < DATA_BYTES ; i++) {
         monomial_is_zero[i]    <== IsZero()(main_monomials[i]);
         accum_prev[i]          <== (1 - monomial_is_zero[i]) * inner_main_digest[i];
@@ -107,34 +109,71 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     }
 
     // BODY
+    signal pow_accumulation[DATA_BYTES+1];
+    signal body_ctr_is_zero <== IsZero()(step_in[6]);
+    pow_accumulation[0] <== (1 - body_ctr_is_zero); // TODO: this was 1, but now it is 1 if and only if the ctr isn't zero
+    signal isLessThanCounter[DATA_BYTES];
+    signal multFactor[DATA_BYTES];
+    var logN = log2Ceil(DATA_BYTES);
+    for (var i = 0 ; i < DATA_BYTES ; i++) {
+        isLessThanCounter[i] <== LessThan(logN)([i, step_in[6]]);
+        multFactor[i]        <== isLessThanCounter[i] * ciphertext_digest + (1 - isLessThanCounter[i]);
+        pow_accumulation[i+1] <== pow_accumulation[i] * multFactor[i];
+    }
+
     signal body_monomials[DATA_BYTES];
     signal body_accum[DATA_BYTES];
     signal body_switch[DATA_BYTES -1];
     signal body_digest[DATA_BYTES];
-    body_monomials[0] <== 0;
-    body_accum[0]     <== 0;
-    body_digest[0]    <== 0;
+    body_monomials[0] <== pow_accumulation[DATA_BYTES];
+    log("pow_accumulation: ", pow_accumulation[DATA_BYTES]);
+    body_accum[0]     <== (1 - body_ctr_is_zero); // Stays zero so we accumalate the body digest
+    // Set this to what the previous digest was
+    body_digest[0]    <== body_monomials[0] * zeroed_data[0]; 
     for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
-        body_accum[i + 1]        <== body_accum[i] + State[i + 1].parsing_body;
+        body_accum[i + 1]        <== body_accum[i] + State[i + 1].parsing_body * (1 - isPadding[i + 1]);
         body_switch[i]           <== IsEqual()([body_accum[i + 1], 1]);
         body_monomials[i + 1]    <== body_monomials[i] * ciphertext_digest + body_switch[i];
         body_digest[i + 1]       <== body_digest[i] + body_monomials[i + 1] * zeroed_data[i + 1];
     }
 
-
-
-    // subtract all the header digests here and also wrap them in poseidon.
-    signal body_digest_hashed <== Poseidon(1)([body_digest[DATA_BYTES - 1]]);
-
-    // TODO: removed body_digest_hashed from step_out[0], add PD(b[p]) if body
-    step_out[0] <== step_in[0] - pt_digest;
+    // TODO: removed body_digest_hashed from step_out[0], add PD(b[p]) if body 
+    // Note: This body digest computed here is just a diff since we added the other component before
+    step_out[0] <== step_in[0] - pt_digest + body_digest[DATA_BYTES - 1];
     step_out[1] <== step_in[1];
-    step_out[2] <== data_length;
+    step_out[2] <== ctr;
     // pass machine state to next iteration
-    step_out[3] <== PolynomialDigest(6)([State[DATA_BYTES - 1].next_parsing_start, State[DATA_BYTES - 1].next_parsing_header, State[DATA_BYTES - 1].next_parsing_field_name, State[DATA_BYTES - 1].next_parsing_field_value, State[DATA_BYTES - 1].next_parsing_body, State[DATA_BYTES - 1].next_line_status], ciphertext_digest);
+    step_out[3] <== PolynomialDigest(8)(
+        [State[DATA_BYTES - 1].next_parsing_start,
+         State[DATA_BYTES - 1].next_parsing_header,
+         State[DATA_BYTES - 1].next_parsing_field_name,
+         State[DATA_BYTES - 1].next_parsing_field_value,
+         State[DATA_BYTES - 1].next_parsing_body,
+         State[DATA_BYTES - 1].next_line_status,
+         inner_main_digest[DATA_BYTES],
+         body_digest[DATA_BYTES - 1]
+         ],
+         ciphertext_digest
+         );
     step_out[4] <== step_in[4];
     step_out[5] <== step_in[5] - num_matched; // No longer check above, subtract here so circuits later check
-    for (var i = 6 ; i < PUBLIC_IO_LENGTH ; i++) {
+    log("left_to_match = ", step_out[5]);
+    step_out[6] <== step_in[6] + body_accum[DATA_BYTES - 1]; // TODO: Note this may count padding as body length, but i did add more above in the `body_accum`
+
+    for (var i = 7 ; i < PUBLIC_IO_LENGTH ; i++) {
         step_out[i] <== step_in[i];
+    }
+
+    log("next_parsing_start: ", State[DATA_BYTES - 1].next_parsing_start);
+    log("next_parsing_header: ", State[DATA_BYTES - 1].next_parsing_header);
+    log("next_parsing_field_name: ", State[DATA_BYTES - 1].next_parsing_field_name);
+    log("next_parsing_field_value: ", State[DATA_BYTES - 1].next_parsing_field_value);
+    log("next_parsing_body: ", State[DATA_BYTES - 1].next_parsing_body);
+    log("next_line_status: ", State[DATA_BYTES - 1].next_line_status);
+    log("inner_main_digest: ", inner_main_digest[DATA_BYTES]);
+    log("body_digest: ", body_digest[DATA_BYTES - 1]);
+
+    for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {
+        log("step_out[",i,"] = ", step_out[i]);
     }
 }
