@@ -15,15 +15,18 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     signal input ciphertext_digest;
 
     // step_in[2] is the combined length of the data
-    var ctr = step_in[2];
+    signal ciphertext_digest_pow[DATA_BYTES+1];
+    ciphertext_digest_pow[0] <== step_in[2];
+    signal mult_factor[DATA_BYTES];
 
     signal input data[DATA_BYTES];
     signal isPadding[DATA_BYTES]; // == 1 in the case we hit padding number
     signal zeroed_data[DATA_BYTES];
     for (var i = 0 ; i < DATA_BYTES ; i++) {
-      isPadding[i]   <== IsEqual()([data[i], -1]);
-      zeroed_data[i] <== (1 - isPadding[i]) * data[i];
-      ctr            += 1 - isPadding[i];
+        isPadding[i]   <== IsEqual()([data[i], -1]);
+        zeroed_data[i] <== (1 - isPadding[i]) * data[i];
+        mult_factor[i] <== (1 - isPadding[i]) * ciphertext_digest + isPadding[i];
+        ciphertext_digest_pow[i+1] <== ciphertext_digest_pow[i] * mult_factor[i];
     }
     signal pt_digest <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_data, ciphertext_digest, step_in[2]);
     log("inner plaintext_digest: ", pt_digest);
@@ -129,7 +132,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     log("pow_accumulation: ", pow_accumulation[DATA_BYTES]);
     body_accum[0]     <== (1 - body_ctr_is_zero); // Stays zero so we accumalate the body digest
     // Set this to what the previous digest was
-    body_digest[0]    <== body_monomials[0] * zeroed_data[0]; 
+    body_digest[0]    <== body_monomials[0] * zeroed_data[0];
     for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
         body_accum[i + 1]        <== body_accum[i] + State[i + 1].parsing_body * (1 - isPadding[i + 1]);
         body_switch[i]           <== IsEqual()([body_accum[i + 1], 1]);
@@ -137,11 +140,10 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
         body_digest[i + 1]       <== body_digest[i] + body_monomials[i + 1] * zeroed_data[i + 1];
     }
 
-    // TODO: removed body_digest_hashed from step_out[0], add PD(b[p]) if body 
     // Note: This body digest computed here is just a diff since we added the other component before
     step_out[0] <== step_in[0] - pt_digest + body_digest[DATA_BYTES - 1];
     step_out[1] <== step_in[1];
-    step_out[2] <== ctr;
+    step_out[2] <== ciphertext_digest_pow[DATA_BYTES];
     // pass machine state to next iteration
     step_out[3] <== PolynomialDigest(8)(
         [State[DATA_BYTES - 1].next_parsing_start,
@@ -152,9 +154,9 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
          State[DATA_BYTES - 1].next_line_status,
          inner_main_digest[DATA_BYTES],
          body_digest[DATA_BYTES - 1]
-         ],
-         ciphertext_digest
-         );
+        ],
+        ciphertext_digest
+    );
     step_out[4] <== step_in[4];
     step_out[5] <== step_in[5] - num_matched; // No longer check above, subtract here so circuits later check
     log("left_to_match = ", step_out[5]);

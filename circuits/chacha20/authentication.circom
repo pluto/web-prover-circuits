@@ -148,19 +148,22 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
   }
 
   // Count the number of non-padding bytes
-  var plaintext_length = step_in[1];
+  signal ciphertext_digest_pow[DATA_BYTES+1];
+  ciphertext_digest_pow[0] <== step_in[1];
+  signal mult_factor[DATA_BYTES];
   // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
   signal zeroed_plaintext[DATA_BYTES];
   for(var i = 0 ; i < DATA_BYTES ; i++) {
     zeroed_plaintext[i] <== (1 - isPadding[i]) * plaintext[i];
-    plaintext_length += 1 - isPadding[i];
+    mult_factor[i] <== (1 - isPadding[i]) * ciphertext_digest + isPadding[i];
+    ciphertext_digest_pow[i+1] <== ciphertext_digest_pow[i] * mult_factor[i];
   }
   signal part_ciphertext_digest <== DataHasherWithSeed(DATA_BYTES)(step_in[10],bigEndianCiphertext);
-  
+
   signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, step_in[1]);
 
   step_out[0] <== step_in[0] + step_in[10] - part_ciphertext_digest + plaintext_digest;
-  step_out[1] <== plaintext_length;
+  step_out[1] <== ciphertext_digest_pow[DATA_BYTES];
   // TODO: I was lazy and put this at the end instead of in a better spot
   step_out[10] <== part_ciphertext_digest;
   for (var i = 2 ; i < PUBLIC_IO_LENGTH - 1 ; i++) {

@@ -1,7 +1,6 @@
 import { circomkit, WitnessTester, PolynomialDigest, http_response_plaintext, http_start_line, http_header_0, http_header_1, http_body, modAdd, PUBLIC_IO_VARIABLES } from "../common";
 import { assert } from "chai";
 import { poseidon1 } from "poseidon-lite";
-import { SignalValueType } from "snarkjs";
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
@@ -39,6 +38,7 @@ describe("HTTP Verification", async () => {
     let machine_state = Array(8).fill(0);
     machine_state[0] = 1; // Sets the parsing start to 1
     let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
+    step_in[2] = 1; // ciphertext_digest_pow
     step_in[3] = 1; // This would be the PD of the machine state given 1 is in the x^0 coeff
 
     // Get all the hashes we need
@@ -144,6 +144,7 @@ describe("HTTP Verification: Split", async () => {
     let machine_state = Array(8).fill(0);
     machine_state[0] = 1; // Sets the parsing start to 1
     let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
+    step_in[2] = 1; // ciphertext_digest_pow
     step_in[3] = 1; // This would be the PD of the machine state given 1 is in the x^0 coeff
 
     // Get all the hashes we need

@@ -362,6 +362,14 @@ function modMul(a: bigint, b: bigint): bigint {
     return (a * b) % PRIME;
 }
 
+export function modPow(base: bigint, exponent: bigint): bigint {
+    let result = ONE;
+    for (let i = 0; i < exponent; i++) {
+        result = modMul(result, base);
+    }
+    return result;
+}
+
 export function jsonTreeHasher(
     polynomialInput: bigint,
     keySequence: JsonMaskType[],
