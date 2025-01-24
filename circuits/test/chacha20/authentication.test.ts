@@ -49,9 +49,9 @@ describe("Plaintext Authentication", () => {
                     0x16, 0x39, 0xd6, 0x24, 0xe6, 0x51, 0x52, 0xab, 0x8f, 0x53, 0x0c, 0x35, 0x9f, 0x08, 0x61, 0xd8
                 ];
             const counterBits = uintArray32ToBits([1])[0];
-            let ciphertext_digest = DataHasher(ciphertextBytes);
+            let ciphertext_digest = DataHasher(ciphertextBytes, BigInt(0));
             let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
-            step_in[1] = BigInt(1);
+            step_in[1] = BigInt(1); // ciphertext_digest_pow initialises as 1
             let w = await circuit.compute({
                 key: toInput(Buffer.from(keyBytes)),
                 nonce: toInput(Buffer.from(nonceBytes)),
@@ -112,7 +112,7 @@ describe("Plaintext Authentication", () => {
             let totalLength = 128;
             let paddedPlaintextBytes = plaintextBytes.concat(Array(totalLength - plaintextBytes.length).fill(-1));
             const counterBits = uintArray32ToBits([1])[0];
-            let ciphertext_digest = DataHasher(ciphertextBytes);
+            let ciphertext_digest = DataHasher(ciphertextBytes, BigInt(0));
             let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
             step_in[1] = BigInt(1);
             let w = await circuit.compute({
@@ -174,7 +174,7 @@ describe("Plaintext Authentication", () => {
             let totalLength = 128;
             let paddedPlaintextBytes = plaintextBytes.concat(Array(totalLength - plaintextBytes.length).fill(-1));
             const counterBits0 = uintArray32ToBits([1])[0];
-            let ciphertext_digest = DataHasher(ciphertextBytes);
+            let ciphertext_digest = DataHasher(ciphertextBytes, BigInt(0));
             console.log("ciphertext_digest: ", ciphertext_digest);
             let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
             step_in[1] = BigInt(1);

@@ -24,7 +24,7 @@ describe("DataHasher", () => {
         );
     });
     // Check that TS version of DataHasher also is correct
-    assert.deepEqual(DataHasher(Array(16).fill(0)), all_zero_hash);
+    assert.deepEqual(DataHasher(Array(16).fill(0), BigInt(0)), all_zero_hash);
 
     it("witness: in = [-1,...x16]", async () => {
         const input = Array(16).fill(-1);
@@ -34,7 +34,7 @@ describe("DataHasher", () => {
         );
     });
     // Check that TS version of DataHasher also is correct
-    assert.deepEqual(DataHasher(Array(16).fill(-1)), 0);
+    assert.deepEqual(DataHasher(Array(16).fill(-1), BigInt(0)), 0);
 
     it("witness: in = [1,0,...x15]", async () => {
         let input = Array(16).fill(0);
@@ -79,17 +79,17 @@ describe("DataHasherHTTP", () => {
     });
 
     it("witness: HTTP bytes", async () => {
-        let hash = DataHasher(http_response_plaintext);
+        let hash = DataHasher(http_response_plaintext, BigInt(0));
         assert.deepEqual(String(hash), "2195365663909569734943279727560535141179588918483111718403427949138562480675");
         await circuit.expectPass({ in: http_response_plaintext }, { out: "2195365663909569734943279727560535141179588918483111718403427949138562480675" });
     });
 
-    let padded_hash = DataHasher(padded_http_start_line);
+    let padded_hash = DataHasher(padded_http_start_line, BigInt(0));
     it("witness: padded HTTP start line", async () => {
         await circuit.expectPass({ in: padded_http_start_line }, { out: padded_hash });
     });
 
-    let hash = DataHasher(http_start_line);
+    let hash = DataHasher(http_start_line, BigInt(0));
     it("witness: unpadded HTTP start line", async () => {
         await circuit_small.expectPass({ in: http_start_line.concat(Array(32 - http_start_line.length).fill(-1)) }, { out: hash });
     });

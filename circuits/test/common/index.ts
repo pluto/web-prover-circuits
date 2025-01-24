@@ -358,6 +358,10 @@ export function modAdd(a: bigint, b: bigint): bigint {
     return ((a + b) % PRIME + PRIME) % PRIME;
 }
 
+export function modSub(a: bigint, b: bigint): bigint {
+    return ((a - b) % PRIME + PRIME) % PRIME;
+}
+
 function modMul(a: bigint, b: bigint): bigint {
     return (a * b) % PRIME;
 }
@@ -461,21 +465,22 @@ export function InitialDigest(
     manifest: Manifest,
     ciphertexts: number[][],
     maxStackHeight: number
-): [bigint, bigint] {
-    let ciphertextDigests: bigint[] = [];
+): [bigint, bigint[]] {
     // Create a digest of the ciphertext itself
-    ciphertexts.forEach(ciphertext => {
-        const ciphertextDigest = DataHasher(ciphertext);
-        ciphertextDigests.push(ciphertextDigest);
-    });
+    let ciphertextDigests = [BigInt(0)];
+    for (var i = 0; i < ciphertexts.length; i++) {
+        ciphertextDigests.push(DataHasher(ciphertexts[i], ciphertextDigests[i]));
+    }
 
     let ciphertextDigest = ciphertextDigests.reduce((a, b) => a + b, BigInt(0));
+    console.log("Ciphertext Digest: ", ciphertextDigest);
 
     // Digest the start line using the ciphertext_digest as a random input
     const startLineBytes = strToBytes(
         `${manifest.response.version} ${manifest.response.status} ${manifest.response.message}`
     );
     const startLineDigest = PolynomialDigest(startLineBytes, ciphertextDigest, BigInt(0));
+    const startLineDigestHashed = poseidon1([startLineDigest]);
 
     // Digest all the headers
     const headerBytes = headersToBytes(manifest.response.headers);
@@ -489,18 +494,17 @@ export function InitialDigest(
         manifest.response.body.json,
         maxStackHeight
     );
-    const jsonSequenceDigest = compressTreeHash(ciphertextDigest, jsonTreeHash);
+    const jsonSequenceDigestHash = poseidon1([compressTreeHash(ciphertextDigest, jsonTreeHash)]);
 
-    // Put all the digests into an array
-    const allDigests: bigint[] = [jsonSequenceDigest, startLineDigest, ...headersDigest];
 
     // Calculate manifest digest
-    const manifestDigest = modAdd(
-        ciphertextDigest,
-        allDigests.map(d => poseidon1([d])).reduce((a, b) => modAdd(a, b), ZERO)
+    const headerVerificationLock = modAdd(
+        startLineDigestHashed,
+        headersDigest.map(d => poseidon1([d])).reduce((a, b) => modAdd(a, b), ZERO)
     );
 
-    return [ciphertextDigest, manifestDigest];
+    const numMatches = 1 + Object.keys(manifest.response.headers).length;
+    return [ciphertextDigest, [ciphertextDigest, BigInt(1), BigInt(1), BigInt(1), headerVerificationLock, BigInt(numMatches), BigInt(0), BigInt(1), BigInt(0), jsonSequenceDigestHash, BigInt(0)]];
 }
 
 export function MockManifest(): Manifest {

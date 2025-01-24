@@ -143,9 +143,6 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
       bigEndianCiphertext[i*4 + j] <== isPadding[i * 4 + j] * (-1 - toCiphertextBytes[i].words[j]) + toCiphertextBytes[i].words[j]; // equal to: (isPadding[i * 4 + j] * (-1)) + (1 - isPadding[i * 4 + j]) * toCiphertextBytes[i].words[j];
     }
   }
-  for(var i = 0 ; i < 64 ; i++) {
-    log("cipherText[",i,"] = ", bigEndianCiphertext[i]);
-  }
 
   // Count the number of non-padding bytes
   signal ciphertext_digest_pow[DATA_BYTES+1];
@@ -162,6 +159,7 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
 
   signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, step_in[1]);
 
+  // TODO (Sambhav): step_in[10] might not be the right thing to add here
   step_out[0] <== step_in[0] + step_in[10] - part_ciphertext_digest + plaintext_digest;
   step_out[1] <== ciphertext_digest_pow[DATA_BYTES];
   // TODO: I was lazy and put this at the end instead of in a better spot
@@ -173,4 +171,5 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
   for (var i = 0; i < PUBLIC_IO_LENGTH ; i++) {
     log("step_out[",i,"]", step_out[i]);
   }
+  log("xxxxxx Authentication Done xxxxxx");
 }
