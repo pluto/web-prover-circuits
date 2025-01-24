@@ -174,13 +174,13 @@ describe("HTTP Verification: Split", async () => {
     // dummy[41] = 1;
     // console.log("pow accumulation manual:", PolynomialDigest(dummy, mock_ct_digest, BigInt(0)));
 
+    const mid = http_response_plaintext.length / 2;
+    const [http_response_plaintext_0, http_response_plaintext_1] = [http_response_plaintext.slice(0, mid), http_response_plaintext.slice(mid)];
+
     it("witness: http_response_plaintext, no header", async () => {
         // For this specific test, we need these registers set
         step_in[4] = start_line_digest_hashed;
         step_in[5] = 1; // Total number of matches to expect (sl)
-
-        const mid = http_response_plaintext.length / 2;
-        const [http_response_plaintext_0, http_response_plaintext_1] = [http_response_plaintext.slice(0, mid), http_response_plaintext.slice(mid)];
 
         // Run the HTTP circuit
         // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
@@ -197,7 +197,6 @@ describe("HTTP Verification: Split", async () => {
         let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("16202935654388484508586282728137211277659125633297860980774265969941813526293")];
         // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
         let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
-        next_step_in[6] = BigInt(42); // OVERRIDING
         let http_nivc_compute_1 = await HTTPVerification.compute({
             step_in: next_step_in,
             data: http_response_plaintext_1,
@@ -208,58 +207,87 @@ describe("HTTP Verification: Split", async () => {
         assert.deepEqual((http_nivc_compute_1.step_out as BigInt[])[0], output_difference);
     });
 
-    // it("witness: http_response_plaintext, one header", async () => {
-    //     // For this specific test, we need these registers set
-    //     step_in[4] = start_line_digest_hashed + header_0_digest_hashed;
-    //     step_in[5] = 2; // Total number of matches to expect (sl, h0)
+    it("witness: http_response_plaintext, one header", async () => {
+        // For this specific test, we need these registers set
+        step_in[4] = start_line_digest_hashed + header_0_digest_hashed;
+        step_in[5] = 2; // Total number of matches to expect (sl, h0)
 
-    //     // Run the HTTP circuit
-    //     // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
-    //     let http_nivc_compute = await HTTPVerification.compute({
-    //         step_in,  // This doesn't really matter for this test
-    //         data: http_response_plaintext,
-    //         machine_state,
-    //         main_digests: [start_line_digest, header_0_digest].concat(Array(1).fill(0)),
-    //         ciphertext_digest: mock_ct_digest
-    //     }, ["step_out"]);
-    //     // I fucking hate circomkit
-    //     assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], output_difference);
-    // });
+        // Run the HTTP circuit
+        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
+        let http_nivc_compute_0 = await HTTPVerification.compute({
+            step_in,  // This doesn't really matter for this test
+            data: http_response_plaintext_0,
+            machine_state,
+            main_digests: [start_line_digest, header_0_digest].concat(Array(1).fill(0)),
+            ciphertext_digest: mock_ct_digest
+        }, ["step_out"]);
 
-    // it("witness: http_response_plaintext, two headers", async () => {
-    //     // For this specific test, we need these registers set
-    //     step_in[4] = start_line_digest_hashed + header_0_digest_hashed + header_1_digest_hashed;
-    //     step_in[5] = 3; // Total number of matches to expect (sl, h0, h1)
+        let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("16202935654388484508586282728137211277659125633297860980774265969941813526293")];
+        // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
+        let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
+        let http_nivc_compute_1 = await HTTPVerification.compute({
+            step_in: next_step_in,
+            data: http_response_plaintext_1,
+            machine_state: next_machine_state,
+            main_digests: [start_line_digest, header_0_digest].concat(Array(1).fill(0)),
+            ciphertext_digest: mock_ct_digest
+        }, ["step_out"]);
+        assert.deepEqual((http_nivc_compute_1.step_out as BigInt[])[0], output_difference);
+    });
 
-    //     // Run the HTTP circuit
-    //     // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
-    //     let http_nivc_compute = await HTTPVerification.compute({
-    //         step_in,  // This doesn't really matter for this test
-    //         data: http_response_plaintext,
-    //         machine_state,
-    //         main_digests: [start_line_digest, header_0_digest, header_1_digest],
-    //         ciphertext_digest: mock_ct_digest
-    //     }, ["step_out"]);
-    //     // I fucking hate circomkit
-    //     assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], output_difference);
-    // });
+    it("witness: http_response_plaintext, two headers", async () => {
+        // For this specific test, we need these registers set
+        step_in[4] = start_line_digest_hashed + header_0_digest_hashed + header_1_digest_hashed;
+        step_in[5] = 3; // Total number of matches to expect (sl, h0, h1)
 
-    // it("witness: http_response_plaintext, two headers, order does not matter", async () => {
-    //     // For this specific test, we need these registers set
-    //     step_in[4] = start_line_digest_hashed + header_0_digest_hashed + header_1_digest_hashed;
-    //     step_in[5] = 3; // Total number of matches to expect (sl, h0, h1)
+        // Run the HTTP circuit
+        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
+        let http_nivc_compute_0 = await HTTPVerification.compute({
+            step_in,  // This doesn't really matter for this test
+            data: http_response_plaintext_0,
+            machine_state,
+            main_digests: [start_line_digest, header_0_digest, header_1_digest],
+            ciphertext_digest: mock_ct_digest
+        }, ["step_out"]);
 
-    //     // Run the HTTP circuit
-    //     // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
-    //     let http_nivc_compute = await HTTPVerification.compute({
-    //         step_in,  // This doesn't really matter for this test
-    //         data: http_response_plaintext,
-    //         machine_state,
-    //         main_digests: [header_1_digest, start_line_digest, header_0_digest],
-    //         ciphertext_digest: mock_ct_digest
-    //     }, ["step_out"]);
-    //     // I fucking hate circomkit
-    //     // TODO: need to check more of the assertions
-    //     assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], output_difference);
-    // });
+        let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("16202935654388484508586282728137211277659125633297860980774265969941813526293")];
+        // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
+        let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
+        let http_nivc_compute_1 = await HTTPVerification.compute({
+            step_in: next_step_in,
+            data: http_response_plaintext_1,
+            machine_state: next_machine_state,
+            main_digests: [start_line_digest, header_0_digest, header_1_digest],
+            ciphertext_digest: mock_ct_digest
+        }, ["step_out"]);
+        assert.deepEqual((http_nivc_compute_1.step_out as BigInt[])[0], output_difference);
+    });
+
+    it("witness: http_response_plaintext, two headers, order does not matter", async () => {
+        // For this specific test, we need these registers set
+        step_in[4] = start_line_digest_hashed + header_0_digest_hashed + header_1_digest_hashed;
+        step_in[5] = 3; // Total number of matches to expect (sl, h0, h1)
+
+        // Run the HTTP circuit
+        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
+        let http_nivc_compute_0 = await HTTPVerification.compute({
+            step_in,  // This doesn't really matter for this test
+            data: http_response_plaintext_0,
+            machine_state,
+            main_digests: [header_1_digest, start_line_digest, header_0_digest],
+            ciphertext_digest: mock_ct_digest
+        }, ["step_out"]);
+
+        let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("16202935654388484508586282728137211277659125633297860980774265969941813526293")];
+        // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
+        let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
+        let http_nivc_compute_1 = await HTTPVerification.compute({
+            step_in: next_step_in,
+            data: http_response_plaintext_1,
+            machine_state: next_machine_state,
+            main_digests: [header_1_digest, start_line_digest, header_0_digest],
+            ciphertext_digest: mock_ct_digest
+        }, ["step_out"]);
+        assert.deepEqual((http_nivc_compute_1.step_out as BigInt[])[0], output_difference);
+    });
 });
