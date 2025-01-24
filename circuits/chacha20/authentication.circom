@@ -143,6 +143,9 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
       bigEndianCiphertext[i*4 + j] <== isPadding[i * 4 + j] * (-1 - toCiphertextBytes[i].words[j]) + toCiphertextBytes[i].words[j]; // equal to: (isPadding[i * 4 + j] * (-1)) + (1 - isPadding[i * 4 + j]) * toCiphertextBytes[i].words[j];
     }
   }
+  for(var i = 0 ; i < 64 ; i++) {
+    log("cipherText[",i,"] = ", bigEndianCiphertext[i]);
+  }
 
   // Count the number of non-padding bytes
   var plaintext_length = step_in[1];
@@ -152,12 +155,19 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
     zeroed_plaintext[i] <== (1 - isPadding[i]) * plaintext[i];
     plaintext_length += 1 - isPadding[i];
   }
-  signal part_ciphertext_digest <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
+  signal part_ciphertext_digest <== DataHasherWithSeed(DATA_BYTES)(step_in[10],bigEndianCiphertext);
+  
   signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, step_in[1]);
 
-  step_out[0] <== step_in[0] - part_ciphertext_digest + plaintext_digest;
+  step_out[0] <== step_in[0] + step_in[10] - part_ciphertext_digest + plaintext_digest;
   step_out[1] <== plaintext_length;
-  for (var i = 2 ; i < PUBLIC_IO_LENGTH ; i++) {
+  // TODO: I was lazy and put this at the end instead of in a better spot
+  step_out[10] <== part_ciphertext_digest;
+  for (var i = 2 ; i < PUBLIC_IO_LENGTH - 1 ; i++) {
     step_out[i] <== step_in[i];
+  }
+
+  for (var i = 0; i < PUBLIC_IO_LENGTH ; i++) {
+    log("step_out[",i,"]", step_out[i]);
   }
 }
