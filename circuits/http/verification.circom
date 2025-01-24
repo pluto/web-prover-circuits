@@ -178,4 +178,5 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {
         log("step_out[",i,"] = ", step_out[i]);
     }
+    log("xxxxx HTTP Verification Done xxxxx");
 }

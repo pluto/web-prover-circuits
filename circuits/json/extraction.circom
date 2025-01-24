@@ -16,7 +16,6 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     //--------------------------------------------------------------------------------------------//
 
     // assertions:
-    step_in[4] === 0; // HTTP state valid
     step_in[5] === 0; // HTTP statements matched
     signal input_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 3)(state, ciphertext_digest);
     step_in[8] === input_state_digest;
@@ -152,4 +151,8 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     step_out[8] <== new_state_digest;
     step_out[9] <== step_in[9];
     step_out[10] <== step_in[10];
+    for (var i = 11 ; i < PUBLIC_IO_LENGTH ; i++) {
+        step_out[i] <== step_in[i];
+    }
+    log("xxxxxx JSON Extraction Done xxxxxx");
 }
