@@ -1,5 +1,7 @@
 use super::*;
 
+pub mod parser;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum JsonKey {
