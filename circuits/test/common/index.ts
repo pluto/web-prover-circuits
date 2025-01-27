@@ -354,8 +354,8 @@ const PRIME = BigInt("2188824287183927522224640574525727508854836440041603434369
 const ONE = BigInt(1);
 const ZERO = BigInt(0);
 
-export function modAdd(a: bigint, b: bigint): bigint {
-    return ((a + b) % PRIME + PRIME) % PRIME;
+export function modAdd(...args: bigint[]): bigint {
+    return args.reduce((acc, val) => ((acc + val) % PRIME + PRIME) % PRIME, BigInt(0));
 }
 
 export function modSub(a: bigint, b: bigint): bigint {
@@ -433,6 +433,13 @@ export function compressTreeHash(
     return accumulated;
 }
 
+interface ManifestRequest {
+    method: string,
+    url: string,
+    version: string,
+    headers: Record<string, string[]>,
+}
+
 interface ManifestResponse {
     version: string;
     status: string;
@@ -444,6 +451,7 @@ interface ManifestResponse {
 }
 
 export interface Manifest {
+    request: ManifestRequest;
     response: ManifestResponse;
 }
 
@@ -507,6 +515,76 @@ export function InitialDigest(
     return [ciphertextDigest, [ciphertextDigest, BigInt(1), BigInt(1), BigInt(1), headerVerificationLock, BigInt(numMatches), BigInt(0), BigInt(1), BigInt(0), jsonSequenceDigestHash, BigInt(0)]];
 }
 
+export function CombinedInitialDigest(
+    manifest: Manifest,
+    request_ciphertexts: number[][],
+    response_ciphertexts: number[][],
+    maxStackHeight: number
+): [bigint, bigint[], bigint[]] {
+    // Create a digest of the ciphertext itself
+    let ciphertextDigests = [BigInt(0)];
+    for (var i = 0; i < request_ciphertexts.length; i++) {
+        ciphertextDigests.push(DataHasher(request_ciphertexts[i], ciphertextDigests[ciphertextDigests.length - 1]));
+    }
+    for (var i = 0; i < response_ciphertexts.length; i++) {
+        ciphertextDigests.push(DataHasher(response_ciphertexts[i], ciphertextDigests[ciphertextDigests.length - 1]));
+    }
+
+    let ciphertextDigest = ciphertextDigests[ciphertextDigests.length - 1];
+    console.log("Ciphertext Digest: ", ciphertextDigest);
+
+    // Digest the start line using the ciphertext_digest as a random input
+    const requestStartLineBytes = strToBytes(
+        `${manifest.request.method} ${manifest.request.url} ${manifest.request.version}`
+    );
+    const requestStartLineDigest = PolynomialDigest(requestStartLineBytes, ciphertextDigest, BigInt(0));
+    const requestStartLineDigestHashed = poseidon1([requestStartLineDigest]);
+
+    const responseStartLineBytes = strToBytes(
+        `${manifest.response.version} ${manifest.response.status} ${manifest.response.message}`
+    );
+    const responseStartLineDigest = PolynomialDigest(responseStartLineBytes, ciphertextDigest, BigInt(0));
+    const responseStartLineDigestHashed = poseidon1([responseStartLineDigest]);
+
+    // Digest all the headers
+    const requestHeaderBytes = headersToBytes(manifest.request.headers);
+    const requestHeadersDigest = requestHeaderBytes.map(bytes =>
+        PolynomialDigest(bytes, ciphertextDigest, BigInt(0))
+    );
+    const responseHeaderBytes = headersToBytes(manifest.response.headers);
+    const responseHeadersDigest = responseHeaderBytes.map(bytes =>
+        PolynomialDigest(bytes, ciphertextDigest, BigInt(0))
+    );
+
+    // Digest the JSON sequence
+    const jsonTreeHash = jsonTreeHasher(
+        ciphertextDigest,
+        manifest.response.body.json,
+        maxStackHeight
+    );
+    const jsonSequenceDigestHash = poseidon1([compressTreeHash(ciphertextDigest, jsonTreeHash)]);
+
+
+    // Calculate manifest digest
+    let headerVerificationLock = modAdd(
+        requestStartLineDigestHashed,
+        requestHeadersDigest.map(d => poseidon1([d])).reduce((a, b) => modAdd(a, b), ZERO)
+    );
+    headerVerificationLock = modAdd(
+        headerVerificationLock,
+        responseStartLineDigestHashed,
+    );
+    headerVerificationLock = modAdd(
+        headerVerificationLock,
+        responseHeadersDigest.map(d => poseidon1([d])).reduce((a, b) => modAdd(a, b), ZERO)
+    );
+
+    let allDigests = [requestStartLineDigest, responseStartLineDigest, ...requestHeadersDigest, ...responseHeadersDigest];
+
+    const numMatches = 1 + Object.keys(manifest.response.headers).length + 1 + Object.keys(manifest.request.headers).length;
+    return [ciphertextDigest, [ciphertextDigest, BigInt(1), BigInt(1), BigInt(1), headerVerificationLock, BigInt(numMatches), BigInt(0), BigInt(1), BigInt(0), jsonSequenceDigestHash, BigInt(0)], allDigests];
+}
+
 export function MockManifest(): Manifest {
     const headers: Record<string, string[]> = {
         "content-type": ["application/json; charset=utf-8"],
@@ -522,6 +600,12 @@ export function MockManifest(): Manifest {
     ];
 
     return {
+        request: {
+            method: "GET",
+            url: "/",
+            version: "HTTP/1.1",
+            headers: {}
+        },
         response: {
             status: "200",
             version: "HTTP/1.1",

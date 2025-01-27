@@ -112,6 +112,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     }
 
     // BODY
+    // TODO: this is incorrect. If http body ctr = 1040, then pow_accumulation[DATA_BYTES] will be incorrect.
     signal pow_accumulation[DATA_BYTES+1];
     signal body_ctr_is_zero <== IsZero()(step_in[6]);
     pow_accumulation[0] <== body_ctr_is_zero * State[0].parsing_body + (1 - body_ctr_is_zero); // checks if we are in the body

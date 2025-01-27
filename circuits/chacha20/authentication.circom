@@ -161,13 +161,23 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
 
   signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, step_in[1]);
 
-  // TODO (Sambhav): step_in[10] might not be the right thing to add here
+  log("plaintext_digest: ", plaintext_digest);
+
   step_out[0] <== step_in[0] + step_in[10] - part_ciphertext_digest + plaintext_digest;
   step_out[1] <== ciphertext_digest_pow[DATA_BYTES];
   // TODO: I was lazy and put this at the end instead of in a better spot
   step_out[10] <== part_ciphertext_digest;
-  for (var i = 2 ; i < PUBLIC_IO_LENGTH - 1 ; i++) {
-    step_out[i] <== step_in[i];
+
+  // reset HTTP Verification inputs
+  step_out[2] <== 1; // Ciphertext digest POW accumulator
+  step_out[3] <== 1; // Machine state hash digest
+  for (var i = 4 ; i < PUBLIC_IO_LENGTH - 1 ; i++) {
+    if (i == 6) {
+      // TODO: might not be the most clean
+      step_out[i] <== 0; // Body counter
+    } else {
+      step_out[i] <== step_in[i];
+    }
   }
 
   for (var i = 0; i < PUBLIC_IO_LENGTH ; i++) {
