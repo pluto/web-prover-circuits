@@ -159,8 +159,9 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
         if machine.status == Status::None {
           machine.status = Status::ParsingNumber;
         },
-      _ => {
-        output.push(machine.clone());
+      _ => match machine.status {
+        Status::ParsingNumber => machine.status = Status::None,
+        _ => output.push(machine.clone()),
       },
     }
   }
