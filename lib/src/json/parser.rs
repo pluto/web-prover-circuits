@@ -67,7 +67,7 @@ pub enum Location {
   ArrayIndex(usize),
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Status {
   #[default]
   None,
@@ -82,6 +82,7 @@ const END_BRACKET: u8 = 93;
 const COLON: u8 = 58;
 const COMMA: u8 = 44;
 const QUOTE: u8 = 34;
+const NUMBER: [u8; 10] = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57];
 
 pub fn parse<const MAX_STACK_HEIGHT: usize>(
   bytes: &[u8],
@@ -154,6 +155,10 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
             "Quote found while parsing number!".to_string(),
           )),
       },
+      c if NUMBER.contains(&c) =>
+        if machine.status == Status::None {
+          machine.status = Status::ParsingNumber;
+        },
       _ => {
         output.push(machine.clone());
       },
