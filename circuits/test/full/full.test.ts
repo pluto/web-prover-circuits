@@ -3,7 +3,7 @@ import { circomkit, WitnessTester, uintArray32ToBits, http_response_plaintext, h
 import { test_case, TestCaseManifest } from "./testCase.test";
 
 import { toInput } from "../chacha20/authentication.test";
-import { poseidon1, poseidon8 } from "poseidon-lite";
+import { poseidon1 } from "poseidon-lite";
 import { DataHasher } from "../common/poseidon";
 
 // HTTP/1.1 200 OK
@@ -226,8 +226,7 @@ describe("Example NIVC Proof", async () => {
             ciphertext_digest,
         }, ["step_out"]);
         let plaintext_authentication2_step_out = plaintext_authentication2.step_out as bigint[];
-
-        assert.deepEqual(plaintext_authentication2_step_out[0], modAdd(init_nivc_input[0] + plaintext_authentication1_step_out[10], ptDigest - ciphertext_digest));
+        assert.deepEqual(plaintext_authentication2_step_out[0], modAdd(init_nivc_input[0], ptDigest - ciphertext_digest));
 
         // Run HTTPVerification
         let machine_state = Array(8).fill(0);
@@ -290,116 +289,133 @@ describe("Example NIVC Proof", async () => {
             sequence_digest,
             state,
         }, ["step_out"]);
+
         let json_extraction_step_out = json_extraction.step_out as bigint[];
-        // TODO (Sambhav): doesn't match, might be due to step_in[10] in PA circuit
-        // assert.deepEqual(json_extraction_step_out[0], value_digest);
+        assert.deepEqual(json_extraction_step_out[0], value_digest);
         assert.deepEqual(json_extraction_step_out[7], modPow(ciphertext_digest, BigInt(http_body.length)));
         assert.deepEqual(json_extraction_step_out[9], poseidon1([sequence_digest]));
     });
 
-    // it("github example", async () => {
+    it("github example", async () => {
 
-    //     let http_response_plaintext = test_case.plaintext;
-    //     let http_response_ciphertext = test_case.ciphertext;
-    //     let key = test_case.key;
-    //     let iv = test_case.iv;
-    //     let manifest = TestCaseManifest();
+        let http_response_plaintext = test_case.plaintext;
+        let http_response_ciphertext = test_case.ciphertext;
+        let key = test_case.key;
+        let iv = test_case.iv;
+        let manifest = TestCaseManifest();
 
-    //     let http_response_combined = http_response_plaintext[0].concat(http_response_plaintext[1]);
-    //     let http_response_padded = http_response_combined.concat(Array(DATA_BYTES - http_response_combined.length).fill(-1));
-    //     let http_response1_padded = http_response_plaintext[0].concat(Array(DATA_BYTES - http_response_plaintext[0].length).fill(-1));
-    //     let http_response1_0_padded = http_response_plaintext[0].concat(Array(DATA_BYTES - http_response_plaintext[0].length).fill(0));
-    //     let http_response2_padded = http_response_plaintext[1].concat(Array(DATA_BYTES - http_response_plaintext[1].length).fill(-1));
-    //     let http_response2_0_padded = http_response_plaintext[1].concat(Array(DATA_BYTES - http_response_plaintext[1].length).fill(0));
-    //     let ciphertext1_padded = http_response_ciphertext[0].concat(Array(DATA_BYTES - http_response_ciphertext[0].length).fill(-1));
-    //     let ciphertext2_padded = http_response_ciphertext[1].concat(Array(DATA_BYTES - http_response_ciphertext[1].length).fill(-1));
+        let http_response_combined = http_response_plaintext[0].concat(http_response_plaintext[1]);
+        let http_response_padded = http_response_combined.concat(Array(DATA_BYTES - http_response_combined.length).fill(-1));
 
-    //     const [ciphertext_digest, init_nivc_input] = InitialDigest(manifest, [ciphertext1_padded, ciphertext2_padded], MAX_STACK_HEIGHT);
+        let http_response1_padded = http_response_plaintext[0].concat(Array(DATA_BYTES - http_response_plaintext[0].length).fill(-1));
+        let http_response1_0_padded = http_response_plaintext[0].concat(Array(DATA_BYTES - http_response_plaintext[0].length).fill(0));
+        let http_response2_padded = http_response_plaintext[1].concat(Array(DATA_BYTES - http_response_plaintext[1].length).fill(-1));
+        let http_response2_0_padded = http_response_plaintext[1].concat(Array(DATA_BYTES - http_response_plaintext[1].length).fill(0));
+        let ciphertext1_padded = http_response_ciphertext[0].concat(Array(DATA_BYTES - http_response_ciphertext[0].length).fill(-1));
+        let ciphertext2_padded = http_response_ciphertext[1].concat(Array(DATA_BYTES - http_response_ciphertext[1].length).fill(-1));
 
-    //     const counterBits = uintArray32ToBits([1])[0];
-    //     const keyIn = toInput(Buffer.from(key));
+        const [ciphertext_digest, init_nivc_input] = InitialDigest(manifest, [ciphertext1_padded, ciphertext2_padded], MAX_STACK_HEIGHT);
 
-    //     let nonce1 = to_nonce(Uint8Array.from(iv), 1);
-    //     const nonceIn = toInput(Buffer.from(nonce1));
-    //     let plaintext_authentication1 = await PlaintextAuthentication.compute({
-    //         step_in: init_nivc_input,
-    //         plaintext: http_response1_padded,
-    //         key: keyIn,
-    //         nonce: nonceIn,
-    //         counter: counterBits,
-    //         plaintext_index_counter: 0,
-    //         ciphertext_digest,
-    //     }, ["step_out"]);
+        let ptDigest = PolynomialDigest(http_response_combined, ciphertext_digest, BigInt(0));
 
-    //     let pt1Digest = PolynomialDigest(http_response1_0_padded, ciphertext_digest, BigInt(0));
-    //     let ct1Digest = DataHasher(ciphertext1_padded);
-    //     assert.deepEqual(plaintext_authentication1.step_out, init_nivc_input - ct1Digest + pt1Digest);
+        const counterBits = uintArray32ToBits([1])[0];
+        const keyIn = toInput(Buffer.from(key));
+        let nonce1 = to_nonce(Uint8Array.from(iv), 1);
+        const nonceIn = toInput(Buffer.from(nonce1));
+        let plaintext_authentication1 = await PlaintextAuthentication.compute({
+            step_in: init_nivc_input,
+            plaintext: http_response1_padded,
+            key: keyIn,
+            nonce: nonceIn,
+            counter: counterBits,
+            ciphertext_digest,
+        }, ["step_out"]);
+        let plaintext_authentication1_step_out = plaintext_authentication1.step_out as bigint[];
 
-    //     let nonce2 = to_nonce(Uint8Array.from(iv), 2);
-    //     const nonceIn2 = toInput(Buffer.from(nonce2));
-    //     let plaintext_authentication2 = await PlaintextAuthentication.compute({
-    //         step_in: plaintext_authentication1.step_out,
-    //         plaintext: http_response2_padded,
-    //         key: keyIn,
-    //         nonce: nonceIn2,
-    //         counter: counterBits,
-    //         plaintext_index_counter: http_response_plaintext[0].length,
-    //         ciphertext_digest,
-    //     }, ["step_out"]);
+        let pt1Digest = PolynomialDigest(http_response1_0_padded, ciphertext_digest, BigInt(0));
+        let ct1Digest = DataHasher(ciphertext1_padded, BigInt(0));
+        assert.deepEqual(plaintext_authentication1_step_out[0], modAdd(init_nivc_input[0] - ct1Digest, pt1Digest));
 
-    //     let pt2Digest = PolynomialDigest(http_response2_0_padded, ciphertext_digest, BigInt(http_response_plaintext[0].length));
-    //     let ct2Digest = DataHasher(ciphertext2_padded);
-    //     assert.deepEqual(plaintext_authentication2.step_out, modAdd(init_nivc_input - ct1Digest - ct2Digest, pt1Digest + pt2Digest));
+        let nonce2 = to_nonce(Uint8Array.from(iv), 2);
+        const nonceIn2 = toInput(Buffer.from(nonce2));
+        let plaintext_authentication2 = await PlaintextAuthentication.compute({
+            step_in: plaintext_authentication1.step_out,
+            plaintext: http_response2_padded,
+            key: keyIn,
+            nonce: nonceIn2,
+            counter: counterBits,
+            ciphertext_digest,
+        }, ["step_out"]);
+        let plaintext_authentication2_step_out = plaintext_authentication2.step_out as bigint[];
+        assert.deepEqual(plaintext_authentication2_step_out[0], modAdd(init_nivc_input[0], ptDigest - ciphertext_digest));
 
-    //     const http_response_plaintext_digest = PolynomialDigest(http_response_combined, ciphertext_digest, BigInt(0));
+        // Run HTTPVerification
+        const start_line_digest = PolynomialDigest(http_start_line, ciphertext_digest, BigInt(0));
+        let header_0 = test_case.header_0;
+        const header_0_digest = PolynomialDigest(header_0, ciphertext_digest, BigInt(0));
 
-    //     // Run HTTPVerification
-    //     const start_line_digest = PolynomialDigest(http_start_line, ciphertext_digest, BigInt(0));
-    //     let header_0 = test_case.header_0;
-    //     const header_0_digest = PolynomialDigest(header_0, ciphertext_digest, BigInt(0));
+        let main_digests = Array(MAX_NUMBER_OF_HEADERS + 1).fill(0);
+        main_digests[0] = start_line_digest;
+        main_digests[1] = header_0_digest;
+        let machine_state = Array(8).fill(0);
+        machine_state[0] = 1; // Sets the parsing start to 1
 
-    //     let main_digests = Array(MAX_NUMBER_OF_HEADERS + 1).fill(0);
-    //     main_digests[0] = start_line_digest;
-    //     main_digests[1] = header_0_digest;
+        let http_verification1 = await HTTPVerification.compute({
+            step_in: plaintext_authentication2_step_out,
+            ciphertext_digest,
+            data: http_response1_padded,
+            main_digests,
+            machine_state,
+        }, ["step_out"]);
+        let http_verification1_step_out = (http_verification1.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
+        assert.deepEqual(http_verification1_step_out[0], modAdd(init_nivc_input[0] - ciphertext_digest, ptDigest - pt1Digest));
+        assert.deepEqual(http_verification1_step_out[5], BigInt(0)); // all matched
+        assert.deepEqual(http_verification1_step_out[6], BigInt(0)); // body doesn't start yet
 
-    //     let step_in = BigInt(plaintext_authentication2.step_out.toString(10));
-    //     let http_verification = await HTTPVerification.compute({
-    //         step_in,
-    //         ciphertext_digest,
-    //         data: http_response_padded,
-    //         main_digests,
-    //     }, ["step_out"]);
-    //     console.log("http_verification", http_verification.step_out);
-    //     let http_body = http_response_plaintext[1];
-    //     const padded_http_body = http_body.concat(Array(DATA_BYTES - http_body.length).fill(0));
-    //     let http_verification_step_out = BigInt((http_verification.step_out as number[])[0]);
-    //     let body_digest = PolynomialDigest(http_body, ciphertext_digest, BigInt(0));
+        machine_state = [0, 0, 0, 0, 1, 0, 0, 0];
+        let bodyDigest = PolynomialDigest(http_response2_0_padded, ciphertext_digest, BigInt(0));
+        console.log("bodyDigest", bodyDigest);
 
-    //     const body_digest_hashed = poseidon1([body_digest]);
-    //     const start_line_digest_digest_hashed = poseidon1([start_line_digest]);
-    //     const header_0_digest_hashed = poseidon1([header_0_digest]);
-    //     const correct_http_verification_step_out = modAdd(step_in - http_response_plaintext_digest - start_line_digest_digest_hashed - header_0_digest_hashed, body_digest_hashed);
-    //     assert.deepEqual(http_verification_step_out, correct_http_verification_step_out);
+        let http_verification2 = await HTTPVerification.compute({
+            step_in: http_verification1_step_out,
+            ciphertext_digest,
+            data: http_response2_padded,
+            main_digests,
+            machine_state,
+        }, ["step_out"]);
+        let http_verification2_step_out = (http_verification2.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
+        assert.deepEqual(http_verification2_step_out[0], modAdd(init_nivc_input[0] - ciphertext_digest, bodyDigest));
+        assert.deepEqual(http_verification2_step_out[5], BigInt(0)); // all matched
+        assert.deepEqual(http_verification2_step_out[6], BigInt(http_response_plaintext[1].length)); // body doesn't start yet
 
-    //     // Run JSONExtraction
-    //     const KEY0 = strToBytes("hello");
-    //     const targetValue = strToBytes("world");
-    //     const keySequence: JsonMaskType[] = [
-    //         { type: "Object", value: KEY0 },
-    //     ];
+        // Run JSONExtraction
+        const KEY0 = strToBytes("hello");
+        const targetValue = strToBytes("world");
+        const keySequence: JsonMaskType[] = [
+            { type: "Object", value: KEY0 },
+        ];
 
-    //     const [stack, treeHashes] = jsonTreeHasher(ciphertext_digest, keySequence, MAX_STACK_HEIGHT);
-    //     const sequence_digest = compressTreeHash(ciphertext_digest, [stack, treeHashes]);
-    //     const value_digest = PolynomialDigest(targetValue, ciphertext_digest, BigInt(0));
+        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
 
-    //     let json_extraction = await JSONExtraction.compute({
-    //         step_in: http_verification_step_out,
-    //         ciphertext_digest,
-    //         data: padded_http_body,
-    //         value_digest,
-    //         sequence_digest,
-    //     }, ["step_out"]);
-    //     console.log("json_extraction", json_extraction.step_out);
-    //     assert.deepEqual(json_extraction.step_out, value_digest);
-    // });
+        const [stack, treeHashes] = jsonTreeHasher(ciphertext_digest, keySequence, MAX_STACK_HEIGHT);
+        const sequence_digest = compressTreeHash(ciphertext_digest, [stack, treeHashes]);
+        const value_digest = PolynomialDigest(targetValue, ciphertext_digest, BigInt(0));
+
+        let json_extraction = await JSONExtraction.compute({
+            step_in: http_verification2_step_out,
+            ciphertext_digest,
+            data: http_response2_padded,
+            value_digest,
+            sequence_digest,
+            state,
+        }, ["step_out"]);
+        let json_extraction_step_out = json_extraction.step_out as bigint[];
+        assert.deepEqual(json_extraction_step_out[0], value_digest);
+        assert.deepEqual(json_extraction_step_out[7], modPow(ciphertext_digest, BigInt(http_response_plaintext[1].length)));
+        assert.deepEqual(json_extraction_step_out[9], poseidon1([sequence_digest]));
+    });
+
+    // TODO: add a 3 iteration test
+    it("3 iterations", async () => {
+    });
 });
