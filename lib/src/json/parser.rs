@@ -6,7 +6,8 @@ pub struct JsonMachine<const MAX_STACK_HEIGHT: usize> {
   //   tree_hash: [[F; 2]; MAX_STACK_HEIGHT],
   monomial: F,
   status:   Status,
-  location: Location,
+  location: Location, /* TODO: Make this also an array at stack height and maybe just make an
+                       * ".into()" to produce the actual stack */
 }
 
 impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
@@ -72,7 +73,7 @@ const COMMA: u8 = 44;
 pub fn parse<const MAX_STACK_HEIGHT: usize>(
   bytes: &[u8],
   polynomial_input: F,
-) -> Vec<JsonMachine<MAX_STACK_HEIGHT>> {
+) -> Result<Vec<JsonMachine<MAX_STACK_HEIGHT>>, WitnessGeneratorError> {
   let mut machine = JsonMachine::<MAX_STACK_HEIGHT>::default();
   let mut output = vec![];
   for char in bytes {
@@ -83,24 +84,63 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           machine.location = Location::ObjectKey;
           machine.stack[machine.pointer()][..].copy_from_slice(&[F::ONE, F::ZERO]);
         },
-        _ => {
-          todo!()
+        _ =>
+          return Err(WitnessGeneratorError::JsonParser(
+            "Start brace in invalid position!".to_string(),
+          )),
+      },
+      END_BRACE => match (machine.status, machine.location) {
+        (Status::None, Location::ObjectValue) => {
+          // TODO: Return to "previous" location
+          // machine.location = Location::ObjectKey;
+          machine.stack[machine.pointer()][..].copy_from_slice(&[F::ZERO, F::ZERO]);
         },
+        _ =>
+          return Err(WitnessGeneratorError::JsonParser(
+            "End brace in invalid position!".to_string(),
+          )),
       },
-      END_BRACE => {
-        todo!()
+      START_BRACKET => match (machine.status, machine.location) {
+        (Status::None, Location::None | Location::ObjectValue | Location::ArrayIndex(_)) => {
+          machine.location = Location::ArrayIndex(0);
+          machine.stack[machine.pointer()][..].copy_from_slice(&[F::ONE + F::ONE, F::ZERO]);
+        },
+        _ =>
+          return Err(WitnessGeneratorError::JsonParser(
+            "Start bracket in invalid position!".to_string(),
+          )),
       },
-      START_BRACKET => {
-        todo!()
+      END_BRACKET => match (machine.status, machine.location) {
+        (Status::None, Location::ArrayIndex(_)) => {
+          // TODO: Return to "previous" location
+          // machine.location = Location::ArrayIndex(0);
+          machine.stack[machine.pointer()][..].copy_from_slice(&[F::ZERO, F::ZERO]);
+        },
+        _ =>
+          return Err(WitnessGeneratorError::JsonParser(
+            "End bracket in invalid position!".to_string(),
+          )),
       },
-      END_BRACKET => {
-        todo!()
+      COLON => match (machine.status, machine.location) {
+        (Status::None, Location::ObjectKey) => {
+          machine.location = Location::ObjectValue;
+          machine.stack[machine.pointer()][..].copy_from_slice(&[F::ONE, F::ONE]);
+        },
+        _ =>
+          return Err(WitnessGeneratorError::JsonParser("Colon in invalid position!".to_string())),
       },
-      COLON => {
-        todo!()
-      },
-      COMMA => {
-        todo!()
+      COMMA => match (machine.status, machine.location) {
+        (Status::None, Location::ObjectValue) => {
+          machine.location = Location::ObjectKey;
+          machine.stack[machine.pointer()][..].copy_from_slice(&[F::ONE, F::ZERO]);
+        },
+        (Status::None, Location::ArrayIndex(idx)) => {
+          machine.location = Location::ArrayIndex(idx + 1);
+          machine.stack[machine.pointer()][..]
+            .copy_from_slice(&[F::ONE, F::from((idx + 1) as u64)]);
+        },
+        _ =>
+          return Err(WitnessGeneratorError::JsonParser("Comma in invalid position!".to_string())),
       },
       _ => {
         output.push(machine.clone());
@@ -108,7 +148,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
     }
   }
 
-  output
+  Ok(output)
 }
 
 #[cfg(test)]
