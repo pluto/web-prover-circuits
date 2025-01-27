@@ -157,6 +157,8 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
   }
   signal part_ciphertext_digest <== DataHasherWithSeed(DATA_BYTES)(step_in[10],bigEndianCiphertext);
 
+  log("part_ciphertext_digest: ", part_ciphertext_digest);
+
   signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, step_in[1]);
 
   // TODO (Sambhav): step_in[10] might not be the right thing to add here

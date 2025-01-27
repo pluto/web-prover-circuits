@@ -472,7 +472,7 @@ export function InitialDigest(
         ciphertextDigests.push(DataHasher(ciphertexts[i], ciphertextDigests[i]));
     }
 
-    let ciphertextDigest = ciphertextDigests.reduce((a, b) => a + b, BigInt(0));
+    let ciphertextDigest = ciphertextDigests[ciphertextDigests.length - 1];
     console.log("Ciphertext Digest: ", ciphertextDigest);
 
     // Digest the start line using the ciphertext_digest as a random input

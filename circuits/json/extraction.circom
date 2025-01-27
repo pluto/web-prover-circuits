@@ -154,5 +154,9 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     for (var i = 11 ; i < PUBLIC_IO_LENGTH ; i++) {
         step_out[i] <== step_in[i];
     }
+
+    for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {
+        log("step_out[", i, "] = ", step_out[i]);
+    }
     log("xxxxxx JSON Extraction Done xxxxxx");
 }
