@@ -19,42 +19,11 @@ pub use self::error::WitnessGeneratorError;
 #[cfg(test)] pub(crate) use self::mock::*;
 use self::{http::*, json::*};
 
-type StackAndTreeHashes = (Vec<[F; 2]>, Vec<[F; 2]>);
-
 pub type E = client_side_prover::provider::Bn256EngineKZG;
 pub type G = <E as Engine>::GE;
 pub type F = <G as Group>::Scalar;
 
-#[cfg(test)]
-pub(crate) fn mock_manifest() -> Manifest {
-  let request = Request {
-    method:  "GET".to_string(),
-    url:     "spotify.com".to_string(),
-    version: "HTTP/1.1".to_string(),
-    headers: HashMap::new(),
-  };
-  let mut headers = HashMap::new();
-  headers.insert("content-type".to_string(), "application/json; charset=utf-8".to_string());
-  headers.insert("content-encoding".to_string(), "gzip".to_string());
-  let body = ResponseBody {
-    json: vec![
-      JsonKey::String("data".to_string()),
-      JsonKey::String("items".to_string()),
-      JsonKey::Num(0),
-      JsonKey::String("profile".to_string()),
-      JsonKey::String("name".to_string()),
-    ],
-  };
-  let response = Response {
-    status: "200".to_string(),
-    version: "HTTP/1.1".to_string(),
-    message: "OK".to_string(),
-    headers,
-    body,
-  };
-  Manifest { request, response }
-}
-
+// TODO: This is really like "initial nivc input maker" or something
 pub fn manifest_digest(
   manifest: &Manifest,
   ciphertext_digest: F,
@@ -161,7 +130,7 @@ impl From<&u8> for ByteOrPad {
 impl From<&ByteOrPad> for halo2curves::bn256::Fr {
   fn from(b: &ByteOrPad) -> Self {
     match b {
-      ByteOrPad::Byte(b) => Self::from(*b as u64),
+      ByteOrPad::Byte(b) => Self::from(u64::from(*b)),
       ByteOrPad::Pad => -Self::one(),
     }
   }
