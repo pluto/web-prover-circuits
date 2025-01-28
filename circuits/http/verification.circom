@@ -1,5 +1,6 @@
 pragma circom 2.1.9;
 
+include "circomlib/circuits/comparators.circom";
 include "machine.circom";
 include "../utils/hash.circom";
 
@@ -112,32 +113,31 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     }
 
     // BODY
-    // TODO: this is incorrect. If http body ctr = 1040, then pow_accumulation[DATA_BYTES] will be incorrect.
-    signal pow_accumulation[DATA_BYTES+1];
-    signal body_ctr_is_zero <== IsZero()(step_in[6]);
-    pow_accumulation[0] <== body_ctr_is_zero * State[0].parsing_body + (1 - body_ctr_is_zero); // checks if we are in the body
-    signal isLessThanCounter[DATA_BYTES]; // check if we are less than the previous iteration counter
-    signal multFactor[DATA_BYTES]; // multiply by the ciphertext digest or 1
-    var logN = log2Ceil(DATA_BYTES);
-    for (var i = 0 ; i < DATA_BYTES ; i++) {
-        isLessThanCounter[i] <== LessThan(logN)([i, step_in[6]]);
-        multFactor[i]        <== isLessThanCounter[i] * ciphertext_digest + (1 - isLessThanCounter[i]);
-        pow_accumulation[i+1] <== pow_accumulation[i] * multFactor[i];
-    }
+    // step_in[6] is the (ciphertext digest ** body_ctr)
+    signal body_ctr_is_zero <== IsEqual()([step_in[6], 0]);
+    signal initial_pow_accumulation <== step_in[6] * ciphertext_digest;
+    signal pow_accumulation <== initial_pow_accumulation + body_ctr_is_zero * State[0].parsing_body; // pow_accumulation = 0 if we are not in the body
 
+    log("pow_accumulation: ", pow_accumulation);
+    signal body_monomials_pow_accumulation[DATA_BYTES]; // power of monomials for the body
     signal body_monomials[DATA_BYTES]; // power of monomials for the body
     signal body_ctr[DATA_BYTES]; // body counter
     signal body_switch[DATA_BYTES -1]; // switch to add the previous monomial or not
     signal body_digest[DATA_BYTES]; // body digest
-    body_monomials[0] <== pow_accumulation[DATA_BYTES];
+    body_monomials[0] <== pow_accumulation; // (ciphertext_digest ** body_ctr) * State.parsing_body (0 if we are not in the body)
     body_ctr[0]     <== body_ctr_is_zero * State[0].parsing_body + (1 - body_ctr_is_zero); // checks if we are in the body
+    log("body_ctr[0] = ", body_ctr[0]);
     // Set this to what the previous digest was
     body_digest[0]    <== body_monomials[0] * zeroed_data[0];
     for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
+        log("State[",i+1,"].parsing_body: ", State[i+1].parsing_body);
         body_ctr[i + 1]        <== body_ctr[i] + State[i + 1].parsing_body * (1 - isPadding[i + 1]);
-        body_switch[i]           <== IsEqual()([body_ctr[i + 1], 1]);
-        body_monomials[i + 1]    <== body_monomials[i] * ciphertext_digest + body_switch[i];
-        body_digest[i + 1]       <== body_digest[i] + body_monomials[i + 1] * zeroed_data[i + 1];
+        body_switch[i]           <== IsEqual()([body_ctr[i + 1], 1]); // check if we are in the body
+        log("body_switch[",i,"] = ", body_switch[i]);
+        body_monomials_pow_accumulation[i] <== body_monomials[i] * ciphertext_digest + body_switch[i]; // add the previous monomial if we are in the body
+        body_monomials[i + 1]    <== (body_monomials[i] - body_monomials_pow_accumulation[i]) * isPadding[i + 1] + body_monomials_pow_accumulation[i]; // do not update monomials if padding
+        body_digest[i + 1]       <== body_digest[i] + body_monomials[i + 1] * zeroed_data[i + 1]; // add the monomial to the digest
+        log("body_digest[",i+1,"] = ", body_digest[i+1]);
     }
 
     // Note: This body digest computed here is just a diff since we added the other component before
@@ -159,7 +159,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     );
     step_out[4] <== step_in[4];
     step_out[5] <== step_in[5] - num_matched; // No longer check above, subtract here so circuits later check
-    step_out[6] <== step_in[6] + body_ctr[DATA_BYTES - 1];
+    step_out[6] <== body_monomials[DATA_BYTES - 1];
 
     for (var i = 7 ; i < PUBLIC_IO_LENGTH ; i++) {
         step_out[i] <== step_in[i];

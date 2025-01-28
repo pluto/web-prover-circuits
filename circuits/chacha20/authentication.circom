@@ -144,6 +144,10 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
     }
   }
 
+  // for (var i = 0 ; i < DATA_BYTES ; i++) {
+  //   log("bigEndianCiphertext[",i,"]", bigEndianCiphertext[i]);
+  // }
+
   // Count the number of non-padding bytes
   signal ciphertext_digest_pow[DATA_BYTES+1];
   ciphertext_digest_pow[0] <== step_in[1];
@@ -169,12 +173,12 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
   step_out[10] <== part_ciphertext_digest;
 
   // reset HTTP Verification inputs
-  step_out[2] <== 1; // Ciphertext digest POW accumulator
-  step_out[3] <== 1; // Machine state hash digest
+  step_out[2] <== step_in[2]; // Ciphertext digest POW accumulator
+  signal default_machine_state[8] <== [1, 0, 0, 0, 0, 0, 0, 0];
+  step_out[3] <== PolynomialDigest(8)(default_machine_state, ciphertext_digest); // Machine state hash digest
   for (var i = 4 ; i < PUBLIC_IO_LENGTH - 1 ; i++) {
     if (i == 6) {
-      // TODO: might not be the most clean
-      step_out[i] <== 0; // Body counter
+      step_out[i] <== 0; // Body ciphertext digest pow counter
     } else {
       step_out[i] <== step_in[i];
     }
