@@ -80,6 +80,8 @@ const COMMA: u8 = 44;
 const QUOTE: u8 = 34;
 const NUMBER: [u8; 10] = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57];
 
+// Tell clippy to eat shit
+#[allow(clippy::too_many_lines)]
 pub fn parse<const MAX_STACK_HEIGHT: usize>(
   bytes: &[u8],
   polynomial_input: F,
@@ -141,10 +143,10 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           return Err(WitnessGeneratorError::JsonParser("Colon in invalid position!".to_string())),
       },
       COMMA => match (machine.clone().status, machine.current_location()) {
-        (Status::None, Location::ObjectValue) => {
+        (Status::None | Status::ParsingNumber(_), Location::ObjectValue) => {
           machine.location[machine.pointer() - 1] = Location::ObjectKey;
         },
-        (Status::None, Location::ArrayIndex(idx)) => {
+        (Status::None | Status::ParsingNumber(_), Location::ArrayIndex(idx)) => {
           machine.location[machine.pointer() - 1] = Location::ArrayIndex(idx + 1);
         },
         _ =>
@@ -152,7 +154,16 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
       },
       QUOTE => match machine.status {
         Status::None => machine.status = Status::ParsingString(String::new()),
-        Status::ParsingString(_) => machine.status = Status::None,
+        Status::ParsingString(_) => {
+          machine.status = Status::None;
+
+          match machine.current_location() {
+            // Clear off the second position if we finish a string while there
+            Location::ArrayIndex(_) | Location::ObjectValue =>
+              machine.label_stack[machine.pointer() - 1].1 = String::new(),
+            _ => {},
+          }
+        },
         Status::ParsingNumber(_) =>
           return Err(WitnessGeneratorError::JsonParser(
             "Quote found while parsing number!".to_string(),
@@ -162,11 +173,11 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
         Status::None => machine.status = Status::ParsingNumber(String::from(c as char)),
         Status::ParsingNumber(mut str) => {
           str.push(*char as char);
-          machine.status = Status::ParsingString(str);
+          machine.status = Status::ParsingNumber(str);
         },
         Status::ParsingString(mut str) => {
           str.push(*char as char);
-          machine.status = Status::ParsingNumber(str);
+          machine.status = Status::ParsingString(str);
         },
       },
 
@@ -176,12 +187,13 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           str.push(*char as char);
           machine.status = Status::ParsingString(str);
         },
-        Status::None => output.push(machine.clone()),
+        Status::None => {},
       },
     }
     machine.write_to_label_stack();
+    output.push(machine.clone());
     dbg!(&machine);
-    dbg!(&RawJsonMachine::from(machine.clone()));
+    // dbg!(&RawJsonMachine::from(machine.clone()));
   }
   Ok(output)
 }
@@ -237,5 +249,18 @@ mod tests {
         .count(),
       1
     );
+  }
+
+  #[rstest]
+  #[case::array_only(r#"[ 42, { "a" : "b" } , [ 0 , 1 ] , "foobar"]"#)]
+  #[case::value_array(
+    r#"{ "k" : [ 420 , 69 , 4200 , 600 ] , "b" : [ "ab" , "ba" , "ccc" , "d" ] }"#
+  )]
+  #[case::value_array_object(r#"{ "a" : [ { "b" : [ 1 , 4 ] } , { "c" : "b" } ] }"#)]
+  #[case::value_object(r#"{ "a" : { "d" : "e" , "e" : "c" } , "e" : { "f" : "a" , "e" : "2" } , "g" : { "h" : { "a" : "c" } } , "ab" : "foobar" , "bc" : 42 , "dc" : [ 0 , 1 , "a" ] }"#)]
+  fn test_json_parser_valid(#[case] input: &str) {
+    let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
+    let states = parse::<10>(input.as_bytes(), polynomial_input).unwrap();
+    assert_eq!(states.last().unwrap().location, [Location::None; 10]);
   }
 }

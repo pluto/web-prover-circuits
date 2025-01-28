@@ -12,6 +12,7 @@ use client_side_prover::traits::{Engine, Group};
 use ff::{Field, PrimeField};
 use light_poseidon::{Poseidon, PoseidonBytesHasher};
 use num_bigint::BigUint;
+#[cfg(test)] use rstest::rstest;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
