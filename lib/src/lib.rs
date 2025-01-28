@@ -64,9 +64,11 @@ pub fn manifest_digest(
   // ----------------------------------------------------------------------------------------------------------------------------------------------- //
   // Digest the JSON sequence
   // ----------------------------------------------------------------------------------------------------------------------------------------------- //
-  let json_tree_hash =
-    json_tree_hasher(ciphertext_digest, &manifest.response.body.json, max_stack_height);
-  let json_sequence_digest = compress_tree_hash(ciphertext_digest, json_tree_hash);
+  let raw_json_machine = RawJsonMachine::<10>::from_chosen_sequence_and_input(
+    ciphertext_digest,
+    &manifest.response.body.json,
+  );
+  let json_sequence_digest = raw_json_machine.compress_tree_hash();
   // ----------------------------------------------------------------------------------------------------------------------------------------------- //
 
   // ----------------------------------------------------------------------------------------------------------------------------------------------- //
