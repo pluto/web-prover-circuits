@@ -1,4 +1,4 @@
-import { circomkit, WitnessTester, PolynomialDigest, http_response_plaintext, http_start_line, http_header_0, http_header_1, http_body, modAdd, PUBLIC_IO_VARIABLES } from "../common";
+import { circomkit, WitnessTester, PolynomialDigest, http_response_plaintext, http_start_line, http_header_0, http_header_1, http_body, modAdd, PUBLIC_IO_VARIABLES, modPow } from "../common";
 import { assert } from "chai";
 import { poseidon1 } from "poseidon-lite";
 
@@ -70,6 +70,7 @@ describe("HTTP Verification", async () => {
         }, ["step_out"]);
         // I fucking hate circomkit
         assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], output_difference);
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[6], modPow(mock_ct_digest, BigInt(http_body.length - 1)));
     });
 
     it("witness: http_response_plaintext, one header", async () => {
@@ -88,6 +89,7 @@ describe("HTTP Verification", async () => {
         }, ["step_out"]);
         // I fucking hate circomkit
         assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], output_difference);
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[6], modPow(mock_ct_digest, BigInt(http_body.length - 1)));
     });
 
     it("witness: http_response_plaintext, two headers", async () => {
@@ -106,6 +108,7 @@ describe("HTTP Verification", async () => {
         }, ["step_out"]);
         // I fucking hate circomkit
         assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], output_difference);
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[6], modPow(mock_ct_digest, BigInt(http_body.length - 1)));
     });
 
     it("witness: http_response_plaintext, two headers, order does not matter", async () => {
@@ -125,6 +128,7 @@ describe("HTTP Verification", async () => {
         // I fucking hate circomkit
         // TODO: need to check more of the assertions
         assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], output_difference);
+        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[6], modPow(mock_ct_digest, BigInt(http_body.length - 1)));
     });
 });
 
@@ -165,15 +169,8 @@ describe("HTTP Verification: Split", async () => {
     console.log("outer plaintext_digest_0: ", plaintext_digest_0);
     console.log("outer plaintext_digest_1: ", plaintext_digest_1);
 
-    let body_digest_0 = PolynomialDigest(http_body.slice(0, 42), mock_ct_digest, BigInt(0));
-    let body_digest_1 = PolynomialDigest(http_body.slice(42), mock_ct_digest, BigInt(42));
-    console.log("outer body_digest_0: ", body_digest_0);
-    console.log("outer body_digest_1: ", body_digest_1);
-    // console.log(body_digest);
-    // console.log(modAdd(body_digest_0, body_digest_1));
-    // let dummy = Array(42).fill(0);
-    // dummy[41] = 1;
-    // console.log("pow accumulation manual:", PolynomialDigest(dummy, mock_ct_digest, BigInt(0)));
+    // let body_digest_0 = PolynomialDigest(http_body.slice(0, 42), mock_ct_digest, BigInt(0));
+    // let body_digest_1 = PolynomialDigest(http_body.slice(42), mock_ct_digest, BigInt(42));
 
     const mid = http_response_plaintext.length / 2;
     const [http_response_plaintext_0, http_response_plaintext_1] = [http_response_plaintext.slice(0, mid), http_response_plaintext.slice(mid)];
@@ -192,8 +189,6 @@ describe("HTTP Verification: Split", async () => {
             main_digests: [start_line_digest].concat(Array(2).fill(0)),
             ciphertext_digest: mock_ct_digest
         }, ["step_out"]);
-        // I fucking hate circomkit
-        // assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], output_difference);
 
         let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("16202935654388484508586282728137211277659125633297860980774265969941813526293")];
         // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
@@ -205,6 +200,7 @@ describe("HTTP Verification: Split", async () => {
             main_digests: [start_line_digest].concat(Array(2).fill(0)),
             ciphertext_digest: mock_ct_digest
         }, ["step_out"]);
+        assert.deepEqual((http_nivc_compute_1.step_out as BigInt[])[6], modPow(mock_ct_digest, BigInt(http_body.length - 1)));
         assert.deepEqual((http_nivc_compute_1.step_out as BigInt[])[0], output_difference);
     });
 
