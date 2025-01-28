@@ -206,8 +206,7 @@ mod tests {
 
     let raw_states = states
       .into_iter()
-      .map(RawJsonMachine::from)
-      .map(|raw| compress_tree_hash(raw.polynomial_input, stack_and_tree_hashes))
-      .collect::<Vec<RawJsonMachine<10>>>();
+      .map(|jmachine| RawJsonMachine::from(jmachine).compress_tree_hash())
+      .collect::<Vec<F>>();
   }
 }
