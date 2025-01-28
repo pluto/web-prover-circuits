@@ -1,19 +1,5 @@
 use super::*;
 
-#[derive(Clone, Debug)]
-pub struct JsonMachine<const MAX_STACK_HEIGHT: usize> {
-  polynomial_input: F,
-  status:           Status,
-  location:         [Location; MAX_STACK_HEIGHT],
-  label_stack:      [(String, String); MAX_STACK_HEIGHT],
-}
-
-#[derive(Clone, Debug)]
-pub struct RawJsonMachine<const MAX_STACK_HEIGHT: usize> {
-  stack:     [(F, F); MAX_STACK_HEIGHT],
-  tree_hash: [(F, F); MAX_STACK_HEIGHT],
-}
-
 impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
   for RawJsonMachine<MAX_STACK_HEIGHT>
 {
@@ -23,17 +9,17 @@ impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
     for (idx, (location, labels)) in value.location.into_iter().zip(value.label_stack).enumerate() {
       stack[idx] = location.into();
       tree_hash[idx] = (
-        polynomial_digest(&labels.0.as_bytes(), value.polynomial_input, 0),
-        polynomial_digest(&labels.1.as_bytes(), value.polynomial_input, 0),
+        polynomial_digest(labels.0.as_bytes(), value.polynomial_input, 0),
+        polynomial_digest(labels.1.as_bytes(), value.polynomial_input, 0),
       );
     }
 
-    RawJsonMachine { stack, tree_hash }
+    Self { polynomial_input: value.polynomial_input, stack, tree_hash }
   }
 }
 
 impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
-  pub fn current_location(&self) -> Location {
+  fn current_location(&self) -> Location {
     for i in 0..MAX_STACK_HEIGHT {
       if self.location[i] == Location::None {
         if i == 0 {
@@ -45,7 +31,7 @@ impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
     self.location[MAX_STACK_HEIGHT - 1]
   }
 
-  pub fn pointer(&self) -> usize {
+  fn pointer(&self) -> usize {
     for i in 0..MAX_STACK_HEIGHT {
       if self.location[i] == Location::None {
         return i;
@@ -54,7 +40,7 @@ impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
     MAX_STACK_HEIGHT
   }
 
-  pub fn write_to_label_stack(&mut self) {
+  fn write_to_label_stack(&mut self) {
     match self.status.clone() {
       Status::ParsingNumber(str) | Status::ParsingString(str) => match self.current_location() {
         Location::ArrayIndex(_) | Location::ObjectValue =>
@@ -69,19 +55,8 @@ impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
     }
   }
 
-  pub fn clear_label_stack(&mut self) {
+  fn clear_label_stack(&mut self) {
     self.label_stack[self.pointer()] = (String::new(), String::new());
-  }
-
-  pub fn produce_tree_hash(&self, polynomial_input: F) -> [(F, F); MAX_STACK_HEIGHT] {
-    let mut result = [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT];
-    for (idx, (lhs, rhs)) in self.label_stack.iter().enumerate() {
-      result[idx] = (
-        polynomial_digest(lhs.as_bytes(), polynomial_input, 0),
-        polynomial_digest(rhs.as_bytes(), polynomial_input, 0),
-      );
-    }
-    result
   }
 }
 
@@ -94,34 +69,6 @@ impl<const MAX_STACK_HEIGHT: usize> Default for JsonMachine<MAX_STACK_HEIGHT> {
       label_stack:      std::array::from_fn(|_| (String::new(), String::new())),
     }
   }
-}
-
-impl Into<(F, F)> for Location {
-  fn into(self) -> (F, F) {
-    match self {
-      Self::None => (F::ZERO, F::ZERO),
-      Self::ObjectKey => (F::ONE, F::ZERO),
-      Self::ObjectValue => (F::ONE, F::ONE),
-      Self::ArrayIndex(idx) => (F::from(2), F::from(idx as u64)),
-    }
-  }
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum Location {
-  #[default]
-  None,
-  ObjectKey,
-  ObjectValue,
-  ArrayIndex(usize),
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub enum Status {
-  #[default]
-  None,
-  ParsingString(String),
-  ParsingNumber(String),
 }
 
 const START_BRACE: u8 = 123;
@@ -255,6 +202,12 @@ mod tests {
   #[test]
   fn test_json_parser() {
     let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
-    let states = parse::<10>(RESPONSE_BODY.as_bytes(), polynomial_input);
+    let states = parse::<10>(RESPONSE_BODY.as_bytes(), polynomial_input).unwrap();
+
+    let raw_states = states
+      .into_iter()
+      .map(RawJsonMachine::from)
+      .map(|raw| compress_tree_hash(raw.polynomial_input, stack_and_tree_hashes))
+      .collect::<Vec<RawJsonMachine<10>>>();
   }
 }
