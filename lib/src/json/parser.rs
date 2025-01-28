@@ -262,5 +262,9 @@ mod tests {
     let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
     let states = parse::<10>(input.as_bytes(), polynomial_input).unwrap();
     assert_eq!(states.last().unwrap().location, [Location::None; 10]);
+    assert_eq!(
+      states.last().unwrap().label_stack,
+      std::array::from_fn(|_| (String::new(), String::new()))
+    );
   }
 }
