@@ -2,8 +2,9 @@ use super::*;
 
 #[derive(Clone, Debug)]
 pub struct JsonMachine<const MAX_STACK_HEIGHT: usize> {
-  status:   Status,
-  location: [Location; MAX_STACK_HEIGHT],
+  status:      Status,
+  location:    [Location; MAX_STACK_HEIGHT],
+  label_stack: [(String, String); MAX_STACK_HEIGHT],
 }
 
 impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
@@ -27,11 +28,45 @@ impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
     }
     MAX_STACK_HEIGHT
   }
+
+  pub fn write_to_label_stack(&mut self) {
+    match self.status.clone() {
+      Status::ParsingNumber(str) | Status::ParsingString(str) => match self.current_location() {
+        Location::ArrayIndex(_) | Location::ObjectValue =>
+          self.label_stack[self.pointer() - 1].1 = str,
+        Location::ObjectKey => {
+          self.label_stack[self.pointer() - 1].0 = str;
+          self.label_stack[self.pointer() - 1].1 = String::new();
+        },
+        Location::None => {},
+      },
+      Status::None => {},
+    }
+  }
+
+  pub fn clear_label_stack(&mut self) {
+    self.label_stack[self.pointer()] = (String::new(), String::new());
+  }
+
+  pub fn produce_tree_hash(&self, polynomial_input: F) -> [(F, F); MAX_STACK_HEIGHT] {
+    let mut result = [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT];
+    for (idx, (lhs, rhs)) in self.label_stack.iter().enumerate() {
+      result[idx] = (
+        polynomial_digest(lhs.as_bytes(), polynomial_input, 0),
+        polynomial_digest(rhs.as_bytes(), polynomial_input, 0),
+      );
+    }
+    result
+  }
 }
 
 impl<const MAX_STACK_HEIGHT: usize> Default for JsonMachine<MAX_STACK_HEIGHT> {
   fn default() -> Self {
-    Self { status: Status::default(), location: [Location::default(); MAX_STACK_HEIGHT] }
+    Self {
+      status:      Status::default(),
+      location:    [Location::default(); MAX_STACK_HEIGHT],
+      label_stack: std::array::from_fn(|_| (String::new(), String::new())),
+    }
   }
 }
 
@@ -93,6 +128,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
       END_BRACE => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::ObjectValue) => {
           machine.location[machine.pointer() - 1] = Location::None;
+          machine.clear_label_stack();
         },
         _ =>
           return Err(WitnessGeneratorError::JsonParser(
@@ -111,6 +147,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
       END_BRACKET => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::ArrayIndex(_)) => {
           machine.location[machine.pointer() - 1] = Location::None;
+          machine.clear_label_stack();
         },
         _ =>
           return Err(WitnessGeneratorError::JsonParser(
@@ -163,9 +200,9 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
         Status::None => output.push(machine.clone()),
       },
     }
+    machine.write_to_label_stack();
     dbg!(&machine);
   }
-
   Ok(output)
 }
 
