@@ -181,6 +181,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
     }
     machine.write_to_label_stack();
     dbg!(&machine);
+    dbg!(&RawJsonMachine::from(machine.clone()));
   }
   Ok(output)
 }
@@ -199,14 +200,42 @@ mod tests {
     assert_eq!(machine.pointer(), 2);
   }
 
-  #[test]
-  fn test_json_parser() {
-    let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
-    let states = parse::<10>(RESPONSE_BODY.as_bytes(), polynomial_input).unwrap();
+  const SPOTIFY_EXAMPLE: &str = r#"{ "data" : { "items" : [ { "data" : "Artist" , "profile" : { "name" : "Taylor Swift" } } ] } }"#;
 
-    let raw_states = states
+  #[test]
+  fn test_json_parser_spotify() {
+    // Use a super awesome random polynomial input
+    let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
+
+    // Parse the json and cross my fingers
+    let states = parse::<10>(SPOTIFY_EXAMPLE.as_bytes(), polynomial_input).unwrap();
+
+    // We're looking for tswizzle and if we don't find her i will cry
+    let key_sequence = [
+      JsonKey::String(KEY_0.to_string()),
+      JsonKey::String(KEY_1.to_string()),
+      JsonKey::Num(0),
+      JsonKey::String(KEY_2.to_string()),
+      JsonKey::String(KEY_3.to_string()),
+    ];
+    let t_swizzle = polynomial_digest(b"Taylor Swift", polynomial_input, 0);
+
+    let raw_json_state =
+      RawJsonMachine::<10>::from_chosen_sequence_and_input(polynomial_input, &key_sequence);
+    let contains = states
       .into_iter()
-      .map(|jmachine| RawJsonMachine::from(jmachine).compress_tree_hash())
-      .collect::<Vec<F>>();
+      .map(RawJsonMachine::from)
+      .filter(|val| val.compress_tree_hash() == raw_json_state.compress_tree_hash());
+
+    // Here's the moment of truth
+    assert_eq!(
+      contains
+        .into_iter()
+        .filter(|keys_found| {
+          keys_found.tree_hash.iter().filter(|tree_hash| tree_hash.1 == t_swizzle).count() > 0
+        })
+        .count(),
+      1
+    );
   }
 }

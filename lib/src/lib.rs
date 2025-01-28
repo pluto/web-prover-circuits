@@ -23,12 +23,13 @@ pub type E = client_side_prover::provider::Bn256EngineKZG;
 pub type G = <E as Engine>::GE;
 pub type F = <G as Group>::Scalar;
 
+const NUMBER_IO_REGISTERS: usize = 10;
+
 // TODO: This is really like "initial nivc input maker" or something
-pub fn manifest_digest(
+pub fn manifest_digest<const MAX_STACK_HEIGHT: usize>(
   manifest: &Manifest,
   ciphertext_digest: F,
-  max_stack_height: usize,
-) -> [F; 10] {
+) -> [F; NUMBER_IO_REGISTERS] {
   // ----------------------------------------------------------------------------------------------------------------------------------------------- //
   // Digest both the request and response start lines
   // ----------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -64,7 +65,7 @@ pub fn manifest_digest(
   // ----------------------------------------------------------------------------------------------------------------------------------------------- //
   // Digest the JSON sequence
   // ----------------------------------------------------------------------------------------------------------------------------------------------- //
-  let raw_json_machine = RawJsonMachine::<10>::from_chosen_sequence_and_input(
+  let raw_json_machine = RawJsonMachine::<MAX_STACK_HEIGHT>::from_chosen_sequence_and_input(
     ciphertext_digest,
     &manifest.response.body.json,
   );

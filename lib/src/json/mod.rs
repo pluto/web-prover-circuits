@@ -46,7 +46,7 @@ pub struct RawJsonMachine<const MAX_STACK_HEIGHT: usize> {
 }
 
 impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
-  pub fn compress_tree_hash(self) -> F {
+  pub fn compress_tree_hash(&self) -> F {
     let mut accumulated = F::ZERO;
     let mut monomial = F::ONE;
     // Note, since the target value will be a primitive type in `tree_hash[1]`, we don't actively
