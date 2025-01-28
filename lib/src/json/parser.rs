@@ -2,9 +2,34 @@ use super::*;
 
 #[derive(Clone, Debug)]
 pub struct JsonMachine<const MAX_STACK_HEIGHT: usize> {
-  status:      Status,
-  location:    [Location; MAX_STACK_HEIGHT],
-  label_stack: [(String, String); MAX_STACK_HEIGHT],
+  polynomial_input: F,
+  status:           Status,
+  location:         [Location; MAX_STACK_HEIGHT],
+  label_stack:      [(String, String); MAX_STACK_HEIGHT],
+}
+
+#[derive(Clone, Debug)]
+pub struct RawJsonMachine<const MAX_STACK_HEIGHT: usize> {
+  stack:     [(F, F); MAX_STACK_HEIGHT],
+  tree_hash: [(F, F); MAX_STACK_HEIGHT],
+}
+
+impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
+  for RawJsonMachine<MAX_STACK_HEIGHT>
+{
+  fn from(value: JsonMachine<MAX_STACK_HEIGHT>) -> Self {
+    let mut stack = [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT];
+    let mut tree_hash = [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT];
+    for (idx, (location, labels)) in value.location.into_iter().zip(value.label_stack).enumerate() {
+      stack[idx] = location.into();
+      tree_hash[idx] = (
+        polynomial_digest(&labels.0.as_bytes(), value.polynomial_input, 0),
+        polynomial_digest(&labels.1.as_bytes(), value.polynomial_input, 0),
+      );
+    }
+
+    RawJsonMachine { stack, tree_hash }
+  }
 }
 
 impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
@@ -63,9 +88,10 @@ impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
 impl<const MAX_STACK_HEIGHT: usize> Default for JsonMachine<MAX_STACK_HEIGHT> {
   fn default() -> Self {
     Self {
-      status:      Status::default(),
-      location:    [Location::default(); MAX_STACK_HEIGHT],
-      label_stack: std::array::from_fn(|_| (String::new(), String::new())),
+      polynomial_input: F::ONE,
+      status:           Status::default(),
+      location:         [Location::default(); MAX_STACK_HEIGHT],
+      label_stack:      std::array::from_fn(|_| (String::new(), String::new())),
     }
   }
 }
@@ -109,8 +135,14 @@ const NUMBER: [u8; 10] = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57];
 
 pub fn parse<const MAX_STACK_HEIGHT: usize>(
   bytes: &[u8],
+  polynomial_input: F,
 ) -> Result<Vec<JsonMachine<MAX_STACK_HEIGHT>>, WitnessGeneratorError> {
-  let mut machine = JsonMachine::<MAX_STACK_HEIGHT>::default();
+  let mut machine = JsonMachine::<MAX_STACK_HEIGHT> {
+    polynomial_input,
+    status: Status::default(),
+    location: [Location::default(); MAX_STACK_HEIGHT],
+    label_stack: std::array::from_fn(|_| (String::new(), String::new())),
+  };
   let mut output = vec![];
   for char in bytes {
     // Update the machine
@@ -223,6 +255,6 @@ mod tests {
   #[test]
   fn test_json_parser() {
     let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
-    let states = parse::<10>(RESPONSE_BODY.as_bytes());
+    let states = parse::<10>(RESPONSE_BODY.as_bytes(), polynomial_input);
   }
 }
