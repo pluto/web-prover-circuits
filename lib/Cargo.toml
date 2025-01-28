@@ -18,5 +18,8 @@ light-poseidon = { git = "https://github.com/pluto/light-poseidon" }
 ark-bn254 = "=0.4.0"
 halo2curves = "0.6.1"
 
-sppark = "=0.1.10"
+sppark = "=0.1.10" # lock this or cry
 num-bigint = "0.4"
+
+[dev-dependencies]
+rstest = "0.24"
