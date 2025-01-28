@@ -2,13 +2,8 @@ use super::*;
 
 #[derive(Clone, Debug)]
 pub struct JsonMachine<const MAX_STACK_HEIGHT: usize> {
-  // stack:    [[F; 2]; MAX_STACK_HEIGHT],
-  //   tree_hash: [[F; 2]; MAX_STACK_HEIGHT],
-  monomial: F,
   status:   Status,
-  location: [Location; MAX_STACK_HEIGHT], /* TODO: Make this also an array at stack height and
-                                           * maybe just make an
-                                           * ".into()" to produce the actual stack */
+  location: [Location; MAX_STACK_HEIGHT],
 }
 
 impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
@@ -24,18 +19,6 @@ impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
     self.location[MAX_STACK_HEIGHT - 1]
   }
 
-  // pub fn top_of_stack(&self) -> [F; 2] {
-  //   for i in (0..MAX_STACK_HEIGHT).rev() {
-  //     if self.stack[i][0] == F::ZERO && self.stack[i][1] == F::ZERO {
-  //       if i == 0 {
-  //         return [F::ZERO, F::ZERO];
-  //       }
-  //       return [self.stack[0][i - 1], self.stack[1][i - 1]];
-  //     }
-  //   }
-  //   [self.stack[0][MAX_STACK_HEIGHT - 1], self.stack[1][MAX_STACK_HEIGHT - 1]]
-  // }
-
   pub fn pointer(&self) -> usize {
     for i in 0..MAX_STACK_HEIGHT {
       if self.location[i] == Location::None {
@@ -48,12 +31,17 @@ impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
 
 impl<const MAX_STACK_HEIGHT: usize> Default for JsonMachine<MAX_STACK_HEIGHT> {
   fn default() -> Self {
-    Self {
-      // stack:    [[F::default(); 2]; MAX_STACK_HEIGHT],
-      //   tree_hash: [[F::default(); 2]; MAX_STACK_HEIGHT],
-      monomial: F::default(),
-      status:   Status::default(),
-      location: [Location::default(); MAX_STACK_HEIGHT],
+    Self { status: Status::default(), location: [Location::default(); MAX_STACK_HEIGHT] }
+  }
+}
+
+impl Into<(F, F)> for Location {
+  fn into(self) -> (F, F) {
+    match self {
+      Self::None => (F::ZERO, F::ZERO),
+      Self::ObjectKey => (F::ONE, F::ZERO),
+      Self::ObjectValue => (F::ONE, F::ONE),
+      Self::ArrayIndex(idx) => (F::from(2), F::from(idx as u64)),
     }
   }
 }
@@ -67,12 +55,12 @@ pub enum Location {
   ArrayIndex(usize),
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum Status {
   #[default]
   None,
-  ParsingString,
-  ParsingNumber,
+  ParsingString(String),
+  ParsingNumber(String),
 }
 
 const START_BRACE: u8 = 123;
@@ -86,15 +74,14 @@ const NUMBER: [u8; 10] = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57];
 
 pub fn parse<const MAX_STACK_HEIGHT: usize>(
   bytes: &[u8],
-  polynomial_input: F,
 ) -> Result<Vec<JsonMachine<MAX_STACK_HEIGHT>>, WitnessGeneratorError> {
   let mut machine = JsonMachine::<MAX_STACK_HEIGHT>::default();
   let mut output = vec![];
   for char in bytes {
+    // Update the machine
     dbg!(*char as char);
-    dbg!(&machine);
     match *char {
-      START_BRACE => match (machine.status, machine.current_location()) {
+      START_BRACE => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::None | Location::ObjectValue | Location::ArrayIndex(_)) => {
           machine.location[machine.pointer()] = Location::ObjectKey;
         },
@@ -103,7 +90,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
             "Start brace in invalid position!".to_string(),
           )),
       },
-      END_BRACE => match (machine.status, machine.current_location()) {
+      END_BRACE => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::ObjectValue) => {
           machine.location[machine.pointer() - 1] = Location::None;
         },
@@ -112,7 +99,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
             "End brace in invalid position!".to_string(),
           )),
       },
-      START_BRACKET => match (machine.status, machine.current_location()) {
+      START_BRACKET => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::None | Location::ObjectValue | Location::ArrayIndex(_)) => {
           machine.location[machine.pointer()] = Location::ArrayIndex(0);
         },
@@ -121,7 +108,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
             "Start bracket in invalid position!".to_string(),
           )),
       },
-      END_BRACKET => match (machine.status, machine.current_location()) {
+      END_BRACKET => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::ArrayIndex(_)) => {
           machine.location[machine.pointer() - 1] = Location::None;
         },
@@ -130,14 +117,14 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
             "End bracket in invalid position!".to_string(),
           )),
       },
-      COLON => match (machine.status, machine.current_location()) {
+      COLON => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::ObjectKey) => {
           machine.location[machine.pointer() - 1] = Location::ObjectValue;
         },
         _ =>
           return Err(WitnessGeneratorError::JsonParser("Colon in invalid position!".to_string())),
       },
-      COMMA => match (machine.status, machine.current_location()) {
+      COMMA => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::ObjectValue) => {
           machine.location[machine.pointer() - 1] = Location::ObjectKey;
         },
@@ -148,22 +135,35 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           return Err(WitnessGeneratorError::JsonParser("Comma in invalid position!".to_string())),
       },
       QUOTE => match machine.status {
-        Status::None => machine.status = Status::ParsingString,
-        Status::ParsingString => machine.status = Status::None,
-        Status::ParsingNumber =>
+        Status::None => machine.status = Status::ParsingString(String::new()),
+        Status::ParsingString(_) => machine.status = Status::None,
+        Status::ParsingNumber(_) =>
           return Err(WitnessGeneratorError::JsonParser(
             "Quote found while parsing number!".to_string(),
           )),
       },
-      c if NUMBER.contains(&c) =>
-        if machine.status == Status::None {
-          machine.status = Status::ParsingNumber;
+      c if NUMBER.contains(&c) => match machine.clone().status {
+        Status::None => machine.status = Status::ParsingNumber(String::from(c as char)),
+        Status::ParsingNumber(mut str) => {
+          str.push(*char as char);
+          machine.status = Status::ParsingString(str);
         },
-      _ => match machine.status {
-        Status::ParsingNumber => machine.status = Status::None,
-        _ => output.push(machine.clone()),
+        Status::ParsingString(mut str) => {
+          str.push(*char as char);
+          machine.status = Status::ParsingNumber(str);
+        },
+      },
+
+      _ => match machine.status.clone() {
+        Status::ParsingNumber(_) => machine.status = Status::None,
+        Status::ParsingString(mut str) => {
+          str.push(*char as char);
+          machine.status = Status::ParsingString(str);
+        },
+        Status::None => output.push(machine.clone()),
       },
     }
+    dbg!(&machine);
   }
 
   Ok(output)
@@ -184,5 +184,8 @@ mod tests {
   }
 
   #[test]
-  fn test_json_parser() { parse::<10>(RESPONSE_BODY.as_bytes(), F::from(2)); }
+  fn test_json_parser() {
+    let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
+    let states = parse::<10>(RESPONSE_BODY.as_bytes());
+  }
 }
