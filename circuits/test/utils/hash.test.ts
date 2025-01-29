@@ -140,7 +140,7 @@ describe("PolynomialDigest", () => {
 });
 
 describe("PolynomialDigestWithCounter", () => {
-    let circuit: WitnessTester<["bytes", "polynomial_input", "counter"], ["digest"]>;
+    let circuit: WitnessTester<["bytes", "polynomial_input", "pow_ctr"], ["digest"]>;
 
     before(async () => {
         circuit = await circomkit.WitnessTester(`PolynomialDigestWithCounter`, {
@@ -150,22 +150,22 @@ describe("PolynomialDigestWithCounter", () => {
         });
     });
 
-    it("witness: bytes = [1,2,3,4], polynomial_input = 7, counter = 0", async () => {
+    it("witness: bytes = [1,2,3,4], polynomial_input = 7, pow_ctr = 1", async () => {
         const bytes = [1, 2, 3, 4];
         const polynomial_input = 7;
 
         await circuit.expectPass(
-            { bytes, polynomial_input, counter: 0 },
+            { bytes, polynomial_input, pow_ctr: 1 },
             { digest: 1 + 2 * 7 + 3 * 7 ** 2 + 4 * 7 ** 3 }
         );
     });
 
-    it("witness: bytes = [1,2,3,4], polynomial_input = 7, counter = 2", async () => {
+    it("witness: bytes = [1,2,3,4], polynomial_input = 7, pow_ctr = 7**2", async () => {
         const bytes = [1, 2, 3, 4];
         const polynomial_input = 7;
 
         await circuit.expectPass(
-            { bytes, polynomial_input, counter: 2 },
+            { bytes, polynomial_input, pow_ctr: 7 ** 2 },
             { digest: 1 * 7 ** 2 + 2 * 7 ** 3 + 3 * 7 ** 4 + 4 * 7 ** 5 }
         );
     });
