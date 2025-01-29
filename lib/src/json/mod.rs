@@ -43,6 +43,9 @@ pub struct RawJsonMachine<const MAX_STACK_HEIGHT: usize> {
   pub polynomial_input: F,
   pub stack:            [(F, F); MAX_STACK_HEIGHT],
   pub tree_hash:        [(F, F); MAX_STACK_HEIGHT],
+  pub parsing_string:   bool,
+  pub parsing_number:   bool,
+  pub monomial:         F,
 }
 
 impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
@@ -90,7 +93,17 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
         },
       }
     }
-    Self { polynomial_input, stack, tree_hash }
+
+    // TODO: This is wrong, we shouldn't really output this type here. This function is just to get
+    // the tree hash type of stuff for a given json sequence and value
+    Self {
+      polynomial_input,
+      stack,
+      tree_hash,
+      parsing_number: false,
+      parsing_string: false,
+      monomial: F::ZERO,
+    }
   }
 }
 

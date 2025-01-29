@@ -6,15 +6,35 @@ impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
   fn from(value: JsonMachine<MAX_STACK_HEIGHT>) -> Self {
     let mut stack = [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT];
     let mut tree_hash = [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT];
+    let mut monomial = F::ONE;
     for (idx, (location, labels)) in value.location.into_iter().zip(value.label_stack).enumerate() {
       stack[idx] = location.into();
       tree_hash[idx] = (
         polynomial_digest(labels.0.as_bytes(), value.polynomial_input, 0),
         polynomial_digest(labels.1.as_bytes(), value.polynomial_input, 0),
       );
+      monomial = match location {
+        Location::ObjectKey | Location::ArrayIndex(_) =>
+          value.polynomial_input.pow([labels.0.len() as u64]),
+        Location::ObjectValue => value.polynomial_input.pow([labels.1.len() as u64]),
+        Location::None => F::ONE,
+      };
     }
-
-    Self { polynomial_input: value.polynomial_input, stack, tree_hash }
+    let mut parsing_number = false;
+    let mut parsing_string = false;
+    match value.status {
+      Status::ParsingNumber(_) => parsing_number = true,
+      Status::ParsingString(_) => parsing_string = true,
+      Status::None => {},
+    }
+    Self {
+      polynomial_input: value.polynomial_input,
+      stack,
+      tree_hash,
+      parsing_number,
+      parsing_string,
+      monomial,
+    }
   }
 }
 
@@ -84,7 +104,7 @@ const NUMBER: [u8; 10] = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57];
 #[allow(clippy::too_many_lines)]
 pub fn parse<const MAX_STACK_HEIGHT: usize>(
   bytes: &[u8],
-  polynomial_input: F,
+  polynomial_input: F, // Hash of ct
 ) -> Result<Vec<JsonMachine<MAX_STACK_HEIGHT>>, WitnessGeneratorError> {
   let mut machine = JsonMachine::<MAX_STACK_HEIGHT> {
     polynomial_input,
@@ -286,5 +306,9 @@ mod tests {
       states.last().unwrap().label_stack,
       std::array::from_fn(|_| (String::new(), String::new()))
     );
+
+    let raw_states =
+      states.into_iter().map(RawJsonMachine::from).collect::<Vec<RawJsonMachine<10>>>();
+    dbg!(raw_states);
   }
 }
