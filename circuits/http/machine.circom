@@ -50,8 +50,9 @@ template HttpStateUpdate() {
 
     //---------------------------------------------------------------------------------//
     // Take current state and CRLF info to update state
-    signal state[3]          <== [parsing_start, parsing_header, parsing_field_value];
+    signal state[4]          <== [parsing_start, parsing_header, parsing_field_value, parsing_body];
     component stateChange      = StateChange();
+    stateChange.readCR       <== readCR.out;
     stateChange.prevReadCRLF <== prevReadCRLF.out;
     stateChange.readCRLF     <== readCRLF;
     stateChange.readCRLFCR   <== readCRLFCR;
@@ -70,7 +71,8 @@ template HttpStateUpdate() {
     next_parsing_field_name  <== nextState.out[2];
     next_parsing_field_value <== nextState.out[3];
     next_parsing_body        <== nextState.out[4];
-    next_line_status         <== line_status + readCR.out + readCRLF - line_status * (notCRAndLF + readCRLFCRLF);
+    signal cancelTerm        <== line_status * (notCRAndLF + readCRLFCRLF);
+    next_line_status         <== (line_status + readCR.out + readCRLF - cancelTerm) * (1 - next_parsing_body);
 }
 
 // TODO:
@@ -79,12 +81,13 @@ template HttpStateUpdate() {
 // - header value parsing doesn't handle SPACE between colon and actual value
 template StateChange() {
     signal input prevReadCRLF;
+    signal input readCR;
     signal input readCRLF;
     signal input readCRLFCR;
     signal input readCRLFCRLF;
     signal input readSP;
     signal input readColon;
-    signal input state[3];
+    signal input state[4];
     signal output out[5];
 
     // GreaterEqThan(2) because start line can have at most 3 values for request or response
@@ -92,7 +95,7 @@ template StateChange() {
     // increment parsing start counter on reading SP
     signal incrementParsingStart <== readSP * isParsingStart;
     // disable parsing start on reading CRLF
-    signal disableParsingStart <== prevReadCRLF * state[0];
+    signal disableParsingStart <== readCR * state[0];
 
     // enable parsing header on reading CRLF
     // signal enableParsingHeader <== readCRLF * isParsingStart;
@@ -100,8 +103,7 @@ template StateChange() {
     // Allows for max headers to be 2^5 = 32
     signal isParsingHeader <== GreaterEqThan(5)([state[1], 1]);
     // increment parsing header counter on CRLF and parsing header
-    signal prevReadCRLFAndNotCRLFCR <== prevReadCRLF * (1 - readCRLFCR);
-    signal incrementParsingHeader <== prevReadCRLFAndNotCRLFCR * (isParsingStart + isParsingHeader);
+    signal incrementParsingHeader <== prevReadCRLF * (1 - readCRLFCR);
     // disable parsing header on reading CRLF-CRLF
     signal disableParsingHeader <== readCRLFCRLF * state[1];
     // parsing field value when parsing header and read Colon `:`
@@ -112,18 +114,19 @@ template StateChange() {
     signal enableParsingBody <== readCRLFCRLF * isParsingHeader;
 
     // disable the parsing field value if we should increment parsing header and were previously parsing field value too
-    signal disableParsingFieldValue <== incrementParsingHeader * state[2];
+    signal disableParsingFieldValue <== readCR * state[2];
 
+    // TODO (autoparallel): I didn't clean up the comment here, i was too hasty
     // parsing_start       = out[0] = enable header (default 1) + increment start - disable start
     // parsing_header      = out[1] = enable header            + increment header  - disable header
     // parsing_field_name  = out[2] = enable header + increment header - parsing field value - parsing body
     // parsing_field_value = out[3] = parsing field value - increment parsing header (zeroed every time new header starts)
     // parsing_body        = out[4] = enable body
     out <== [
-            incrementParsingStart - disableParsingStart, 
-            incrementParsingHeader - disableParsingHeader,
-            incrementParsingHeader - isParsingFieldValue,
-            isParsingFieldValue - disableParsingFieldValue - enableParsingBody,
+            (incrementParsingStart - disableParsingStart), 
+            (incrementParsingHeader - disableParsingHeader) * (1 - state[3]),
+            (incrementParsingHeader - isParsingFieldValue) * (1 - state[3]),
+            (isParsingFieldValue - disableParsingFieldValue) * (1 - state[3]),
             enableParsingBody
             ];
 }
