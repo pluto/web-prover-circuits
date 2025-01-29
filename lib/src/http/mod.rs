@@ -12,39 +12,39 @@ pub struct HttpMachine {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct RawHttpMachine {
-  pub parsing_start:       usize,
-  pub parsing_header:      usize,
-  pub parsing_field_name:  bool,
-  pub parsing_field_value: bool,
-  pub parsing_body:        bool,
-  pub line_status:         usize,
+  pub parsing_start:       F,
+  pub parsing_header:      F,
+  pub parsing_field_name:  F,
+  pub parsing_field_value: F,
+  pub parsing_body:        F,
+  pub line_status:         F,
 }
 
 impl From<HttpMachine> for RawHttpMachine {
   fn from(value: HttpMachine) -> Self {
     let mut raw_http_machine = RawHttpMachine::default();
-    raw_http_machine.parsing_header = value.header_num;
+    raw_http_machine.parsing_header = F::from(value.header_num as u64);
     match value.status {
       HttpStatus::ParsingStart(start_line_location) => match start_line_location {
-        StartLineLocation::Beginning => raw_http_machine.parsing_start = 1,
-        StartLineLocation::Middle => raw_http_machine.parsing_start = 2,
-        StartLineLocation::End => raw_http_machine.parsing_start = 3,
+        StartLineLocation::Beginning => raw_http_machine.parsing_start = F::ONE,
+        StartLineLocation::Middle => raw_http_machine.parsing_start = F::from(2),
+        StartLineLocation::End => raw_http_machine.parsing_start = F::from(3),
       },
       HttpStatus::ParsingHeader(name_or_value) => match name_or_value {
         NameOrValue::Name => {
-          raw_http_machine.parsing_field_name = true;
-          raw_http_machine.parsing_field_value = false;
+          raw_http_machine.parsing_field_name = F::ONE;
+          raw_http_machine.parsing_field_value = F::ZERO;
         },
         NameOrValue::Value => {
-          raw_http_machine.parsing_field_name = false;
-          raw_http_machine.parsing_field_value = true;
+          raw_http_machine.parsing_field_name = F::ZERO;
+          raw_http_machine.parsing_field_value = F::ONE;
         },
       },
-      HttpStatus::ParsingBody => raw_http_machine.parsing_body = true,
+      HttpStatus::ParsingBody => raw_http_machine.parsing_body = F::ONE,
       HttpStatus::LineStatus(line_status) => match line_status {
-        LineStatus::CR => raw_http_machine.line_status = 1,
-        LineStatus::CRLF => raw_http_machine.line_status = 2,
-        LineStatus::CRLFCR => raw_http_machine.line_status = 3,
+        LineStatus::CR => raw_http_machine.line_status = F::ONE,
+        LineStatus::CRLF => raw_http_machine.line_status = F::from(2),
+        LineStatus::CRLFCR => raw_http_machine.line_status = F::from(3),
       },
     }
     raw_http_machine
