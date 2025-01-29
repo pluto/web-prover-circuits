@@ -38,10 +38,13 @@ template HttpStateUpdate() {
     // Check if we had read previously CR / LF or multiple
     component prevReadCR     = IsEqual();
     prevReadCR.in          <== [line_status, 1];
+    component prevReadCRLF     = IsEqual();
+    prevReadCRLF.in          <== [line_status, 2];
     component prevReadCRLFCR = IsEqual();
     prevReadCRLFCR.in      <== [line_status, 3];
 
     signal readCRLF     <== prevReadCR.out * readLF.out;
+    signal readCRLFCR   <== prevReadCRLF.out * readCR.out;
     signal readCRLFCRLF <== prevReadCRLFCR.out * readLF.out;
     //---------------------------------------------------------------------------------//
 
@@ -49,7 +52,9 @@ template HttpStateUpdate() {
     // Take current state and CRLF info to update state
     signal state[3]          <== [parsing_start, parsing_header, parsing_field_value];
     component stateChange      = StateChange();
+    stateChange.prevReadCRLF <== prevReadCRLF.out;
     stateChange.readCRLF     <== readCRLF;
+    stateChange.readCRLFCR   <== readCRLFCR;
     stateChange.readCRLFCRLF <== readCRLFCRLF;
     stateChange.readSP       <== readSP.out;
     stateChange.readColon    <== readColon.out;
@@ -65,7 +70,7 @@ template HttpStateUpdate() {
     next_parsing_field_name  <== nextState.out[2];
     next_parsing_field_value <== nextState.out[3];
     next_parsing_body        <== nextState.out[4];
-    next_line_status         <== line_status + readCR.out + readCRLF - line_status * notCRAndLF;
+    next_line_status         <== line_status + readCR.out + readCRLF - line_status * (notCRAndLF + readCRLFCRLF);
 }
 
 // TODO:
@@ -73,7 +78,9 @@ template HttpStateUpdate() {
 // - handle incrementParsingHeader being incremented for header -> body CRLF
 // - header value parsing doesn't handle SPACE between colon and actual value
 template StateChange() {
+    signal input prevReadCRLF;
     signal input readCRLF;
+    signal input readCRLFCR;
     signal input readCRLFCRLF;
     signal input readSP;
     signal input readColon;
@@ -85,15 +92,16 @@ template StateChange() {
     // increment parsing start counter on reading SP
     signal incrementParsingStart <== readSP * isParsingStart;
     // disable parsing start on reading CRLF
-    signal disableParsingStart <== readCRLF * state[0];
+    signal disableParsingStart <== prevReadCRLF * state[0];
 
     // enable parsing header on reading CRLF
-    signal enableParsingHeader <== readCRLF * isParsingStart;
+    // signal enableParsingHeader <== readCRLF * isParsingStart;
     // check if we are parsing header
     // Allows for max headers to be 2^5 = 32
     signal isParsingHeader <== GreaterEqThan(5)([state[1], 1]);
     // increment parsing header counter on CRLF and parsing header
-    signal incrementParsingHeader <== readCRLF * isParsingHeader;
+    signal prevReadCRLFAndNotCRLFCR <== prevReadCRLF * (1 - readCRLFCR);
+    signal incrementParsingHeader <== prevReadCRLFAndNotCRLFCR * (isParsingStart + isParsingHeader);
     // disable parsing header on reading CRLF-CRLF
     signal disableParsingHeader <== readCRLFCRLF * state[1];
     // parsing field value when parsing header and read Colon `:`
@@ -103,6 +111,9 @@ template StateChange() {
     // parsing body when reading CRLF-CRLF and parsing header
     signal enableParsingBody <== readCRLFCRLF * isParsingHeader;
 
+    // disable the parsing field value if we should increment parsing header and were previously parsing field value too
+    signal disableParsingFieldValue <== incrementParsingHeader * state[2];
+
     // parsing_start       = out[0] = enable header (default 1) + increment start - disable start
     // parsing_header      = out[1] = enable header            + increment header  - disable header
     // parsing_field_name  = out[2] = enable header + increment header - parsing field value - parsing body
@@ -110,9 +121,9 @@ template StateChange() {
     // parsing_body        = out[4] = enable body
     out <== [
             incrementParsingStart - disableParsingStart, 
-            enableParsingHeader + incrementParsingHeader - disableParsingHeader,
-            enableParsingHeader + incrementParsingHeader - isParsingFieldValue - enableParsingBody,
-            isParsingFieldValue - incrementParsingHeader,
+            incrementParsingHeader - disableParsingHeader,
+            incrementParsingHeader - isParsingFieldValue,
+            isParsingFieldValue - disableParsingFieldValue - enableParsingBody,
             enableParsingBody
             ];
 }
