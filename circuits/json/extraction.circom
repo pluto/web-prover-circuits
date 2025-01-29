@@ -75,15 +75,6 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
 
         // Digest the whole stack and key tree hash
         var accumulator = 0;
-        if (data_idx == 212) {
-            log("State[", data_idx, "].byte               =", State[data_idx].byte);
-            for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-                log("State[", data_idx, "].next_stack[", i,"]     = [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
-            }
-            for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-                log("State[", data_idx, "].next_tree_hash[", i,"] = [",State[data_idx].next_tree_hash[i][0], "][", State[data_idx].next_tree_hash[i][1],"]" );
-            }
-        }
         for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++) {
             intermediate_digest[data_idx][3 * i]     <== State[data_idx].next_stack[i][0] * monomials[3 * i];
             intermediate_digest[data_idx][3 * i + 1] <== State[data_idx].next_stack[i][1] * monomials[3 * i + 1];
@@ -92,8 +83,6 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
         }
         state_digest[data_idx] <== accumulator;
         sequence_is_matched[data_idx] <== IsEqual()([state_digest[data_idx], sequence_digest]);
-        log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
-        log("sequence_is_matched[", data_idx,"]       = ", sequence_is_matched[data_idx]);
 
         // Now check for if the value digest appears
         var value_digest_in_stack = 0;
@@ -151,9 +140,6 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     signal data_digest <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_data, ciphertext_digest, step_in[7]);
 
     // Set the output to the digest of the intended value
-    log("data_digest: ", data_digest);
-    log("value_digest: ", value_digest);
-    log("total_matches: ", total_matches);
     step_out[0] <== step_in[0] - data_digest + value_digest * total_matches;
     step_out[1] <== step_in[1];
     step_out[2] <== step_in[2];
