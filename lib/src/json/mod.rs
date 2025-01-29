@@ -43,8 +43,8 @@ pub struct RawJsonMachine<const MAX_STACK_HEIGHT: usize> {
   pub polynomial_input: F,
   pub stack:            [(F, F); MAX_STACK_HEIGHT],
   pub tree_hash:        [(F, F); MAX_STACK_HEIGHT],
-  pub parsing_string:   bool,
-  pub parsing_number:   bool,
+  pub parsing_string:   F,
+  pub parsing_number:   F,
   pub monomial:         F,
 }
 
@@ -100,8 +100,8 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
       polynomial_input,
       stack,
       tree_hash,
-      parsing_number: false,
-      parsing_string: false,
+      parsing_number: F::ZERO,
+      parsing_string: F::ZERO,
       monomial: F::ZERO,
     }
   }
