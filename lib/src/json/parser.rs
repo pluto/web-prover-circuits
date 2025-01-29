@@ -229,9 +229,11 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           machine.status = Status::ParsingString(str);
         },
       },
-
       _ => match machine.status.clone() {
-        Status::ParsingNumber(_) => machine.status = Status::None,
+        Status::ParsingNumber(_) => {
+          machine.status = Status::None;
+          machine.clear_array_index_label();
+        },
         Status::ParsingString(mut str) => {
           str.push(*char as char);
           machine.status = Status::ParsingString(str);
