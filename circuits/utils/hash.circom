@@ -114,16 +114,6 @@ template PolynomialDigestWithCounter(N) {
     signal monomials[N];
     signal terms[N];
 
-    // signal pow_accumulation[N+1];
-    // pow_accumulation[0] <== 1;
-    // signal isLessThanCounter[N];
-    // signal multFactor[N];
-    // for (var i = 0 ; i < N ; i++) {
-    //     isLessThanCounter[i] <== LessThan(logN)([i, counter]);
-    //     multFactor[i]        <== isLessThanCounter[i] * polynomial_input + (1 - isLessThanCounter[i]);
-    //     pow_accumulation[i+1] <== pow_accumulation[i] * multFactor[i];
-    // }
-
     // monomials[0] = polynomial_input ** counter
     monomials[0] <== pow_ctr;
     terms[0]     <== bytes[0] * monomials[0];
