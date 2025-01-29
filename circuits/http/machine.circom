@@ -65,7 +65,7 @@ template HttpStateUpdate() {
     next_parsing_field_name  <== nextState.out[2];
     next_parsing_field_value <== nextState.out[3];
     next_parsing_body        <== nextState.out[4];
-    next_line_status         <== line_status + readCR.out + readCRLF + readCRLFCRLF - line_status * notCRAndLF;
+    next_line_status         <== line_status + readCR.out + readCRLF - line_status * notCRAndLF;
 }
 
 // TODO:
