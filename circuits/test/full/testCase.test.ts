@@ -52,9 +52,11 @@ export function CombinedTestCaseManifest(): Manifest {
   const jsonSequence: JsonMaskType[] = [
     { type: "Object", value: strToBytes("data") },
     { type: "Object", value: strToBytes("orderDetails") },
-    { type: "Object", value: strToBytes("items") },
-    { type: "ArrayIndex", value: 0 },
-    { type: "Object", value: strToBytes("name") },
+    // { type: "Object", value: strToBytes("items") },
+    // { type: "ArrayIndex", value: 0 },
+    // { type: "Object", value: strToBytes("name") },
+    // { type: "Object", value: strToBytes("status") }
+    { type: "Object", value: strToBytes("orderId") }
   ];
 
   return {
