@@ -13,14 +13,14 @@ describe("JSON Extraction", () => {
         hash_parser = await circomkit.WitnessTester(`Parser`, {
             file: "json/extraction",
             template: "JSONExtraction",
-            params: [DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_VARIABLES],
+            params: [43, MAX_STACK_HEIGHT, PUBLIC_IO_VARIABLES],
         });
     });
 
     it(`input: array_only`, async () => {
         let filename = "array_only";
         let [input, _keyUnicode, _output] = readJSONInputFile(`${filename}.json`, []);
-        let input_padded = input.concat(Array(DATA_BYTES - input.length).fill(-1));
+        // let input_padded = input.concat(Array(DATA_BYTES - input.length).fill(-1));
 
         // Test `42` in 0th slot
         let targetValue = strToBytes("42");
@@ -41,7 +41,7 @@ describe("JSON Extraction", () => {
         let step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];
 
         let json_extraction_step_out = await hash_parser.compute({
-            data: input_padded,
+            data: input,
             ciphertext_digest: mock_ct_digest,
             sequence_digest,
             value_digest,
@@ -66,7 +66,7 @@ describe("JSON Extraction", () => {
         step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];;
 
         json_extraction_step_out = await hash_parser.compute({
-            data: input_padded,
+            data: input,
             ciphertext_digest: mock_ct_digest,
             sequence_digest,
             value_digest,
