@@ -39,11 +39,11 @@ impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
       _ => F::ZERO,
     };
 
-    let mut parsing_number = false;
-    let mut parsing_string = false;
+    let mut parsing_number = F::ZERO;
+    let mut parsing_string = F::ZERO;
     match value.status {
-      Status::ParsingNumber(_) => parsing_number = true,
-      Status::ParsingString(_) => parsing_string = true,
+      Status::ParsingNumber(_) => parsing_number = F::ONE,
+      Status::ParsingString(_) => parsing_string = F::ONE,
       Status::None => {},
     }
     Self {
@@ -96,6 +96,10 @@ impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
 
   fn clear_label_stack(&mut self) {
     self.label_stack[self.pointer()] = (String::new(), String::new());
+  }
+
+  fn clear_array_index_label(&mut self) {
+    self.label_stack[self.pointer() - 1] = (String::new(), String::new());
   }
 }
 
@@ -192,6 +196,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
         (Status::None | Status::ParsingNumber(_), Location::ArrayIndex(idx)) => {
           machine.location[machine.pointer() - 1] = Location::ArrayIndex(idx + 1);
           machine.status = Status::None;
+          machine.clear_array_index_label();
         },
         _ =>
           return Err(WitnessGeneratorError::JsonParser("Comma in invalid position!".to_string())),
@@ -250,17 +255,24 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
     // Debuggin'
 
     for (i, (a, b)) in raw_stack.iter().enumerate() {
-      println!("state[{ctr:?}].stack[{:2}] = [{}][{}]", i, a, b);
+      println!("state[ {ctr:?} ].stack[{:2} ]     = [ {} ][ {} ]", i, a, b);
     }
     for (i, (a, b)) in raw_tree_hash.iter().enumerate() {
-      println!("state[{ctr:?}].tree_hash[{:2}] = [{}][{}]", i, a, b);
+      println!("state[ {ctr:?} ].tree_hash[{:2} ] = [ {} ][ {} ]", i, a, b);
     }
-    println!("state[{ctr:?}].parsing_string = {}", raw_state.parsing_string);
-    println!("state[{ctr:?}].parsing_number = {}", raw_state.parsing_number);
     println!(
-      "state[{ctr:?}].monomial = {:?}",
+      "state[ {ctr:?} ].monomial       = {:?}",
       BigUint::from_bytes_le(&raw_state.monomial.to_bytes())
     );
+    println!(
+      "state[ {ctr:?} ].parsing_string = {:?}",
+      BigUint::from_bytes_le(&raw_state.parsing_string.to_bytes())
+    );
+    println!(
+      "state[ {ctr:?} ].parsing_number = {:?}",
+      BigUint::from_bytes_le(&raw_state.parsing_number.to_bytes())
+    );
+
     ctr += 1;
     // dbg!(&RawJsonMachine::from(machine.clone()));
   }
@@ -329,15 +341,15 @@ mod tests {
   #[case::value_object(r#"{ "a" : { "d" : "e" , "e" : "c" } , "e" : { "f" : "a" , "e" : "2" } , "g" : { "h" : { "a" : "c" } } , "ab" : "foobar" , "bc" : 42 , "dc" : [ 0 , 1 , "a" ] }"#)]
   fn test_json_parser_valid(#[case] input: &str) {
     let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
-    let states = parse::<4>(input.as_bytes(), polynomial_input).unwrap();
-    assert_eq!(states.last().unwrap().location, [Location::None; 4]);
+    let states = parse::<5>(input.as_bytes(), polynomial_input).unwrap();
+    assert_eq!(states.last().unwrap().location, [Location::None; 5]);
     assert_eq!(
       states.last().unwrap().label_stack,
       std::array::from_fn(|_| (String::new(), String::new()))
     );
 
     let raw_states =
-      states.into_iter().map(RawJsonMachine::from).collect::<Vec<RawJsonMachine<4>>>();
+      states.into_iter().map(RawJsonMachine::from).collect::<Vec<RawJsonMachine<5>>>();
     // dbg!(raw_states);
   }
 }
