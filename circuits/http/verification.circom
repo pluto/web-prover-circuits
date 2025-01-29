@@ -41,7 +41,11 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
 
     // assertions:
     // - check step_in[3] = machine state hash digest
+    for (var i = 0 ; i < 8 ; i++) {
+        log("machine_state[",i,"] = ", machine_state[i]);
+    }
     signal machine_state_digest <== PolynomialDigest(8)(machine_state, ciphertext_digest);
+    log("machine_state_digest: ", machine_state_digest);
     step_in[3] === machine_state_digest;
     // - check step_in[4] = start line hash digest + all header hash digests
     // TODO: I don't like this `MAX_NUMBER_OF_HEADERS + 1` now. It should just be `NUMBER_OF_STATEMENTS_TO_LOCK` or something
@@ -130,14 +134,14 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     // Set this to what the previous digest was
     body_digest[0]    <== body_monomials[0] * zeroed_data[0];
     for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
-        log("State[",i+1,"].parsing_body: ", State[i+1].parsing_body);
+        // log("State[",i+1,"].parsing_body: ", State[i+1].parsing_body);
         body_ctr[i + 1]        <== body_ctr[i] + State[i + 1].parsing_body * (1 - isPadding[i + 1]);
         body_switch[i]           <== IsEqual()([body_ctr[i + 1], 1]); // check if we are in the body
-        log("body_switch[",i,"] = ", body_switch[i]);
+        // log("body_switch[",i,"] = ", body_switch[i]);
         body_monomials_pow_accumulation[i] <== body_monomials[i] * ciphertext_digest + body_switch[i]; // add the previous monomial if we are in the body
         body_monomials[i + 1]    <== (body_monomials[i] - body_monomials_pow_accumulation[i]) * isPadding[i + 1] + body_monomials_pow_accumulation[i]; // do not update monomials if padding
         body_digest[i + 1]       <== body_digest[i] + body_monomials[i + 1] * zeroed_data[i + 1]; // add the monomial to the digest
-        log("body_digest[",i+1,"] = ", body_digest[i+1]);
+        // log("body_digest[",i+1,"] = ", body_digest[i+1]);
     }
 
     // Note: This body digest computed here is just a diff since we added the other component before

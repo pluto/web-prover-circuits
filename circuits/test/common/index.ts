@@ -469,6 +469,29 @@ function headersToBytes(headers: Record<string, string[]>): number[][] {
     return result;
 }
 
+export function findBodyIndex(arr: number[]) {
+    const pattern = [13, 10, 13, 10];
+    let result: number = -1;
+
+    for (let i = 0; i <= arr.length - pattern.length; i++) {
+        if (arr[i] === pattern[0]) {
+            let found = true;
+            for (let j = 0; j < pattern.length; j++) {
+                if (arr[i + j] !== pattern[j]) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found) {
+                result = i + 4;
+                break;
+            }
+        }
+    }
+
+    return result;
+}
+
 export function InitialDigest(
     manifest: Manifest,
     ciphertexts: number[][],
