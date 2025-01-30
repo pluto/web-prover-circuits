@@ -1,10 +1,10 @@
 [package]
-name = "create-pp"
+name = "web-proof-circuits"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "create-pp"
+name = "create_pp"
 path = "src/main.rs"
 
 [lib]

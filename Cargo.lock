@@ -902,25 +902,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "create-pp"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ark-bn254",
- "client-side-prover",
- "ff",
- "halo2curves",
- "light-poseidon",
- "num-bigint 0.4.6",
- "proofs",
- "rstest",
- "serde",
- "serde_json",
- "sppark",
- "thiserror 2.0.11",
-]
-
-[[package]]
 name = "crossbeam-deque"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3608,6 +3589,25 @@ name = "wasm-bindgen-shared"
 version = "0.2.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65fc09f10666a9f147042251e0dda9c18f166ff7de300607007e96bdebc1068d"
+
+[[package]]
+name = "web-proof-circuits"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ark-bn254",
+ "client-side-prover",
+ "ff",
+ "halo2curves",
+ "light-poseidon",
+ "num-bigint 0.4.6",
+ "proofs",
+ "rstest",
+ "serde",
+ "serde_json",
+ "sppark",
+ "thiserror 2.0.11",
+]
 
 [[package]]
 name = "web-time"
