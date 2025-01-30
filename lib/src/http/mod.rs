@@ -1,5 +1,3 @@
-use std::os::macos::raw;
-
 use super::*;
 
 pub mod parser;
@@ -8,6 +6,7 @@ pub mod parser;
 pub struct HttpMachine {
   pub header_num: usize,
   pub status:     HttpStatus,
+  pub line_accum: F,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -18,11 +17,13 @@ pub struct RawHttpMachine {
   pub parsing_field_value: F,
   pub parsing_body:        F,
   pub line_status:         F,
+  pub inner_main_digest:   F,
 }
 
 impl From<HttpMachine> for RawHttpMachine {
   fn from(value: HttpMachine) -> Self {
     let mut raw_http_machine = RawHttpMachine::default();
+    raw_http_machine.inner_main_digest = value.line_accum;
     raw_http_machine.parsing_header = F::from(value.header_num as u64);
     match value.status {
       HttpStatus::ParsingStart(start_line_location) => match start_line_location {
