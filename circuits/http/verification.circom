@@ -101,15 +101,15 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     signal monomial_is_zero[DATA_BYTES];
     signal accum_prev[DATA_BYTES];
     var num_matched = 0;
-    signal inner_main_digest[DATA_BYTES + 1];
+    signal line_digest[DATA_BYTES + 1];
     // Set this to what the previous digest was
-    inner_main_digest[0] <== machine_state[6];
+    line_digest[0] <== machine_state[6];
     for(var i = 0 ; i < DATA_BYTES ; i++) {
         monomial_is_zero[i]    <== IsZero()(main_monomials[i]);
-        accum_prev[i]          <== (1 - monomial_is_zero[i]) * inner_main_digest[i];
-        inner_main_digest[i+1] <== accum_prev[i] + data[i] * main_monomials[i];
-        is_zero[i]             <== IsZero()(inner_main_digest[i+1]);
-        contains[i]            <== Contains(MAX_NUMBER_OF_HEADERS + 1)(inner_main_digest[i+1], main_digests);
+        accum_prev[i]          <== (1 - monomial_is_zero[i]) * line_digest[i];
+        line_digest[i+1] <== accum_prev[i] + data[i] * main_monomials[i];
+        is_zero[i]             <== IsZero()(line_digest[i+1]);
+        contains[i]            <== Contains(MAX_NUMBER_OF_HEADERS + 1)(line_digest[i+1], main_digests);
         is_match[i]            <== (1 - is_zero[i]) * contains[i];
         num_matched             += is_match[i];
     }
@@ -154,7 +154,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
          State[DATA_BYTES - 1].next_parsing_field_value,
          State[DATA_BYTES - 1].next_parsing_body,
          State[DATA_BYTES - 1].next_line_status,
-         inner_main_digest[DATA_BYTES]
+         line_digest[DATA_BYTES]
         ],
         ciphertext_digest
     );
@@ -172,7 +172,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     log("next_parsing_field_value: ", State[DATA_BYTES - 1].next_parsing_field_value);
     log("next_parsing_body: ", State[DATA_BYTES - 1].next_parsing_body);
     log("next_line_status: ", State[DATA_BYTES - 1].next_line_status);
-    log("inner_main_digest: ", inner_main_digest[DATA_BYTES]);
+    log("line_digest: ", line_digest[DATA_BYTES]);
     log("body_digest: ", body_digest[DATA_BYTES - 1]);
 
     for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {

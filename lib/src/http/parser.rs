@@ -7,9 +7,9 @@ const COLON: u8 = 58;
 
 pub fn parse(bytes: &[u8], polynomial_input: F) -> Result<Vec<HttpMachine>, WitnessGeneratorError> {
   let mut machine = HttpMachine {
-    header_num: 0,
-    status:     HttpStatus::ParsingStart(StartLineLocation::Beginning),
-    line_accum: F::ZERO,
+    header_num:  0,
+    status:      HttpStatus::ParsingStart(StartLineLocation::Beginning),
+    line_digest: F::ZERO,
   };
 
   let mut output = vec![];
@@ -28,7 +28,7 @@ pub fn parse(bytes: &[u8], polynomial_input: F) -> Result<Vec<HttpMachine>, Witn
             machine.status = HttpStatus::ParsingStart(StartLineLocation::End),
           StartLineLocation::End => {},
         };
-        machine.line_accum += polynomial_input.pow([line_ctr]) * F::from(*char as u64);
+        machine.line_digest += polynomial_input.pow([line_ctr]) * F::from(*char as u64);
         line_ctr += 1;
       },
       (
@@ -38,38 +38,38 @@ pub fn parse(bytes: &[u8], polynomial_input: F) -> Result<Vec<HttpMachine>, Witn
       ) => {
         machine.status = HttpStatus::LineStatus(LineStatus::CR);
         line_ctr = 0;
-        machine.line_accum = F::ZERO;
+        machine.line_digest = F::ZERO;
       },
       (CR, HttpStatus::LineStatus(LineStatus::CRLF)) => {
         machine.status = HttpStatus::LineStatus(LineStatus::CRLFCR);
         line_ctr = 0;
-        machine.line_accum = F::ZERO;
+        machine.line_digest = F::ZERO;
       },
       (LF, HttpStatus::LineStatus(LineStatus::CR)) => {
         machine.status = HttpStatus::LineStatus(LineStatus::CRLF);
         line_ctr = 0;
-        machine.line_accum = F::ZERO;
+        machine.line_digest = F::ZERO;
       },
       (LF, HttpStatus::LineStatus(LineStatus::CRLFCR)) => {
         machine.status = HttpStatus::ParsingBody;
         machine.header_num = 0;
         line_ctr = 0;
-        machine.line_accum = F::ZERO;
+        machine.line_digest = F::ZERO;
       },
       (_, HttpStatus::LineStatus(LineStatus::CRLF)) => {
         machine.status = HttpStatus::ParsingHeader(NameOrValue::Name);
         machine.header_num += 1;
-        machine.line_accum += polynomial_input.pow([line_ctr]) * F::from(*char as u64);
+        machine.line_digest += polynomial_input.pow([line_ctr]) * F::from(*char as u64);
         line_ctr += 1;
       },
       (COLON, HttpStatus::ParsingHeader(NameOrValue::Name)) => {
         machine.status = HttpStatus::ParsingHeader(NameOrValue::Value);
-        machine.line_accum += polynomial_input.pow([line_ctr]) * F::from(*char as u64);
+        machine.line_digest += polynomial_input.pow([line_ctr]) * F::from(*char as u64);
         line_ctr += 1;
       },
       (_, HttpStatus::ParsingBody) => {},
       _ => {
-        machine.line_accum += polynomial_input.pow([line_ctr]) * F::from(*char as u64);
+        machine.line_digest += polynomial_input.pow([line_ctr]) * F::from(*char as u64);
         line_ctr += 1;
       },
     }
@@ -102,7 +102,7 @@ pub fn parse(bytes: &[u8], polynomial_input: F) -> Result<Vec<HttpMachine>, Witn
     );
     println!(
       "state[ {ctr:?} ].inner_main_digest   = {:?}",
-      BigUint::from_bytes_le(&raw_state.inner_main_digest.to_bytes())
+      BigUint::from_bytes_le(&raw_state.line_digest.to_bytes())
     );
     println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     ctr += 1;
@@ -118,7 +118,17 @@ mod tests {
   pub fn test_parse_http() {
     // It's funny to me every time
     let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
-    let states = parse(&mock::RESPONSE_PLAINTEXT.as_bytes(), polynomial_input);
+    let states = parse(&mock::RESPONSE_PLAINTEXT.as_bytes(), polynomial_input).unwrap();
+    assert_eq!(states.len(), mock::RESPONSE_PLAINTEXT.len());
+
+    let machine_state = RawHttpMachine::from(states.last().unwrap().clone());
+    assert_eq!(machine_state.parsing_start, F::ZERO);
+    assert_eq!(machine_state.parsing_header, F::ZERO);
+    assert_eq!(machine_state.parsing_field_name, F::ZERO);
+    assert_eq!(machine_state.parsing_field_value, F::ZERO);
+    assert_eq!(machine_state.parsing_body, F::ONE);
+    assert_eq!(machine_state.line_status, F::from(0));
+    assert_eq!(machine_state.line_digest, F::from(0));
   }
 
   const HTTP_BYTES: [u8; 915] = [
@@ -172,5 +182,14 @@ mod tests {
     // It's funny to me every time
     let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
     let states = parse(&HTTP_BYTES, polynomial_input).unwrap();
+
+    let machine_state = RawHttpMachine::from(states.last().unwrap().clone());
+    assert_eq!(machine_state.parsing_start, F::ZERO);
+    assert_eq!(machine_state.parsing_header, F::ZERO);
+    assert_eq!(machine_state.parsing_field_name, F::ZERO);
+    assert_eq!(machine_state.parsing_field_value, F::ZERO);
+    assert_eq!(machine_state.parsing_body, F::ONE);
+    assert_eq!(machine_state.line_status, F::from(0));
+    assert_eq!(machine_state.line_digest, F::from(0));
   }
 }
