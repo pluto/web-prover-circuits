@@ -107,7 +107,7 @@ describe("Example NIVC Proof", async () => {
         assert.deepEqual(plaintext_authentication_step_out[1], modPow(ciphertext_digest, BigInt(http_response_plaintext.length)));
 
         // Run HTTPVerification
-        let machine_state = Array(8).fill(0);
+        let machine_state = Array(7).fill(0);
         machine_state[0] = 1; // Sets the parsing start to 1
 
         const start_line_digest = PolynomialDigest(http_start_line, ciphertext_digest, BigInt(0));
@@ -229,7 +229,7 @@ describe("Example NIVC Proof", async () => {
         assert.deepEqual(plaintext_authentication2_step_out[0], modAdd(init_nivc_input[0], ptDigest - ciphertext_digest));
 
         // Run HTTPVerification
-        let machine_state = Array(8).fill(0);
+        let machine_state = Array(7).fill(0);
         machine_state[0] = 1; // Sets the parsing start to 1
 
         const start_line_digest = PolynomialDigest(http_start_line, ciphertext_digest, BigInt(0));
@@ -356,7 +356,7 @@ describe("Example NIVC Proof", async () => {
         let main_digests = Array(MAX_NUMBER_OF_HEADERS + 1).fill(0);
         main_digests[0] = start_line_digest;
         main_digests[1] = header_0_digest;
-        let machine_state = Array(8).fill(0);
+        let machine_state = Array(7).fill(0);
         machine_state[0] = 1; // Sets the parsing start to 1
 
         let http_verification1 = await HTTPVerification.compute({
@@ -371,7 +371,7 @@ describe("Example NIVC Proof", async () => {
         assert.deepEqual(http_verification1_step_out[5], BigInt(0)); // all matched
         assert.deepEqual(http_verification1_step_out[6], BigInt(0)); // body doesn't start yet
 
-        machine_state = [0, 0, 0, 0, 1, 0, 0, 0];
+        machine_state = [0, 0, 0, 0, 1, 0, 0];
         let bodyDigest = PolynomialDigest(http_response2_0_padded, ciphertext_digest, BigInt(0));
         console.log("bodyDigest", bodyDigest);
 
@@ -489,9 +489,9 @@ describe("Example NIVC Proof", async () => {
         assert.deepEqual(plaintextAuthenticationStepOut[0], modAdd(init_nivc_input[0] - requestCiphertextDigest, plaintextDigest));
 
         // Run HTTPVerification
-        let machineState = Array(8).fill(0);
+        let machineState = Array(7).fill(0);
         machineState[0] = 1; // Sets the parsing start to 1
-        let machineState2 = [0, 0, 0, 0, 1, 0, 0, BigInt("4597741686932796891854080771126033240062027585521956904102484899697963333774")];
+        let machineState2 = [0, 0, 0, 0, 1, 0, 0];
         let machineStates = [machineState, machineState2];
         let prevBodyCounter = BigInt(0);
 
@@ -603,7 +603,7 @@ describe("Example NIVC Proof", async () => {
         assert.deepEqual(responsePlaintextAuthenticationStepOut[0], modAdd(init_nivc_input[0] - prevResponseCtDigest, responsePlaintextDigest, requestBodyDigest));
 
         // Run response HTTPVerification
-        let responseMachineState = Array(8).fill(0);
+        let responseMachineState = Array(7).fill(0);
         responseMachineState[0] = 1; // Sets the parsing start to 1
         let responseMachineState2 = [0, 0, 0, 0, 1, 0, 0, BigInt("17254457507538573663580074635865728502553125514899317196086652572055478623335")];
         let responseMachineState3 = [0, 0, 0, 0, 1, 0, 0, BigInt("17485877200063103672489113686823507448308624682483242290501494756760660668524")];
