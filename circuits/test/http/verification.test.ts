@@ -1,6 +1,6 @@
 import { circomkit, WitnessTester, PolynomialDigest, http_response_plaintext, http_start_line, http_header_0, http_header_1, http_body, modAdd, PUBLIC_IO_VARIABLES, modPow } from "../common";
 import { assert } from "chai";
-import { poseidon1 } from "poseidon-lite";
+import { poseidon1, poseidon2 } from "poseidon-lite";
 
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
@@ -32,10 +32,10 @@ describe("HTTP Verification", async () => {
             params: [DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_VARIABLES]
         });
     });
-    const mock_ct_digest = poseidon1([69]);
+    const mock_ct_digest = poseidon2([69, 420]);
 
     // Used across tests
-    let machine_state = Array(8).fill(0);
+    let machine_state = Array(7).fill(0);
     machine_state[0] = 1; // Sets the parsing start to 1
     let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
     step_in[2] = 1; // ciphertext_digest_pow
@@ -142,10 +142,11 @@ describe("HTTP Verification: Split", async () => {
         });
     });
     const mock_ct_digest = poseidon1([69]);
+    console.log("mock_ct_digest: ", mock_ct_digest);
     // const mock_ct_digest = BigInt(2); // TODO: only for debugging!!!
 
     // Used across tests
-    let machine_state = Array(8).fill(0);
+    let machine_state = Array(7).fill(0);
     machine_state[0] = 1; // Sets the parsing start to 1
     let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
     step_in[2] = 1; // ciphertext_digest_pow
@@ -190,7 +191,7 @@ describe("HTTP Verification: Split", async () => {
             ciphertext_digest: mock_ct_digest
         }, ["step_out"]);
 
-        let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("16202935654388484508586282728137211277659125633297860980774265969941813526293")];
+        let next_machine_state = [0, 0, 0, 0, 1, 0, 0];
         // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
         let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
         let http_nivc_compute_1 = await HTTPVerification.compute({
@@ -219,7 +220,7 @@ describe("HTTP Verification: Split", async () => {
             ciphertext_digest: mock_ct_digest
         }, ["step_out"]);
 
-        let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("16202935654388484508586282728137211277659125633297860980774265969941813526293")];
+        let next_machine_state = [0, 0, 0, 0, 1, 0, 0];
         // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
         let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
         let http_nivc_compute_1 = await HTTPVerification.compute({
@@ -247,7 +248,7 @@ describe("HTTP Verification: Split", async () => {
             ciphertext_digest: mock_ct_digest
         }, ["step_out"]);
 
-        let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("16202935654388484508586282728137211277659125633297860980774265969941813526293")];
+        let next_machine_state = [0, 0, 0, 0, 1, 0, 0];
         // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
         let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
         let http_nivc_compute_1 = await HTTPVerification.compute({
@@ -275,7 +276,7 @@ describe("HTTP Verification: Split", async () => {
             ciphertext_digest: mock_ct_digest
         }, ["step_out"]);
 
-        let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("16202935654388484508586282728137211277659125633297860980774265969941813526293")];
+        let next_machine_state = [0, 0, 0, 0, 1, 0, 0];
         // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
         let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
         let http_nivc_compute_1 = await HTTPVerification.compute({

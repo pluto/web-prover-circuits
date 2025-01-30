@@ -4,18 +4,16 @@ include "circomlib/circuits/comparators.circom";
 include "machine.circom";
 include "../utils/hash.circom";
 
-// TODO:
-// - add `if body { PD(b[p]) }` to step_ou[0]
 template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     signal input step_in[PUBLIC_IO_LENGTH];
     signal output step_out[PUBLIC_IO_LENGTH];
 
-    // next_parsing_start, next_parsing_header, next_parsing_field_name, next_parsing_field_value, next_parsing_body, next_line_status, inner_main_digest, body_digest
-    signal input machine_state[8];
+    // next_parsing_start, next_parsing_header, next_parsing_field_name, next_parsing_field_value, next_parsing_body, next_line_status, inner_main_digest
+    signal input machine_state[7];
 
     signal input ciphertext_digest;
 
-    // step_in[2] is the combined length of the data
+    // step_in[2] = ciphertext_digest ** plaintext_ctr
     signal ciphertext_digest_pow[DATA_BYTES+1];
     ciphertext_digest_pow[0] <== step_in[2];
     signal mult_factor[DATA_BYTES];
@@ -30,7 +28,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
         ciphertext_digest_pow[i+1] <== ciphertext_digest_pow[i] * mult_factor[i];
     }
     signal pt_digest <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_data, ciphertext_digest, step_in[2]);
-    log("inner plaintext_digest: ", pt_digest);
+    // log("inner plaintext_digest: ", pt_digest);
 
     // Contains digests of start line and all intended headers (up to `MAX_NUMBER_OF_HEADERS`)
     signal input main_digests[MAX_NUMBER_OF_HEADERS + 1];
@@ -41,10 +39,10 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
 
     // assertions:
     // - check step_in[3] = machine state hash digest
-    for (var i = 0 ; i < 8 ; i++) {
+    for (var i = 0 ; i < 7 ; i++) {
         log("machine_state[",i,"] = ", machine_state[i]);
     }
-    signal machine_state_digest <== PolynomialDigest(8)(machine_state, ciphertext_digest);
+    signal machine_state_digest <== PolynomialDigest(7)(machine_state, ciphertext_digest);
     log("machine_state_digest: ", machine_state_digest);
     step_in[3] === machine_state_digest;
     // - check step_in[4] = start line hash digest + all header hash digests
@@ -130,7 +128,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     signal body_digest[DATA_BYTES]; // body digest
     body_monomials[0] <== pow_accumulation; // (ciphertext_digest ** body_ctr) * State.parsing_body (0 if we are not in the body)
     body_ctr[0]     <== body_ctr_is_zero * State[0].parsing_body + (1 - body_ctr_is_zero); // checks if we are in the body
-    log("body_ctr[0] = ", body_ctr[0]);
+    // log("body_ctr[0] = ", body_ctr[0]);
     // Set this to what the previous digest was
     body_digest[0]    <== body_monomials[0] * zeroed_data[0];
     for(var i = 0 ; i < DATA_BYTES - 1 ; i++) {
@@ -149,15 +147,14 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     step_out[1] <== step_in[1];
     step_out[2] <== ciphertext_digest_pow[DATA_BYTES];
     // pass machine state to next iteration
-    step_out[3] <== PolynomialDigest(8)(
+    step_out[3] <== PolynomialDigest(7)(
         [State[DATA_BYTES - 1].next_parsing_start,
          State[DATA_BYTES - 1].next_parsing_header,
          State[DATA_BYTES - 1].next_parsing_field_name,
          State[DATA_BYTES - 1].next_parsing_field_value,
          State[DATA_BYTES - 1].next_parsing_body,
          State[DATA_BYTES - 1].next_line_status,
-         inner_main_digest[DATA_BYTES],
-         body_digest[DATA_BYTES - 1]
+         inner_main_digest[DATA_BYTES]
         ],
         ciphertext_digest
     );
