@@ -28,11 +28,11 @@ impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
         Status::ParsingNumber(_) | Status::ParsingString(_),
       ) =>
         if value.label_stack[value.pointer() - 1].1.is_empty() {
-          dbg!(value.pointer());
-          println!("in here because empty.");
+          // dbg!(value.pointer());
+          // println!("in here because empty.");
           F::ZERO
         } else {
-          println!("in here because not empty.");
+          // println!("in here because not empty.");
           value.polynomial_input.pow([(value.label_stack[value.pointer() - 1].1.len() - 1) as u64])
         },
 
@@ -352,6 +352,14 @@ mod tests {
 
     let raw_states =
       states.into_iter().map(RawJsonMachine::from).collect::<Vec<RawJsonMachine<5>>>();
+    assert_eq!(raw_states.len(), input.len());
+
+    let last_state = raw_states.last().unwrap();
+    assert_eq!(last_state.stack, [(F::ZERO, F::ZERO); 5]);
+    assert_eq!(last_state.tree_hash, [(F::ZERO, F::ZERO); 5]);
+    assert_eq!(last_state.parsing_number, F::ZERO);
+    assert_eq!(last_state.parsing_string, F::ZERO);
+    assert_eq!(last_state.monomial, F::ZERO);
     // dbg!(raw_states);
   }
 }
