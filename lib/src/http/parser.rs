@@ -16,9 +16,9 @@ pub fn parse(bytes: &[u8], polynomial_input: F) -> Result<Vec<HttpMachine>, Witn
   let mut ctr = 0;
   let mut line_ctr = 0;
   for char in bytes {
-    println!("-------------------------------------------------");
-    println!("char: {:?}, {}", *char as char, *char);
-    println!("-------------------------------------------------");
+    // println!("-------------------------------------------------");
+    // println!("char: {:?}, {}", *char as char, *char);
+    // println!("-------------------------------------------------");
     match (*char, machine.status) {
       (SPACE, HttpStatus::ParsingStart(loc)) => {
         match loc {
@@ -76,35 +76,35 @@ pub fn parse(bytes: &[u8], polynomial_input: F) -> Result<Vec<HttpMachine>, Witn
     output.push(machine);
     let raw_state = RawHttpMachine::from(machine.clone());
 
-    println!(
-      "state[ {ctr:?} ].parsing_start       = {:?}",
-      BigUint::from_bytes_le(&raw_state.parsing_start.to_bytes())
-    );
-    println!(
-      "state[ {ctr:?} ].parsing_header      = {:?}",
-      BigUint::from_bytes_le(&raw_state.parsing_header.to_bytes())
-    );
-    println!(
-      "state[ {ctr:?} ].parsing_field_name  = {:?}",
-      BigUint::from_bytes_le(&raw_state.parsing_field_name.to_bytes())
-    );
-    println!(
-      "state[ {ctr:?} ].parsing_field_value = {:?}",
-      BigUint::from_bytes_le(&raw_state.parsing_field_value.to_bytes())
-    );
-    println!(
-      "state[ {ctr:?} ].parsing_body        = {:?}",
-      BigUint::from_bytes_le(&raw_state.parsing_body.to_bytes())
-    );
-    println!(
-      "state[ {ctr:?} ].line_status         = {:?}",
-      BigUint::from_bytes_le(&raw_state.line_status.to_bytes())
-    );
-    println!(
-      "state[ {ctr:?} ].inner_main_digest   = {:?}",
-      BigUint::from_bytes_le(&raw_state.line_digest.to_bytes())
-    );
-    println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    // println!(
+    //   "state[ {ctr:?} ].parsing_start       = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.parsing_start.to_bytes())
+    // );
+    // println!(
+    //   "state[ {ctr:?} ].parsing_header      = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.parsing_header.to_bytes())
+    // );
+    // println!(
+    //   "state[ {ctr:?} ].parsing_field_name  = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.parsing_field_name.to_bytes())
+    // );
+    // println!(
+    //   "state[ {ctr:?} ].parsing_field_value = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.parsing_field_value.to_bytes())
+    // );
+    // println!(
+    //   "state[ {ctr:?} ].parsing_body        = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.parsing_body.to_bytes())
+    // );
+    // println!(
+    //   "state[ {ctr:?} ].line_status         = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.line_status.to_bytes())
+    // );
+    // println!(
+    //   "state[ {ctr:?} ].inner_main_digest   = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.line_digest.to_bytes())
+    // );
+    // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     ctr += 1;
   }
   Ok(output)

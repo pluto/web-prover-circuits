@@ -47,6 +47,17 @@ pub struct RawJsonMachine<const MAX_STACK_HEIGHT: usize> {
 }
 
 impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
+  pub fn initial_state() -> Self {
+    Self {
+      polynomial_input: F::ZERO,
+      stack:            [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT],
+      tree_hash:        [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT],
+      parsing_string:   F::ZERO,
+      parsing_number:   F::ZERO,
+      monomial:         F::ZERO,
+    }
+  }
+
   pub fn compress_tree_hash(&self) -> F {
     let mut accumulated = F::ZERO;
     let mut monomial = F::ONE;
@@ -104,20 +115,19 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
     }
   }
 
-  pub fn flatten(&self) -> [F; MAX_STACK_HEIGHT * 2 + 3] {
-    let mut output = [F::ZERO; MAX_STACK_HEIGHT * 2 + 3];
-    output[0] = self.polynomial_input;
+  pub fn flatten(&self) -> [F; MAX_STACK_HEIGHT * 4 + 3] {
+    let mut output = [F::ZERO; MAX_STACK_HEIGHT * 4 + 3];
     for (idx, pair) in self.stack.iter().enumerate() {
-      output[2 * idx + 1] = pair.0;
-      output[2 * idx + 2] = pair.1;
+      output[2 * idx] = pair.0;
+      output[2 * idx + 1] = pair.1;
     }
     for (idx, pair) in self.tree_hash.iter().enumerate() {
-      output[2 * idx + 1 + MAX_STACK_HEIGHT * 2] = pair.0;
-      output[2 * idx + 2 + MAX_STACK_HEIGHT * 2] = pair.1;
+      output[2 * idx + MAX_STACK_HEIGHT * 2] = pair.0;
+      output[2 * idx + 1 + MAX_STACK_HEIGHT * 2] = pair.1;
     }
-    output[MAX_STACK_HEIGHT * 2 + 1] = self.parsing_string;
-    output[MAX_STACK_HEIGHT * 2 + 2] = self.parsing_number;
-    output[MAX_STACK_HEIGHT * 2 + 3] = self.monomial;
+    output[MAX_STACK_HEIGHT * 2] = self.parsing_string;
+    output[MAX_STACK_HEIGHT * 2 + 1] = self.parsing_number;
+    output[MAX_STACK_HEIGHT * 2 + 2] = self.monomial;
     output
   }
 }

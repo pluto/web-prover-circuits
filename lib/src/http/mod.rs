@@ -10,8 +10,8 @@ pub struct HttpMachine {
   pub line_digest: F,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(from = "[F; 7]", into = "[F; 7]")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
+#[serde(into = "[String; 7]")]
 pub struct RawHttpMachine {
   pub parsing_start:       F,
   pub parsing_header:      F,
@@ -23,32 +23,17 @@ pub struct RawHttpMachine {
 }
 
 // Implement From<RawHttpMachine> for [F; 7]
-impl From<RawHttpMachine> for [F; 7] {
+impl From<RawHttpMachine> for [String; 7] {
   fn from(machine: RawHttpMachine) -> Self {
     [
-      machine.parsing_start,
-      machine.parsing_header,
-      machine.parsing_field_name,
-      machine.parsing_field_value,
-      machine.parsing_body,
-      machine.line_status,
-      machine.line_digest,
+      field_element_to_base10_string(machine.parsing_start),
+      field_element_to_base10_string(machine.parsing_header),
+      field_element_to_base10_string(machine.parsing_field_name),
+      field_element_to_base10_string(machine.parsing_field_value),
+      field_element_to_base10_string(machine.parsing_body),
+      field_element_to_base10_string(machine.line_status),
+      field_element_to_base10_string(machine.line_digest),
     ]
-  }
-}
-
-// Implement From<[F; 7]> for RawHttpMachine
-impl From<[F; 7]> for RawHttpMachine {
-  fn from(arr: [F; 7]) -> Self {
-    Self {
-      parsing_start:       arr[0],
-      parsing_header:      arr[1],
-      parsing_field_name:  arr[2],
-      parsing_field_value: arr[3],
-      parsing_body:        arr[4],
-      line_status:         arr[5],
-      line_digest:         arr[6],
-    }
   }
 }
 
@@ -81,6 +66,14 @@ impl From<HttpMachine> for RawHttpMachine {
       },
     }
     raw_http_machine
+  }
+}
+
+impl RawHttpMachine {
+  pub fn initial_state() -> Self {
+    let mut default = RawHttpMachine::default();
+    default.parsing_start = F::ONE;
+    default
   }
 }
 

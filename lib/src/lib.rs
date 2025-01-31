@@ -145,7 +145,7 @@ impl From<&ByteOrPad> for halo2curves::bn256::Fr {
 }
 
 /// Converts a field element to a base10 string.
-fn field_element_to_base10_string(fe: F) -> String {
+pub fn field_element_to_base10_string(fe: F) -> String {
   BigUint::from_bytes_le(&fe.to_bytes()).to_str_radix(10)
 }
 
