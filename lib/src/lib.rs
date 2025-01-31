@@ -1,5 +1,6 @@
 //! Used for computing the witnesses needed for HTTP and JSON elements of Web Proof NIVC
 //! hashchain-based circuits.
+#![feature(generic_const_exprs)]
 
 pub mod error;
 pub mod http;
@@ -26,72 +27,75 @@ pub type F = <G as Group>::Scalar;
 
 const NUMBER_IO_REGISTERS: usize = 10;
 
-// TODO: This is really like "initial nivc input maker" or something
-pub fn manifest_digest<const MAX_STACK_HEIGHT: usize>(
-  manifest: &Manifest,
-  ciphertext_digest: F,
-) -> [F; NUMBER_IO_REGISTERS] {
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
-  // Digest both the request and response start lines
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
-  // Request
-  let request_start_line =
-    format!("{} {} {}", &manifest.request.method, &manifest.request.url, &manifest.request.version);
-  let request_start_line_digest =
-    polynomial_digest(request_start_line.as_bytes(), ciphertext_digest, 0);
+// // TODO: This is really like "initial nivc input maker" or something
+// pub fn manifest_digest<const MAX_STACK_HEIGHT: usize>(
+//   manifest: &Manifest,
+//   ciphertext_digest: F,
+// ) -> [F; NUMBER_IO_REGISTERS] {
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// //   // Digest both the request and response start lines
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// //   // Request
+//   let request_start_line =
+//     format!("{} {} {}", &manifest.request.method, &manifest.request.url,
+// &manifest.request.version);   let request_start_line_digest =
+//     polynomial_digest(request_start_line.as_bytes(), ciphertext_digest, 0);
 
-  // Response
-  let response_start_line = format!(
-    "{} {} {}",
-    &manifest.response.version, &manifest.response.status, &manifest.response.message
-  );
-  let response_start_line_digest =
-    polynomial_digest(response_start_line.as_bytes(), ciphertext_digest, 0);
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
+//   // Response
+//   let response_start_line = format!(
+//     "{} {} {}",
+//     &manifest.response.version, &manifest.response.status, &manifest.response.message
+//   );
+//   let response_start_line_digest =
+//     polynomial_digest(response_start_line.as_bytes(), ciphertext_digest, 0);
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// //
 
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
-  // Digest both the request and response headers to lock
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
-  // Request
-  let request_headers_digest = headers_to_bytes(&manifest.request.headers)
-    .map(|bytes| polynomial_digest(&bytes, ciphertext_digest, 0))
-    .collect::<Vec<F>>();
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// //   // Digest both the request and response headers to lock
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// //   // Request
+//   let request_headers_digest = headers_to_bytes(&manifest.request.headers)
+//     .map(|bytes| polynomial_digest(&bytes, ciphertext_digest, 0))
+//     .collect::<Vec<F>>();
 
-  // Response
-  let response_headers_digest = headers_to_bytes(&manifest.response.headers)
-    .map(|bytes| polynomial_digest(&bytes, ciphertext_digest, 0))
-    .collect::<Vec<F>>();
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
+//   // Response
+//   let response_headers_digest = headers_to_bytes(&manifest.response.headers)
+//     .map(|bytes| polynomial_digest(&bytes, ciphertext_digest, 0))
+//     .collect::<Vec<F>>();
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// //
 
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
-  // Digest the JSON sequence
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
-  let raw_json_machine = RawJsonMachine::<MAX_STACK_HEIGHT>::from_chosen_sequence_and_input(
-    ciphertext_digest,
-    &manifest.response.body.json,
-  );
-  let json_sequence_digest = raw_json_machine.compress_tree_hash();
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// //   // Digest the JSON sequence
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// //   let raw_json_machine = RawJsonMachine::<MAX_STACK_HEIGHT>::from_chosen_sequence_and_input(
+//     ciphertext_digest,
+//     &manifest.response.body.json,
+//   );
+//   let json_sequence_digest = raw_json_machine.compress_tree_hash();
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// //
 
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
-  // Populate the initial input
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
-  let mut public_input = [F::default(); 10];
-  public_input[1..=3].copy_from_slice(&[F::ONE; 3]);
-  public_input[4] = poseidon::<1>(&[request_start_line_digest])
-    + poseidon::<1>(&[response_start_line_digest])
-    + request_headers_digest.clone().into_iter().map(|d| poseidon::<1>(&[d])).sum::<F>()
-    + response_headers_digest.clone().into_iter().map(|d| poseidon::<1>(&[d])).sum::<F>();
-  public_input[5] = F::from(2)
-    + F::from(request_headers_digest.len() as u64)
-    + F::from(response_headers_digest.len() as u64);
-  public_input[7] = F::ONE;
-  public_input[9] = poseidon::<1>(&[json_sequence_digest]);
-  dbg!(F::default());
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// //   // Populate the initial input
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// //   let mut public_input = [F::default(); 10];
+//   public_input[1..=3].copy_from_slice(&[F::ONE; 3]);
+//   public_input[4] = poseidon::<1>(&[request_start_line_digest])
+//     + poseidon::<1>(&[response_start_line_digest])
+//     + request_headers_digest.clone().into_iter().map(|d| poseidon::<1>(&[d])).sum::<F>()
+//     + response_headers_digest.clone().into_iter().map(|d| poseidon::<1>(&[d])).sum::<F>();
+//   public_input[5] = F::from(2)
+//     + F::from(request_headers_digest.len() as u64)
+//     + F::from(response_headers_digest.len() as u64);
+//   public_input[7] = F::ONE;
+//   public_input[9] = poseidon::<1>(&[json_sequence_digest]);
+//   dbg!(F::default());
 
-  public_input
-  // ----------------------------------------------------------------------------------------------------------------------------------------------- //
-}
+//   public_input
+//   // -----------------------------------------------------------------------------------------------------------------------------------------------
+// // }
 
 /// Struct representing a byte or padding.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -211,12 +215,12 @@ pub fn poseidon<const N: usize>(preimage: &[F]) -> F {
 /// **Note**:
 /// - any chunk of 16 bytes that is fully padded with -1 will be ignored
 /// - check [`bytepack`] for more details
-pub fn data_hasher(preimage: &[ByteOrPad]) -> F {
+pub fn data_hasher(preimage: &[ByteOrPad], seed: F) -> F {
   // Pack the input bytes in chunks of 16 into field elements
   let packed_inputs = preimage.chunks(16).map(bytepack).collect::<Vec<Option<F>>>();
 
   // Iterate over the packed inputs and hash them with Poseidon
-  let mut hash_val = F::ZERO;
+  let mut hash_val = seed;
   for packed_input in packed_inputs {
     if packed_input.is_none() {
       continue;
@@ -277,7 +281,7 @@ mod tests {
 
   #[test]
   fn test_data_hasher() {
-    let hash = data_hasher(&[ByteOrPad::Byte(0); 16]);
+    let hash = data_hasher(&[ByteOrPad::Byte(0); 16], F::ZERO);
     assert_eq!(
       hash,
       F::from_str_vartime(
@@ -286,17 +290,17 @@ mod tests {
       .unwrap()
     );
 
-    let hash = data_hasher(&[ByteOrPad::Pad; 16]);
+    let hash = data_hasher(&[ByteOrPad::Pad; 16], F::ZERO);
     assert_eq!(hash, F::ZERO);
 
     let mut hash_input = [ByteOrPad::Byte(0); 16];
     hash_input[0] = ByteOrPad::Byte(1);
-    let hash = data_hasher(hash_input.as_ref());
+    let hash = data_hasher(hash_input.as_ref(), F::ZERO);
     assert_eq!(hash, poseidon::<2>([F::ZERO, F::ONE].as_ref()));
 
     hash_input = [ByteOrPad::Byte(0); 16];
     hash_input[15] = ByteOrPad::Byte(1);
-    let hash = data_hasher(hash_input.as_ref());
+    let hash = data_hasher(hash_input.as_ref(), F::ZERO);
     assert_eq!(
       hash,
       poseidon::<2>(

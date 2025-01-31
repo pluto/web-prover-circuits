@@ -1,5 +1,6 @@
-use super::*;
+use serde::{Deserialize, Serialize};
 
+use super::*;
 pub mod parser;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,7 +10,8 @@ pub struct HttpMachine {
   pub line_digest: F,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(from = "[F; 7]", into = "[F; 7]")]
 pub struct RawHttpMachine {
   pub parsing_start:       F,
   pub parsing_header:      F,
@@ -18,6 +20,36 @@ pub struct RawHttpMachine {
   pub parsing_body:        F,
   pub line_status:         F,
   pub line_digest:         F,
+}
+
+// Implement From<RawHttpMachine> for [F; 7]
+impl From<RawHttpMachine> for [F; 7] {
+  fn from(machine: RawHttpMachine) -> Self {
+    [
+      machine.parsing_start,
+      machine.parsing_header,
+      machine.parsing_field_name,
+      machine.parsing_field_value,
+      machine.parsing_body,
+      machine.line_status,
+      machine.line_digest,
+    ]
+  }
+}
+
+// Implement From<[F; 7]> for RawHttpMachine
+impl From<[F; 7]> for RawHttpMachine {
+  fn from(arr: [F; 7]) -> Self {
+    Self {
+      parsing_start:       arr[0],
+      parsing_header:      arr[1],
+      parsing_field_name:  arr[2],
+      parsing_field_value: arr[3],
+      parsing_body:        arr[4],
+      line_status:         arr[5],
+      line_digest:         arr[6],
+    }
+  }
 }
 
 impl From<HttpMachine> for RawHttpMachine {
@@ -80,61 +112,11 @@ pub enum LineStatus {
   CRLFCR,
 }
 
-/// Manifest containing [`Request`] and [`Response`]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Manifest {
-  /// HTTP request lock items
-  pub request:  Request,
-  /// HTTP response lock items
-  pub response: Response,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResponseBody {
-  pub json: Vec<JsonKey>,
-}
-
-/// HTTP Response items required for circuits
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Response {
-  /// HTTP response status
-  pub status:  String,
-  /// HTTP version
-  #[serde(default = "default_version")]
-  pub version: String,
-  /// HTTP response message
-  #[serde(default = "default_message")]
-  pub message: String,
-  /// HTTP headers to lock
-  pub headers: HashMap<String, String>,
-  /// HTTP body keys
-  pub body:    ResponseBody,
-}
-
-/// HTTP Request items required for circuits
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Request {
-  /// HTTP method (GET or POST)
-  pub method:  String,
-  /// HTTP request URL
-  pub url:     String,
-  /// HTTP version
-  #[serde(default = "default_version")]
-  pub version: String,
-  /// Request headers to lock
-  pub headers: HashMap<String, String>,
-}
-
 pub enum HttpMaskType {
   StartLine,
   Header(usize),
   Body,
 }
-
-/// Default HTTP version
-pub fn default_version() -> String { "HTTP/1.1".to_string() }
-/// Default HTTP message
-pub fn default_message() -> String { "OK".to_string() }
 
 // TODO: Note, HTTP does not require a `:` and space between the name and value of a header, so we
 // will have to deal with this somehow, but for now I'm assuming there's a space

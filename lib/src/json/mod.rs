@@ -103,6 +103,23 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
       monomial: F::ZERO,
     }
   }
+
+  pub fn flatten(&self) -> [F; MAX_STACK_HEIGHT * 2 + 3] {
+    let mut output = [F::ZERO; MAX_STACK_HEIGHT * 2 + 3];
+    output[0] = self.polynomial_input;
+    for (idx, pair) in self.stack.iter().enumerate() {
+      output[2 * idx + 1] = pair.0;
+      output[2 * idx + 2] = pair.1;
+    }
+    for (idx, pair) in self.tree_hash.iter().enumerate() {
+      output[2 * idx + 1 + MAX_STACK_HEIGHT * 2] = pair.0;
+      output[2 * idx + 2 + MAX_STACK_HEIGHT * 2] = pair.1;
+    }
+    output[MAX_STACK_HEIGHT * 2 + 1] = self.parsing_string;
+    output[MAX_STACK_HEIGHT * 2 + 2] = self.parsing_number;
+    output[MAX_STACK_HEIGHT * 2 + 3] = self.monomial;
+    output
+  }
 }
 
 // TODO: Fix all panics here

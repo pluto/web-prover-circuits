@@ -605,8 +605,8 @@ describe("Example NIVC Proof", async () => {
         // Run response HTTPVerification
         let responseMachineState = Array(7).fill(0);
         responseMachineState[0] = 1; // Sets the parsing start to 1
-        let responseMachineState2 = [0, 0, 0, 0, 1, 0, 0, BigInt("17254457507538573663580074635865728502553125514899317196086652572055478623335")];
-        let responseMachineState3 = [0, 0, 0, 0, 1, 0, 0, BigInt("17485877200063103672489113686823507448308624682483242290501494756760660668524")];
+        let responseMachineState2 = [0, 0, 0, 0, 1, 0, 0];
+        let responseMachineState3 = [0, 0, 0, 0, 1, 0, 0];
         let responseMachineStates = [responseMachineState, responseMachineState2, responseMachineState3];
         let prevResponseBodyCounter = BigInt(0);
 
