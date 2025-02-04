@@ -140,8 +140,8 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
   let mut ctr = 0;
   for char in bytes {
     // Update the machine
-    println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    println!("char: {}, ctr: {}", *char as char, ctr);
+    // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    // println!("char: {}, ctr: {}", *char as char, ctr);
     match *char {
       START_BRACE => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::None | Location::ObjectValue | Location::ArrayIndex(_)) => {
