@@ -47,8 +47,8 @@ This template is for updating the state of the parser from a current state to a 
  - `next_parsing_number`            : a bool flag that indicates whether the parser is currently parsing a number or not after reading `byte`.
 */
 template StateUpdateHasher(MAX_STACK_HEIGHT) {
-    signal input byte; 
-    
+    signal input byte;
+
     signal input stack[MAX_STACK_HEIGHT][2];
     signal input parsing_string;
     signal input parsing_number;
@@ -309,6 +309,8 @@ template RewriteStack(n) {
     signal output next_stack[n][2];
     signal output next_tree_hash[n][2];
 
+    signal readColonAndNotParsingString <== readColon * (1 - parsing_string);
+    signal readCommaAndNotParsingString <== readComma * (1 - parsing_string);
     //--------------------------------------------------------------------------------------------//
     // * scan value on top of stack *
     component topOfStack      = GetTopOfStack(n);
@@ -336,8 +338,8 @@ template RewriteStack(n) {
     signal indicator[n];
     signal tree_hash_indicator[n];
     for(var i = 0; i < n; i++) {
-        indicator[i] <== IsZero()(pointer - isPop - readColon - readComma - i); // Note, pointer points to unallocated region!
-        tree_hash_indicator[i] <== IsZero()(pointer - i - 1); 
+        indicator[i] <== IsZero()(pointer - isPop - readColonAndNotParsingString - readCommaAndNotParsingString - i); // Note, pointer points to unallocated region!
+        tree_hash_indicator[i] <== IsZero()(pointer - i - 1);
     }
     //--------------------------------------------------------------------------------------------//
 
@@ -351,7 +353,7 @@ template RewriteStack(n) {
     stateHash[1].index <== pointer - 1;
     for(var i = 0 ; i < n ; i++) {
         stateHash[0].in[i] <== tree_hash[i][0];
-        stateHash[1].in[i] <== tree_hash[i][1];        
+        stateHash[1].in[i] <== tree_hash[i][1];
     }
 
     signal is_object_key   <== IsEqualArray(2)([current_value,[1,0]]);
@@ -361,12 +363,12 @@ template RewriteStack(n) {
     signal not_to_hash <== IsZero()(parsing_string * next_parsing_string + next_parsing_number);
     signal hash_0      <== is_object_key * stateHash[0].out; // TODO: I think these may not be needed
     signal hash_1      <== (is_object_value + is_array) * stateHash[1].out; // TODO: I think these may not be needed
-    
+
     signal monomial_is_zero <== IsZero()(monomial);
     signal increased_power  <== monomial * polynomial_input;
     next_monomial           <== (1 - not_to_hash) * (monomial_is_zero + increased_power); // if monomial is zero and to_hash, then this treats monomial as if it is 1, else we increment the monomial
-    signal option_hash      <== hash_0 + hash_1 + byte * next_monomial; 
-    
+    signal option_hash      <== hash_0 + hash_1 + byte * next_monomial;
+
     signal next_state_hash[2];
     next_state_hash[0] <== not_to_hash * (stateHash[0].out - option_hash) + option_hash; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
     next_state_hash[1] <== not_to_hash * (stateHash[1].out - option_hash) + option_hash;
@@ -375,18 +377,18 @@ template RewriteStack(n) {
 
     //--------------------------------------------------------------------------------------------//
     // * loop to modify the stack and tree hash by rebuilding it *
-    signal stack_change_value[2] <== [(isPush + isPop) * read_write_value, readColon + readCommaInArray - readCommaNotInArray];
+    signal stack_change_value[2] <== [(isPush + isPop) * read_write_value, readColonAndNotParsingString + readCommaInArray - readCommaNotInArray];
     signal second_index_clear[n];
-    
+
     signal still_parsing_string <== parsing_string * next_parsing_string;
     signal still_parsing_object_key     <== still_parsing_string * is_object_key;
-    signal end_kv               <== (1 - parsing_string) * (readComma + readEndBrace + readEndBracket);
+    signal end_kv               <== (1 - parsing_string) * (readCommaAndNotParsingString + readEndBrace + readEndBracket);
     // signal not_array_and_not_object_value <== (1 - is_array) * (1 - is_object_value);
     // signal not_array_and_not_object_value_and_not_end_kv <== not_array_and_not_object_value * (1 - end_kv);
     // signal not_array_and_not_end_kv <== (1 - is_array) * (1 - end_kv);
     signal to_change_zeroth         <== (1 - is_array) * still_parsing_object_key + end_kv;
 
-    signal not_end_char_for_first    <== IsZero()(readColon + readComma + readQuote + (1-next_parsing_number));
+    signal not_end_char_for_first    <== IsZero()(readColonAndNotParsingString + readCommaAndNotParsingString + readQuote + (1-next_parsing_number));
     signal maintain_zeroth           <== is_object_value * stateHash[0].out;
     signal to_change_first           <== is_object_value + is_array;
     // signal tree_hash_change_value[2] <== [not_array_and_not_object_value_and_not_end_kv * next_state_hash[0], to_change_first * next_state_hash[1]];
@@ -402,8 +404,8 @@ template RewriteStack(n) {
         to_update_hash[i][0] <== tree_hash_indicator[i] * to_change_zeroth;
         to_update_hash[i][1] <== tree_hash_indicator[i] * to_change_first;
     }
-    /* 
-    NOTE: 
+    /*
+    NOTE:
     - The thing to do now is to make this so it clears off the value when we want and update it when we want.
     - Let's us a "to_change_zeroth" and "to_clear_zeroth" together. You will need both to clear, just "change" to update
     */

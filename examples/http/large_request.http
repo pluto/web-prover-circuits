@@ -1,0 +1,52 @@
+POST /api/v1/data HTTP/1.1
+Host: example.com
+Content-Type: application/json
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+Accept: application/json
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cache-Control: no-cache
+Connection: keep-alive
+Cookie: session=abc123; user_id=12345; theme=dark
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ
+X-Request-ID: 7b92f2b0-69f6-11ee-8c99-0242ac120002
+X-Forwarded-For: 203.0.113.195
+Content-Length: 989
+
+{
+    "metadata": {
+        "requestId": "7b92f2b0-69f6-11ee-8c99-0242ac120002",
+        "timestamp": "2025-01-27T10:15:30Z",
+        "source": "web-client",
+        "version": "1.0.0"
+    },
+    "data": {
+        "user": {
+            "id": "usr_12345",
+            "email": "john.doe@example.com",
+            "preferences": {
+                "notifications": {
+                    "email": true,
+                    "push": false,
+                    "sms": true
+                },
+                "timezone": "America/New_York",
+                "language": "en-US"
+            }
+        },
+        "items": [
+            {
+                "id": "item_001",
+                "name": "Product A",
+                "quantity": 2,
+                "price": 29.99
+            },
+            {
+                "id": "item_002",
+                "name": "Product B",
+                "quantity": 1,
+                "price": 49.99
+            }
+        ]
+    }
+}

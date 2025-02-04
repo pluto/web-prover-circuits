@@ -1,0 +1,71 @@
+HTTP/1.1 200 OK
+Date: Mon, 27 Jan 2025 10:15:31 GMT
+Content-Type: application/json
+Content-Length: 1760
+Server: nginx/1.18.0
+Cache-Control: no-cache, no-store, must-revalidate
+Pragma: no-cache
+Expires: 0
+X-Request-ID: 7b92f2b0-69f6-11ee-8c99-0242ac120002
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization
+
+{
+    "status": "success",
+    "code": 200,
+    "requestId": "7b92f2b0-69f6-11ee-8c99-0242ac120002",
+    "timestamp": "2025-01-27T10:15:31Z",
+    "data": {
+        "orderDetails": {
+            "orderId": "ord_67890",
+            "status": "confirmed",
+            "createdAt": "2025-01-27T10:15:30Z",
+            "updatedAt": "2025-01-27T10:15:31Z",
+            "totalAmount": 109.97,
+            "currency": "USD",
+            "items": [
+                {
+                    "id": "item_001",
+                    "name": "Product A",
+                    "quantity": 2,
+                    "price": 29.99,
+                    "subtotal": 59.98,
+                    "metadata": {
+                        "sku": "SKU123456",
+                        "category": "Electronics",
+                        "weight": "0.5kg",
+                        "dimensions": "10x5x2cm"
+                    }
+                },
+                {
+                    "id": "item_002",
+                    "name": "Product B",
+                    "quantity": 1,
+                    "price": 49.99,
+                    "subtotal": 49.99,
+                    "metadata": {
+                        "sku": "SKU789012",
+                        "category": "Accessories",
+                        "weight": "0.3kg",
+                        "dimensions": "15x8x4cm"
+                    }
+                }
+            ]
+        },
+        "metadata": {
+            "processingTime": "125ms",
+            "serverRegion": "us-east-1",
+            "apiVersion": "2024-01",
+            "debug": {
+                "cache": "miss",
+                "database": "primary",
+                "loadBalancer": "lb-01"
+            }
+        }
+    }
+}

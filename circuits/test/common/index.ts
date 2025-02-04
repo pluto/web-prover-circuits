@@ -254,6 +254,8 @@ export function PolynomialDigest(coeffs: number[], input: bigint, counter: bigin
     return result;
 }
 
+export const PUBLIC_IO_VARIABLES = 11;
+
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
 // content-encoding: gzip
@@ -352,12 +354,24 @@ const PRIME = BigInt("2188824287183927522224640574525727508854836440041603434369
 const ONE = BigInt(1);
 const ZERO = BigInt(0);
 
-export function modAdd(a: bigint, b: bigint): bigint {
-    return ((a + b) % PRIME + PRIME) % PRIME;
+export function modAdd(...args: bigint[]): bigint {
+    return args.reduce((acc, val) => ((acc + val) % PRIME + PRIME) % PRIME, BigInt(0));
+}
+
+export function modSub(a: bigint, b: bigint): bigint {
+    return ((a - b) % PRIME + PRIME) % PRIME;
 }
 
 function modMul(a: bigint, b: bigint): bigint {
     return (a * b) % PRIME;
+}
+
+export function modPow(base: bigint, exponent: bigint): bigint {
+    let result = ONE;
+    for (let i = 0; i < exponent; i++) {
+        result = modMul(result, base);
+    }
+    return result;
 }
 
 export function jsonTreeHasher(
@@ -419,6 +433,13 @@ export function compressTreeHash(
     return accumulated;
 }
 
+interface ManifestRequest {
+    method: string,
+    url: string,
+    version: string,
+    headers: Record<string, string[]>,
+}
+
 interface ManifestResponse {
     version: string;
     status: string;
@@ -430,6 +451,7 @@ interface ManifestResponse {
 }
 
 export interface Manifest {
+    request: ManifestRequest;
     response: ManifestResponse;
 }
 
@@ -447,25 +469,49 @@ function headersToBytes(headers: Record<string, string[]>): number[][] {
     return result;
 }
 
+export function findBodyIndex(arr: number[]) {
+    const pattern = [13, 10, 13, 10];
+    let result: number = -1;
+
+    for (let i = 0; i <= arr.length - pattern.length; i++) {
+        if (arr[i] === pattern[0]) {
+            let found = true;
+            for (let j = 0; j < pattern.length; j++) {
+                if (arr[i + j] !== pattern[j]) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found) {
+                result = i + 4;
+                break;
+            }
+        }
+    }
+
+    return result;
+}
+
 export function InitialDigest(
     manifest: Manifest,
     ciphertexts: number[][],
     maxStackHeight: number
-): [bigint, bigint] {
-    let ciphertextDigests: bigint[] = [];
+): [bigint, bigint[]] {
     // Create a digest of the ciphertext itself
-    ciphertexts.forEach(ciphertext => {
-        const ciphertextDigest = DataHasher(ciphertext);
-        ciphertextDigests.push(ciphertextDigest);
-    });
+    let ciphertextDigests = [BigInt(0)];
+    for (var i = 0; i < ciphertexts.length; i++) {
+        ciphertextDigests.push(DataHasher(ciphertexts[i], ciphertextDigests[i]));
+    }
 
-    let ciphertextDigest = ciphertextDigests.reduce((a, b) => a + b, BigInt(0));
+    let ciphertextDigest = ciphertextDigests[ciphertextDigests.length - 1];
+    console.log("Ciphertext Digest: ", ciphertextDigest);
 
     // Digest the start line using the ciphertext_digest as a random input
     const startLineBytes = strToBytes(
         `${manifest.response.version} ${manifest.response.status} ${manifest.response.message}`
     );
     const startLineDigest = PolynomialDigest(startLineBytes, ciphertextDigest, BigInt(0));
+    const startLineDigestHashed = poseidon1([startLineDigest]);
 
     // Digest all the headers
     const headerBytes = headersToBytes(manifest.response.headers);
@@ -479,18 +525,87 @@ export function InitialDigest(
         manifest.response.body.json,
         maxStackHeight
     );
-    const jsonSequenceDigest = compressTreeHash(ciphertextDigest, jsonTreeHash);
+    const jsonSequenceDigestHash = poseidon1([compressTreeHash(ciphertextDigest, jsonTreeHash)]);
 
-    // Put all the digests into an array
-    const allDigests: bigint[] = [jsonSequenceDigest, startLineDigest, ...headersDigest];
 
     // Calculate manifest digest
-    const manifestDigest = modAdd(
-        ciphertextDigest,
-        allDigests.map(d => poseidon1([d])).reduce((a, b) => modAdd(a, b), ZERO)
+    const headerVerificationLock = modAdd(
+        startLineDigestHashed,
+        headersDigest.map(d => poseidon1([d])).reduce((a, b) => modAdd(a, b), ZERO)
     );
 
-    return [ciphertextDigest, manifestDigest];
+    const numMatches = 1 + Object.keys(manifest.response.headers).length;
+    return [ciphertextDigest, [ciphertextDigest, BigInt(1), BigInt(1), BigInt(1), headerVerificationLock, BigInt(numMatches), BigInt(0), BigInt(1), BigInt(0), jsonSequenceDigestHash, BigInt(0)]];
+}
+
+export function CombinedInitialDigest(
+    manifest: Manifest,
+    request_ciphertexts: number[][],
+    response_ciphertexts: number[][],
+    maxStackHeight: number
+): [bigint, bigint[], bigint[]] {
+    // Create a digest of the ciphertext itself
+    let ciphertextDigests = [BigInt(0)];
+    for (var i = 0; i < request_ciphertexts.length; i++) {
+        ciphertextDigests.push(DataHasher(request_ciphertexts[i], ciphertextDigests[ciphertextDigests.length - 1]));
+    }
+    for (var i = 0; i < response_ciphertexts.length; i++) {
+        ciphertextDigests.push(DataHasher(response_ciphertexts[i], ciphertextDigests[ciphertextDigests.length - 1]));
+    }
+
+    let ciphertextDigest = ciphertextDigests[ciphertextDigests.length - 1];
+    console.log("Ciphertext Digest: ", ciphertextDigest);
+
+    // Digest the start line using the ciphertext_digest as a random input
+    const requestStartLineBytes = strToBytes(
+        `${manifest.request.method} ${manifest.request.url} ${manifest.request.version}`
+    );
+    const requestStartLineDigest = PolynomialDigest(requestStartLineBytes, ciphertextDigest, BigInt(0));
+    const requestStartLineDigestHashed = poseidon1([requestStartLineDigest]);
+
+    const responseStartLineBytes = strToBytes(
+        `${manifest.response.version} ${manifest.response.status} ${manifest.response.message}`
+    );
+    const responseStartLineDigest = PolynomialDigest(responseStartLineBytes, ciphertextDigest, BigInt(0));
+    const responseStartLineDigestHashed = poseidon1([responseStartLineDigest]);
+
+    // Digest all the headers
+    const requestHeaderBytes = headersToBytes(manifest.request.headers);
+    const requestHeadersDigest = requestHeaderBytes.map(bytes =>
+        PolynomialDigest(bytes, ciphertextDigest, BigInt(0))
+    );
+    const responseHeaderBytes = headersToBytes(manifest.response.headers);
+    const responseHeadersDigest = responseHeaderBytes.map(bytes =>
+        PolynomialDigest(bytes, ciphertextDigest, BigInt(0))
+    );
+
+    // Digest the JSON sequence
+    const jsonTreeHash = jsonTreeHasher(
+        ciphertextDigest,
+        manifest.response.body.json,
+        maxStackHeight
+    );
+    const jsonSequenceDigestHash = poseidon1([compressTreeHash(ciphertextDigest, jsonTreeHash)]);
+
+
+    // Calculate manifest digest
+    let headerVerificationLock = modAdd(
+        requestStartLineDigestHashed,
+        requestHeadersDigest.map(d => poseidon1([d])).reduce((a, b) => modAdd(a, b), ZERO)
+    );
+    headerVerificationLock = modAdd(
+        headerVerificationLock,
+        responseStartLineDigestHashed,
+    );
+    headerVerificationLock = modAdd(
+        headerVerificationLock,
+        responseHeadersDigest.map(d => poseidon1([d])).reduce((a, b) => modAdd(a, b), ZERO)
+    );
+
+    let allDigests = [requestStartLineDigest, responseStartLineDigest, ...requestHeadersDigest, ...responseHeadersDigest];
+
+    const numMatches = 1 + Object.keys(manifest.response.headers).length + 1 + Object.keys(manifest.request.headers).length;
+    return [ciphertextDigest, [ciphertextDigest, BigInt(1), BigInt(1), BigInt(1), headerVerificationLock, BigInt(numMatches), BigInt(0), BigInt(1), BigInt(0), jsonSequenceDigestHash, BigInt(0)], allDigests];
 }
 
 export function MockManifest(): Manifest {
@@ -508,6 +623,12 @@ export function MockManifest(): Manifest {
     ];
 
     return {
+        request: {
+            method: "GET",
+            url: "/",
+            version: "HTTP/1.1",
+            headers: {}
+        },
         response: {
             status: "200",
             version: "HTTP/1.1",

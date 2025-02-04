@@ -1,14 +1,26 @@
 {
     "data": {
-        "redditorInfoByName": {
-            "id": "t2_bepsb",
-            "karma": {
-                "fromAwardsGiven": 0,
-                "fromAwardsReceived": 470,
-                "fromComments": 9583,
-                "fromPosts": 13228,
-                "total": 23281
+        "redditorInfoByName": [
+            {
+                "id": "t1_bepsb",
+                "karma": {
+                    "fromAwardsGiven": 10,
+                    "fromAwardsReceived": 70,
+                    "fromComments": 95,
+                    "fromPosts": 228,
+                    "total": 3281
+                }
+            },
+            {
+                "id": "t2_bepsb",
+                "karma": {
+                    "fromAwardsGiven": 0,
+                    "fromAwardsReceived": 470,
+                    "fromComments": 9583,
+                    "fromPosts": 13228,
+                    "total": 23281
+                }
             }
-        }
+        ]
     }
 }
