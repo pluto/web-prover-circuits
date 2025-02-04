@@ -174,8 +174,7 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
 
   // reset HTTP Verification inputs
   step_out[2] <== step_in[2]; // Ciphertext digest POW accumulator
-  signal default_machine_state[8] <== [1, 0, 0, 0, 0, 0, 0, 0];
-  step_out[3] <== PolynomialDigest(8)(default_machine_state, ciphertext_digest); // Machine state hash digest
+  step_out[3] <== 1; // Machine state hash digest
   for (var i = 4 ; i < PUBLIC_IO_LENGTH - 1 ; i++) {
     if (i == 6) {
       step_out[i] <== 0; // Body ciphertext digest pow counter
