@@ -22,7 +22,7 @@ pub struct RawHttpMachine {
   pub line_digest:         F,
 }
 
-// Implement From<RawHttpMachine> for [F; 7]
+/// Implement From<RawHttpMachine> for [String; 7]
 impl From<RawHttpMachine> for [String; 7] {
   fn from(machine: RawHttpMachine) -> Self {
     [
@@ -74,6 +74,18 @@ impl RawHttpMachine {
     let mut default = RawHttpMachine::default();
     default.parsing_start = F::ONE;
     default
+  }
+
+  pub fn flatten(&self) -> [F; 7] {
+    [
+      self.parsing_start,
+      self.parsing_header,
+      self.parsing_field_name,
+      self.parsing_field_value,
+      self.parsing_body,
+      self.line_status,
+      self.line_digest,
+    ]
   }
 }
 
