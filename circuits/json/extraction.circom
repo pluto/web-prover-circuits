@@ -123,9 +123,9 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     new_state[MAX_STACK_HEIGHT*4 + 2] <== State[DATA_BYTES - 1].next_parsing_number;
     signal new_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 3)(new_state, ciphertext_digest);
 
-    for (var i = 0 ; i < MAX_STACK_HEIGHT * 4 + 3 ; i++) {
-        log("new_state[", i, "] = ", new_state[i]);
-    }
+    // for (var i = 0 ; i < MAX_STACK_HEIGHT * 4 + 3 ; i++) {
+    //     log("new_state[", i, "] = ", new_state[i]);
+    // }
 
     // Verify we have now processed all the data properly
     // TODO: This data is now the HTTP body, consider renaming
@@ -159,8 +159,8 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
         step_out[i] <== step_in[i];
     }
 
-    for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {
-        log("step_out[", i, "] = ", step_out[i]);
-    }
-    log("xxxxxx JSON Extraction Done xxxxxx");
+    // for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {
+    //     log("step_out[", i, "] = ", step_out[i]);
+    // }
+    // log("xxxxxx JSON Extraction Done xxxxxx");
 }

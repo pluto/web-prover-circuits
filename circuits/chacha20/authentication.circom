@@ -161,11 +161,11 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
   }
   signal part_ciphertext_digest <== DataHasherWithSeed(DATA_BYTES)(step_in[10],bigEndianCiphertext);
 
-  log("part_ciphertext_digest: ", part_ciphertext_digest);
+  // log("part_ciphertext_digest: ", part_ciphertext_digest);
 
   signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, step_in[1]);
 
-  log("plaintext_digest: ", plaintext_digest);
+  // log("plaintext_digest: ", plaintext_digest);
 
   step_out[0] <== step_in[0] + step_in[10] - part_ciphertext_digest + plaintext_digest;
   step_out[1] <== ciphertext_digest_pow[DATA_BYTES];
@@ -183,8 +183,8 @@ template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
     }
   }
 
-  for (var i = 0; i < PUBLIC_IO_LENGTH ; i++) {
-    log("step_out[",i,"]", step_out[i]);
-  }
-  log("xxxxxx Authentication Done xxxxxx");
+  // for (var i = 0; i < PUBLIC_IO_LENGTH ; i++) {
+  //   log("step_out[",i,"]", step_out[i]);
+  // }
+  // log("xxxxxx Authentication Done xxxxxx");
 }

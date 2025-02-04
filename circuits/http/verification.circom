@@ -39,11 +39,11 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
 
     // assertions:
     // - check step_in[3] = machine state hash digest
-    for (var i = 0 ; i < 7 ; i++) {
-        log("machine_state[",i,"] = ", machine_state[i]);
-    }
+    // for (var i = 0 ; i < 7 ; i++) {
+    //     log("machine_state[",i,"] = ", machine_state[i]);
+    // }
     signal machine_state_digest <== PolynomialDigest(7)(machine_state, ciphertext_digest);
-    log("machine_state_digest: ", machine_state_digest);
+    // log("machine_state_digest: ", machine_state_digest);
     step_in[3] === machine_state_digest;
     // - check step_in[4] = start line hash digest + all header hash digests
     // TODO: I don't like this `MAX_NUMBER_OF_HEADERS + 1` now. It should just be `NUMBER_OF_STATEMENTS_TO_LOCK` or something
@@ -120,7 +120,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     signal initial_pow_accumulation <== step_in[6] * ciphertext_digest;
     signal pow_accumulation <== initial_pow_accumulation + body_ctr_is_zero * State[0].parsing_body; // pow_accumulation = 0 if we are not in the body
 
-    log("pow_accumulation: ", pow_accumulation);
+    // log("pow_accumulation: ", pow_accumulation);
     signal body_monomials_pow_accumulation[DATA_BYTES]; // power of monomials for the body
     signal body_monomials[DATA_BYTES]; // power of monomials for the body
     signal body_ctr[DATA_BYTES]; // body counter
@@ -166,17 +166,17 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
         step_out[i] <== step_in[i];
     }
 
-    log("next_parsing_start: ", State[DATA_BYTES - 1].next_parsing_start);
-    log("next_parsing_header: ", State[DATA_BYTES - 1].next_parsing_header);
-    log("next_parsing_field_name: ", State[DATA_BYTES - 1].next_parsing_field_name);
-    log("next_parsing_field_value: ", State[DATA_BYTES - 1].next_parsing_field_value);
-    log("next_parsing_body: ", State[DATA_BYTES - 1].next_parsing_body);
-    log("next_line_status: ", State[DATA_BYTES - 1].next_line_status);
-    log("line_digest: ", line_digest[DATA_BYTES]);
-    log("body_digest: ", body_digest[DATA_BYTES - 1]);
+    // log("next_parsing_start: ", State[DATA_BYTES - 1].next_parsing_start);
+    // log("next_parsing_header: ", State[DATA_BYTES - 1].next_parsing_header);
+    // log("next_parsing_field_name: ", State[DATA_BYTES - 1].next_parsing_field_name);
+    // log("next_parsing_field_value: ", State[DATA_BYTES - 1].next_parsing_field_value);
+    // log("next_parsing_body: ", State[DATA_BYTES - 1].next_parsing_body);
+    // log("next_line_status: ", State[DATA_BYTES - 1].next_line_status);
+    // log("line_digest: ", line_digest[DATA_BYTES]);
+    // log("body_digest: ", body_digest[DATA_BYTES - 1]);
 
-    for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {
-        log("step_out[",i,"] = ", step_out[i]);
-    }
-    log("xxxxx HTTP Verification Done xxxxx");
+//     for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {
+//         log("step_out[",i,"] = ", step_out[i]);
+//     }
+//     log("xxxxx HTTP Verification Done xxxxx");
 }
