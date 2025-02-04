@@ -125,9 +125,9 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
       output[2 * idx + MAX_STACK_HEIGHT * 2] = pair.0;
       output[2 * idx + 1 + MAX_STACK_HEIGHT * 2] = pair.1;
     }
-    output[MAX_STACK_HEIGHT * 2] = self.parsing_string;
-    output[MAX_STACK_HEIGHT * 2 + 1] = self.parsing_number;
-    output[MAX_STACK_HEIGHT * 2 + 2] = self.monomial;
+    output[MAX_STACK_HEIGHT * 4] = self.monomial;
+    output[MAX_STACK_HEIGHT * 4 + 1] = self.parsing_string;
+    output[MAX_STACK_HEIGHT * 4 + 2] = self.parsing_number;
     output
   }
 }

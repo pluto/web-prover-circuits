@@ -95,20 +95,20 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
         total_matches += sequence_and_value_matched[data_idx];
 
         // Debugging
-        log("State[", data_idx, "].byte               =", State[data_idx].byte);
-        for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-            log("State[", data_idx, "].next_stack[", i,"]     = [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
-        }
-        for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-            log("State[", data_idx, "].next_tree_hash[", i,"] = [",State[data_idx].next_tree_hash[i][0], "][", State[data_idx].next_tree_hash[i][1],"]" );
-        }
-        log("State[", data_idx, "].next_monomial       =", State[data_idx].next_monomial);
-        log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
-        log("State[", data_idx, "].next_parsing_number =", State[data_idx].next_parsing_number);
-        log("++++++++++++++++++++++++++++++++++++++++++++++++");
-        log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
-        log("total_matches                   = ", total_matches);
-        log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+        // log("State[", data_idx, "].byte               =", State[data_idx].byte);
+        // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+        //     log("State[", data_idx, "].next_stack[", i,"]     = [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
+        // }
+        // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+        //     log("State[", data_idx, "].next_tree_hash[", i,"] = [",State[data_idx].next_tree_hash[i][0], "][", State[data_idx].next_tree_hash[i][1],"]" );
+        // }
+        // log("State[", data_idx, "].next_monomial       =", State[data_idx].next_monomial);
+        // log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
+        // log("State[", data_idx, "].next_parsing_number =", State[data_idx].next_parsing_number);
+        // log("++++++++++++++++++++++++++++++++++++++++++++++++");
+        // log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
+        // log("total_matches                   = ", total_matches);
+        // log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     }
 
     signal new_state[MAX_STACK_HEIGHT*4 + 3];
@@ -122,6 +122,10 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     new_state[MAX_STACK_HEIGHT*4 + 1] <== State[DATA_BYTES - 1].next_parsing_string;
     new_state[MAX_STACK_HEIGHT*4 + 2] <== State[DATA_BYTES - 1].next_parsing_number;
     signal new_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 3)(new_state, ciphertext_digest);
+
+    for (var i = 0 ; i < MAX_STACK_HEIGHT * 4 + 3 ; i++) {
+        log("new_state[", i, "] = ", new_state[i]);
+    }
 
     // Verify we have now processed all the data properly
     // TODO: This data is now the HTTP body, consider renaming

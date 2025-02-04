@@ -19,83 +19,10 @@ use serde_json::Value;
 
 pub use self::error::WitnessGeneratorError;
 #[cfg(test)] pub(crate) use self::mock::*;
-use self::{http::*, json::*};
 
 pub type E = client_side_prover::provider::Bn256EngineKZG;
 pub type G = <E as Engine>::GE;
 pub type F = <G as Group>::Scalar;
-
-const NUMBER_IO_REGISTERS: usize = 10;
-
-// // TODO: This is really like "initial nivc input maker" or something
-// pub fn manifest_digest<const MAX_STACK_HEIGHT: usize>(
-//   manifest: &Manifest,
-//   ciphertext_digest: F,
-// ) -> [F; NUMBER_IO_REGISTERS] {
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// //   // Digest both the request and response start lines
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// //   // Request
-//   let request_start_line =
-//     format!("{} {} {}", &manifest.request.method, &manifest.request.url,
-// &manifest.request.version);   let request_start_line_digest =
-//     polynomial_digest(request_start_line.as_bytes(), ciphertext_digest, 0);
-
-//   // Response
-//   let response_start_line = format!(
-//     "{} {} {}",
-//     &manifest.response.version, &manifest.response.status, &manifest.response.message
-//   );
-//   let response_start_line_digest =
-//     polynomial_digest(response_start_line.as_bytes(), ciphertext_digest, 0);
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// //
-
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// //   // Digest both the request and response headers to lock
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// //   // Request
-//   let request_headers_digest = headers_to_bytes(&manifest.request.headers)
-//     .map(|bytes| polynomial_digest(&bytes, ciphertext_digest, 0))
-//     .collect::<Vec<F>>();
-
-//   // Response
-//   let response_headers_digest = headers_to_bytes(&manifest.response.headers)
-//     .map(|bytes| polynomial_digest(&bytes, ciphertext_digest, 0))
-//     .collect::<Vec<F>>();
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// //
-
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// //   // Digest the JSON sequence
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// //   let raw_json_machine = RawJsonMachine::<MAX_STACK_HEIGHT>::from_chosen_sequence_and_input(
-//     ciphertext_digest,
-//     &manifest.response.body.json,
-//   );
-//   let json_sequence_digest = raw_json_machine.compress_tree_hash();
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// //
-
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// //   // Populate the initial input
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// //   let mut public_input = [F::default(); 10];
-//   public_input[1..=3].copy_from_slice(&[F::ONE; 3]);
-//   public_input[4] = poseidon::<1>(&[request_start_line_digest])
-//     + poseidon::<1>(&[response_start_line_digest])
-//     + request_headers_digest.clone().into_iter().map(|d| poseidon::<1>(&[d])).sum::<F>()
-//     + response_headers_digest.clone().into_iter().map(|d| poseidon::<1>(&[d])).sum::<F>();
-//   public_input[5] = F::from(2)
-//     + F::from(request_headers_digest.len() as u64)
-//     + F::from(response_headers_digest.len() as u64);
-//   public_input[7] = F::ONE;
-//   public_input[9] = poseidon::<1>(&[json_sequence_digest]);
-//   dbg!(F::default());
-
-//   public_input
-//   // -----------------------------------------------------------------------------------------------------------------------------------------------
-// // }
 
 /// Struct representing a byte or padding.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -326,35 +253,4 @@ mod tests {
       )
     );
   }
-
-  // TODO: This test doesn't actually test anything at all. Fix that.
-  //   #[test]
-  //   fn test_initial_digest() {
-  //     let test_ciphertext_padded =
-  //       TEST_CIPHERTEXT.iter().map(|x| ByteOrPad::Byte(*x)).collect::<Vec<ByteOrPad>>();
-
-  //     let ciphertext_digest = data_hasher(&test_ciphertext_padded);
-  //     let (ct_digest, manifest_digest) =
-  //       response_initial_digest(&mock_manifest().response, ciphertext_digest, 5);
-  //     println!("\nManifest Digest (decimal):");
-  //     println!("  {}", BigUint::from_bytes_le(&manifest_digest.to_bytes()));
-
-  //     assert_eq!(
-  //       BigUint::from_bytes_le(&ct_digest.to_bytes()),
-  //       BigUint::from_str(
-  //         "5947802862726868637928743536818722886587721698845887498686185738472802646104"
-  //       )
-  //       .unwrap()
-  //     );
-
-  //     let (ct_digest, _manifest_digest) =
-  //       request_initial_digest(&mock_manifest().request, ciphertext_digest);
-  //     assert_eq!(
-  //       BigUint::from_bytes_le(&ct_digest.to_bytes()),
-  //       BigUint::from_str(
-  //         "5947802862726868637928743536818722886587721698845887498686185738472802646104"
-  //       )
-  //       .unwrap()
-  //     );
-  //   }
 }
