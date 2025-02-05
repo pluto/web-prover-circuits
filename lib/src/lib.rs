@@ -42,17 +42,6 @@ impl ByteOrPad {
     result.extend(std::iter::repeat(Self::Pad).take(padding));
     result
   }
-
-  /// converts a slice of `ByteOrPad` to a vector of bytes. Converts `Pad` to `0`.
-  pub fn as_bytes(bytes: &[ByteOrPad]) -> Vec<u8> {
-    bytes
-      .iter()
-      .map(|b| match b {
-        Self::Byte(b) => *b,
-        Self::Pad => 0,
-      })
-      .collect()
-  }
 }
 
 impl From<u8> for ByteOrPad {
