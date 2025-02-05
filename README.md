@@ -16,7 +16,7 @@
 `web-prover-circuits` is a project focused on implementing parsers and extractors/selective-disclosure for various data formats inside zero-knowledge circuits.
 Specifically, these are designed to be used in an NIVC folding scheme.
 Currently, our program layout looks like this:
-![v0.7.5](docs/images/v0.7.5.png)
+![v0.9.0](docs/images/v0.9.0.png)
 
 ## Repository Structure
 
