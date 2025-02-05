@@ -2,24 +2,6 @@ import { circomkit, WitnessTester, PolynomialDigest, http_response_plaintext, ht
 import { assert } from "chai";
 import { poseidon1, poseidon2 } from "poseidon-lite";
 
-// HTTP/1.1 200 OK
-// content-type: application/json; charset=utf-8
-// content-encoding: gzip
-// Transfer-Encoding: chunked
-//
-// {
-//    "data": {
-//        "items": [
-//            {
-//                "data": "Artist",
-//                "profile": {
-//                    "name": "Taylor Swift"
-//                }
-//            }
-//        ]
-//    }
-// }
-
 const DATA_BYTES = 320;
 const MAX_NUMBER_OF_HEADERS = 2;
 
@@ -68,9 +50,9 @@ describe("HTTP Verification", async () => {
             main_digests: [start_line_digest].concat(Array(2).fill(0)),
             ciphertext_digest: mock_ct_digest
         }, ["step_out"]);
-        // I fucking hate circomkit
-        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], output_difference);
-        assert.deepEqual((http_nivc_compute.step_out as BigInt[])[6], modPow(mock_ct_digest, BigInt(http_body.length - 1)));
+        let http_step_out = http_nivc_compute.step_out as BigInt[];
+        assert.deepEqual(http_step_out[0], output_difference);
+        assert.deepEqual(http_step_out[6], modPow(mock_ct_digest, BigInt(http_body.length - 1)));
     });
 
     it("witness: http_response_plaintext, one header", async () => {
@@ -79,7 +61,6 @@ describe("HTTP Verification", async () => {
         step_in[5] = 2; // Total number of matches to expect (sl, h0)
 
         // Run the HTTP circuit
-        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
         let http_nivc_compute = await HTTPVerification.compute({
             step_in,  // This doesn't really matter for this test
             data: http_response_plaintext,
@@ -117,7 +98,6 @@ describe("HTTP Verification", async () => {
         step_in[5] = 3; // Total number of matches to expect (sl, h0, h1)
 
         // Run the HTTP circuit
-        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
         let http_nivc_compute = await HTTPVerification.compute({
             step_in,  // This doesn't really matter for this test
             data: http_response_plaintext,
@@ -125,7 +105,6 @@ describe("HTTP Verification", async () => {
             main_digests: [header_1_digest, start_line_digest, header_0_digest],
             ciphertext_digest: mock_ct_digest
         }, ["step_out"]);
-        // I fucking hate circomkit
         // TODO: need to check more of the assertions
         assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], output_difference);
         assert.deepEqual((http_nivc_compute.step_out as BigInt[])[6], modPow(mock_ct_digest, BigInt(http_body.length - 1)));
@@ -143,7 +122,6 @@ describe("HTTP Verification: Split", async () => {
     });
     const mock_ct_digest = poseidon1([69]);
     console.log("mock_ct_digest: ", mock_ct_digest);
-    // const mock_ct_digest = BigInt(2); // TODO: only for debugging!!!
 
     // Used across tests
     let machine_state = Array(7).fill(0);
@@ -170,9 +148,6 @@ describe("HTTP Verification: Split", async () => {
     console.log("outer plaintext_digest_0: ", plaintext_digest_0);
     console.log("outer plaintext_digest_1: ", plaintext_digest_1);
 
-    // let body_digest_0 = PolynomialDigest(http_body.slice(0, 42), mock_ct_digest, BigInt(0));
-    // let body_digest_1 = PolynomialDigest(http_body.slice(42), mock_ct_digest, BigInt(42));
-
     const mid = http_response_plaintext.length / 2;
     const [http_response_plaintext_0, http_response_plaintext_1] = [http_response_plaintext.slice(0, mid), http_response_plaintext.slice(mid)];
 
@@ -192,7 +167,6 @@ describe("HTTP Verification: Split", async () => {
         }, ["step_out"]);
 
         let next_machine_state = [0, 0, 0, 0, 1, 0, 0];
-        // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
         let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
         let http_nivc_compute_1 = await HTTPVerification.compute({
             step_in: next_step_in,
@@ -211,7 +185,6 @@ describe("HTTP Verification: Split", async () => {
         step_in[5] = 2; // Total number of matches to expect (sl, h0)
 
         // Run the HTTP circuit
-        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
         let http_nivc_compute_0 = await HTTPVerification.compute({
             step_in,  // This doesn't really matter for this test
             data: http_response_plaintext_0,
@@ -221,7 +194,6 @@ describe("HTTP Verification: Split", async () => {
         }, ["step_out"]);
 
         let next_machine_state = [0, 0, 0, 0, 1, 0, 0];
-        // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
         let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
         let http_nivc_compute_1 = await HTTPVerification.compute({
             step_in: next_step_in,
@@ -239,7 +211,6 @@ describe("HTTP Verification: Split", async () => {
         step_in[5] = 3; // Total number of matches to expect (sl, h0, h1)
 
         // Run the HTTP circuit
-        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
         let http_nivc_compute_0 = await HTTPVerification.compute({
             step_in,  // This doesn't really matter for this test
             data: http_response_plaintext_0,
@@ -249,7 +220,6 @@ describe("HTTP Verification: Split", async () => {
         }, ["step_out"]);
 
         let next_machine_state = [0, 0, 0, 0, 1, 0, 0];
-        // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
         let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
         let http_nivc_compute_1 = await HTTPVerification.compute({
             step_in: next_step_in,
@@ -267,7 +237,6 @@ describe("HTTP Verification: Split", async () => {
         step_in[5] = 3; // Total number of matches to expect (sl, h0, h1)
 
         // Run the HTTP circuit
-        // POTENTIAL BUG: I didn't get this to work with `expectPass` as it didn't compute `step_out` that way???
         let http_nivc_compute_0 = await HTTPVerification.compute({
             step_in,  // This doesn't really matter for this test
             data: http_response_plaintext_0,
@@ -277,7 +246,6 @@ describe("HTTP Verification: Split", async () => {
         }, ["step_out"]);
 
         let next_machine_state = [0, 0, 0, 0, 1, 0, 0];
-        // let next_machine_state = [0, 0, 0, 0, 1, 0, 0, BigInt("140302555479869")]; // TODO: Only for debuggin!
         let next_step_in = (http_nivc_compute_0.step_out as bigint[]).slice(0, PUBLIC_IO_VARIABLES);
         let http_nivc_compute_1 = await HTTPVerification.compute({
             step_in: next_step_in,

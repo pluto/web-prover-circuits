@@ -74,14 +74,14 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
     accumulated
   }
 
-  // TODO: Need to take into account if we enter into a value that is an object inside of object. So
-  // need a bit more than just `JsonMaskType` maybe.
   pub fn from_chosen_sequence_and_input(
     polynomial_input: F,
     key_sequence: &[JsonKey],
-  ) -> RawJsonMachine<MAX_STACK_HEIGHT> {
-    // TODO: This should be an error
-    assert!(key_sequence.len() <= MAX_STACK_HEIGHT);
+  ) -> Result<RawJsonMachine<MAX_STACK_HEIGHT>, WitnessGeneratorError> {
+    if key_sequence.len() > MAX_STACK_HEIGHT {
+      return Err(WitnessGeneratorError::JsonKeyError("Key sequence too long".to_string()));
+    }
+
     let mut stack = [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT];
     let mut tree_hash = [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT];
     for (idx, val_type) in key_sequence.iter().enumerate() {
@@ -105,14 +105,14 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
 
     // TODO: This is wrong, we shouldn't really output this type here. This function is just to get
     // the tree hash type of stuff for a given json sequence and value
-    Self {
+    Ok(Self {
       polynomial_input,
       stack,
       tree_hash,
       parsing_number: F::ZERO,
       parsing_string: F::ZERO,
       monomial: F::ZERO,
-    }
+    })
   }
 
   pub fn flatten(&self) -> [F; MAX_STACK_HEIGHT * 4 + 3] {
@@ -132,56 +132,52 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
   }
 }
 
-// TODO: Fix all panics here
-pub fn json_value_digest(
-  plaintext: &[ByteOrPad],
+pub fn json_value_digest<const MAX_STACK_HEIGHT: usize>(
+  plaintext: &[u8],
   keys: &[JsonKey],
 ) -> Result<Vec<u8>, WitnessGeneratorError> {
-  let pad_index = plaintext.iter().position(|&b| b == ByteOrPad::Pad).unwrap_or(plaintext.len());
-  let mut json: Value = serde_json::from_slice(&ByteOrPad::as_bytes(&plaintext[..pad_index]))?;
+  assert!(!keys.is_empty());
+  assert!(keys.len() <= MAX_STACK_HEIGHT);
+  assert!(plaintext.iter().all(|&b| b.is_ascii() && b > 0), "Input must be valid ASCII");
+
+  let mut json: Value = serde_json::from_slice(plaintext)?;
 
   for key in keys {
     match key {
-      JsonKey::String(string) => {
+      JsonKey::String(string) =>
         if let Some(value) = json.get_mut(string) {
           json = value.take();
         } else {
-          panic!()
-          // return Err(ProofError::JsonKeyError(string.clone()));
-        }
-      },
-      JsonKey::Num(idx) => {
+          return Err(WitnessGeneratorError::JsonKeyError(string.clone()));
+        },
+      JsonKey::Num(idx) =>
         if let Some(value) = json.get_mut(*idx) {
           json = value.take();
         } else {
-          panic!()
-          // return Err(ProofError::JsonKeyError(idx.to_string()));
-        }
-      },
+          return Err(WitnessGeneratorError::JsonKeyError(idx.to_string()));
+        },
     }
   }
 
   let value = match json {
     Value::Number(num) => num.to_string(),
     Value::String(val) => val,
-    _ => {
-      panic!()
-      // return Err(ProofError::JsonKeyError(
-      //     "Value is not a string or number".to_string(),
-      // ))
-    },
+    _ =>
+      return Err(WitnessGeneratorError::JsonKeyError(
+        "Value is not a string or number".to_string(),
+      )),
   };
 
   Ok(value.as_bytes().to_vec())
 }
 
-impl Into<(F, F)> for Location {
-  fn into(self) -> (F, F) {
-    match self {
-      Self::None => (F::ZERO, F::ZERO),
-      Self::ObjectKey => (F::ONE, F::ZERO),
-      Self::ObjectValue => (F::ONE, F::ONE),
-      Self::ArrayIndex(idx) => (F::from(2), F::from(idx as u64)),
+impl From<Location> for (F, F) {
+  fn from(val: Location) -> Self {
+    match val {
+      Location::None => (F::ZERO, F::ZERO),
+      Location::ObjectKey => (F::ONE, F::ZERO),
+      Location::ObjectValue => (F::ONE, F::ONE),
+      Location::ArrayIndex(idx) => (F::from(2), F::from(idx as u64)),
     }
   }
 }
@@ -204,7 +200,8 @@ mod tests {
     let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
     println!("polynomial_input: {:?}", BigUint::from_bytes_le(&polynomial_input.to_bytes()));
     let raw_json_machine =
-      RawJsonMachine::<10>::from_chosen_sequence_and_input(polynomial_input, &key_sequence);
+      RawJsonMachine::<10>::from_chosen_sequence_and_input(polynomial_input, &key_sequence)
+        .unwrap();
 
     println!("Stack (decimal):");
     for (i, pair) in raw_json_machine.stack.iter().enumerate() {
@@ -228,7 +225,6 @@ mod tests {
   #[test]
   fn test_json_value_digest() {
     let json = r#"{"data": {"items": [{"profile": {"name": "Taylor Swift"}}]}}"#;
-    let json_bytes_padded = ByteOrPad::from_bytes_with_padding(json.as_bytes(), 1024);
 
     let keys = vec![
       JsonKey::String(KEY_0.to_string()),
@@ -238,7 +234,7 @@ mod tests {
       JsonKey::String(KEY_3.to_string()),
     ];
 
-    let value = json_value_digest(&json_bytes_padded, &keys).unwrap();
+    let value = json_value_digest::<5>(json.as_bytes(), &keys).unwrap();
     assert_eq!(value, b"Taylor Swift");
   }
 }

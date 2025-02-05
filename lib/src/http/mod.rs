@@ -39,9 +39,11 @@ impl From<RawHttpMachine> for [String; 7] {
 
 impl From<HttpMachine> for RawHttpMachine {
   fn from(value: HttpMachine) -> Self {
-    let mut raw_http_machine = RawHttpMachine::default();
-    raw_http_machine.line_digest = value.line_digest;
-    raw_http_machine.parsing_header = F::from(value.header_num as u64);
+    let mut raw_http_machine = RawHttpMachine {
+      line_digest: value.line_digest,
+      parsing_header: F::from(value.header_num as u64),
+      ..Default::default()
+    };
     match value.status {
       HttpStatus::ParsingStart(start_line_location) => match start_line_location {
         StartLineLocation::Beginning => raw_http_machine.parsing_start = F::ONE,
@@ -70,11 +72,7 @@ impl From<HttpMachine> for RawHttpMachine {
 }
 
 impl RawHttpMachine {
-  pub fn initial_state() -> Self {
-    let mut default = RawHttpMachine::default();
-    default.parsing_start = F::ONE;
-    default
-  }
+  pub fn initial_state() -> Self { Self { parsing_start: F::ONE, ..Default::default() } }
 
   pub fn flatten(&self) -> [F; 7] {
     [
@@ -135,7 +133,7 @@ pub fn headers_to_bytes(headers: &HashMap<String, String>) -> impl Iterator<Item
 /// - `mask_at`: the [`HttpMaskType`] of the HTTP request/response to mask
 /// # Returns
 /// - the masked HTTP request/response
-pub fn compute_http_witness(plaintext: &[ByteOrPad], mask_at: HttpMaskType) -> Vec<ByteOrPad> {
+pub fn compute_http_witness(plaintext: &[u8], mask_at: HttpMaskType) -> Vec<u8> {
   let mut result = Vec::new();
   match mask_at {
     HttpMaskType::StartLine => {
@@ -200,10 +198,7 @@ pub fn compute_http_witness(plaintext: &[ByteOrPad], mask_at: HttpMaskType) -> V
   result
 }
 
-pub fn compute_http_header_witness(
-  plaintext: &[ByteOrPad],
-  name: &[u8],
-) -> (usize, Vec<ByteOrPad>) {
+pub fn compute_http_header_witness(plaintext: &[u8], name: &[u8]) -> (usize, Vec<u8>) {
   let mut result = Vec::new();
 
   let mut current_header = 0;
@@ -252,95 +247,42 @@ mod tests {
 
   #[test]
   fn test_compute_http_witness_start_line() {
-    let bytes = compute_http_witness(
-      &RESPONSE_PLAINTEXT
-        .as_bytes()
-        .iter()
-        .copied()
-        .map(ByteOrPad::from)
-        .collect::<Vec<ByteOrPad>>(),
-      HttpMaskType::StartLine,
-    );
-    assert_eq!(ByteOrPad::as_bytes(&bytes), RESPONSE_START_LINE.as_bytes());
+    let bytes = compute_http_witness(RESPONSE_PLAINTEXT.as_bytes(), HttpMaskType::StartLine);
+    assert_eq!(bytes, RESPONSE_START_LINE.as_bytes());
   }
 
   #[test]
   fn test_compute_http_witness_header_0() {
-    let bytes = compute_http_witness(
-      &RESPONSE_PLAINTEXT
-        .as_bytes()
-        .iter()
-        .copied()
-        .map(ByteOrPad::from)
-        .collect::<Vec<ByteOrPad>>(),
-      HttpMaskType::Header(0),
-    );
-    assert_eq!(ByteOrPad::as_bytes(&bytes), RESPONSE_HEADER_0.as_bytes());
+    let bytes = compute_http_witness(RESPONSE_PLAINTEXT.as_bytes(), HttpMaskType::Header(0));
+    assert_eq!(bytes, RESPONSE_HEADER_0.as_bytes());
   }
 
   #[test]
   fn test_compute_http_witness_header_1() {
-    let bytes = compute_http_witness(
-      &RESPONSE_PLAINTEXT
-        .as_bytes()
-        .iter()
-        .copied()
-        .map(ByteOrPad::from)
-        .collect::<Vec<ByteOrPad>>(),
-      HttpMaskType::Header(1),
-    );
-    assert_eq!(ByteOrPad::as_bytes(&bytes), RESPONSE_HEADER_1.as_bytes());
+    let bytes = compute_http_witness(RESPONSE_PLAINTEXT.as_bytes(), HttpMaskType::Header(1));
+    assert_eq!(bytes, RESPONSE_HEADER_1.as_bytes());
   }
 
   #[test]
   fn test_compute_http_witness_body() {
-    let bytes = compute_http_witness(
-      &RESPONSE_PLAINTEXT
-        .as_bytes()
-        .iter()
-        .copied()
-        .map(ByteOrPad::from)
-        .collect::<Vec<ByteOrPad>>(),
-      HttpMaskType::Body,
-    );
-    assert_eq!(ByteOrPad::as_bytes(&bytes), RESPONSE_BODY.as_bytes());
+    let bytes = compute_http_witness(RESPONSE_PLAINTEXT.as_bytes(), HttpMaskType::Body);
+    assert_eq!(bytes, RESPONSE_BODY.as_bytes());
   }
 
   #[test]
   fn test_compute_http_witness_name() {
-    let (index, bytes_from_name) = compute_http_header_witness(
-      &RESPONSE_PLAINTEXT
-        .as_bytes()
-        .iter()
-        .copied()
-        .map(ByteOrPad::from)
-        .collect::<Vec<ByteOrPad>>(),
-      "Transfer-Encoding".as_bytes(),
-    );
-    let bytes_from_index = compute_http_witness(
-      &RESPONSE_PLAINTEXT
-        .as_bytes()
-        .iter()
-        .copied()
-        .map(ByteOrPad::from)
-        .collect::<Vec<ByteOrPad>>(),
-      HttpMaskType::Header(2),
-    );
+    let (index, bytes_from_name) =
+      compute_http_header_witness(RESPONSE_PLAINTEXT.as_bytes(), "Transfer-Encoding".as_bytes());
+    let bytes_from_index =
+      compute_http_witness(RESPONSE_PLAINTEXT.as_bytes(), HttpMaskType::Header(2));
     assert_eq!(bytes_from_index, bytes_from_name);
     assert_eq!(index, 2);
   }
 
   #[test]
   fn test_compute_http_witness_name_not_present() {
-    let (_, bytes_from_name) = compute_http_header_witness(
-      &RESPONSE_PLAINTEXT
-        .as_bytes()
-        .iter()
-        .copied()
-        .map(ByteOrPad::from)
-        .collect::<Vec<ByteOrPad>>(),
-      "pluto-rocks".as_bytes(),
-    );
+    let (_, bytes_from_name) =
+      compute_http_header_witness(RESPONSE_PLAINTEXT.as_bytes(), "pluto-rocks".as_bytes());
     assert!(bytes_from_name.is_empty());
   }
 }

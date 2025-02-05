@@ -1,5 +1,6 @@
 //! Used for computing the witnesses needed for HTTP and JSON elements of Web Proof NIVC
 //! hashchain-based circuits.
+#![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
 pub mod error;

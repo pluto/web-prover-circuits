@@ -137,7 +137,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
   };
   let mut output = vec![];
   // ctr used only for debuggin
-  let mut ctr = 0;
+  // let mut ctr = 0;
   for char in bytes {
     // Update the machine
     // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
@@ -276,7 +276,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
     //   BigUint::from_bytes_le(&raw_state.parsing_number.to_bytes())
     // );
 
-    ctr += 1;
+    // ctr += 1;
     // dbg!(&RawJsonMachine::from(machine.clone()));
   }
   Ok(output)
@@ -285,6 +285,19 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  // Use a super awesome random polynomial input
+  fn create_polynomial_input() -> F { poseidon::<2>(&[F::from(69), F::from(420)]) }
+
+  fn verify_final_state<const MAX_STACK_HEIGHT: usize>(
+    last_state: &RawJsonMachine<MAX_STACK_HEIGHT>,
+  ) {
+    assert_eq!(last_state.stack, [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT]);
+    assert_eq!(last_state.tree_hash, [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT]);
+    assert_eq!(last_state.parsing_number, F::ZERO);
+    assert_eq!(last_state.parsing_string, F::ZERO);
+    assert_eq!(last_state.monomial, F::ZERO);
+  }
 
   #[test]
   fn test_pointer() {
@@ -300,8 +313,7 @@ mod tests {
 
   #[test]
   fn test_json_parser_spotify() {
-    // Use a super awesome random polynomial input
-    let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
+    let polynomial_input = create_polynomial_input();
 
     // Parse the json and cross my fingers
     let states = parse::<5>(SPOTIFY_EXAMPLE.as_bytes(), polynomial_input).unwrap();
@@ -317,7 +329,7 @@ mod tests {
     let t_swizzle = polynomial_digest(b"Taylor Swift", polynomial_input, 0);
 
     let raw_json_state =
-      RawJsonMachine::<5>::from_chosen_sequence_and_input(polynomial_input, &key_sequence);
+      RawJsonMachine::<5>::from_chosen_sequence_and_input(polynomial_input, &key_sequence).unwrap();
     let contains = states
       .into_iter()
       .map(RawJsonMachine::from)
@@ -343,7 +355,8 @@ mod tests {
   #[case::value_array_object(r#"{ "a" : [ { "b" : [ 1 , 4 ] } , { "c" : "b" } ] }"#)]
   #[case::value_object(r#"{ "a" : { "d" : "e" , "e" : "c" } , "e" : { "f" : "a" , "e" : "2" } , "g" : { "h" : { "a" : "c" } } , "ab" : "foobar" , "bc" : 42 , "dc" : [ 0 , 1 , "a" ] }"#)]
   fn test_json_parser_valid(#[case] input: &str) {
-    let polynomial_input = poseidon::<2>(&[F::from(69), F::from(420)]);
+    let polynomial_input = create_polynomial_input();
+
     let states = parse::<5>(input.as_bytes(), polynomial_input).unwrap();
     assert_eq!(states.last().unwrap().location, [Location::None; 5]);
     assert_eq!(
@@ -355,12 +368,14 @@ mod tests {
       states.into_iter().map(RawJsonMachine::from).collect::<Vec<RawJsonMachine<5>>>();
     assert_eq!(raw_states.len(), input.len());
 
-    let last_state = raw_states.last().unwrap();
-    assert_eq!(last_state.stack, [(F::ZERO, F::ZERO); 5]);
-    assert_eq!(last_state.tree_hash, [(F::ZERO, F::ZERO); 5]);
-    assert_eq!(last_state.parsing_number, F::ZERO);
-    assert_eq!(last_state.parsing_string, F::ZERO);
-    assert_eq!(last_state.monomial, F::ZERO);
-    // dbg!(raw_states);
+    verify_final_state(raw_states.last().unwrap());
+  }
+
+  #[test]
+  fn test_json_parser_stack_overflow() {
+    // Create deeply nested object that exceeds MAX_STACK_HEIGHT
+    let input = "{".repeat(6) + &"}".repeat(6);
+    let result = parse::<5>(input.as_bytes(), create_polynomial_input());
+    assert!(result.is_err());
   }
 }

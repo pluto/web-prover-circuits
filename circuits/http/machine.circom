@@ -77,7 +77,6 @@ template HttpStateUpdate() {
 
 // TODO:
 // - multiple space between start line values
-// - handle incrementParsingHeader being incremented for header -> body CRLF
 // - header value parsing doesn't handle SPACE between colon and actual value
 template StateChange() {
     signal input prevReadCRLF;
@@ -116,14 +115,13 @@ template StateChange() {
     // disable the parsing field value if we should increment parsing header and were previously parsing field value too
     signal disableParsingFieldValue <== readCR * state[2];
 
-    // TODO (autoparallel): I didn't clean up the comment here, i was too hasty
-    // parsing_start       = out[0] = enable header (default 1) + increment start - disable start
-    // parsing_header      = out[1] = enable header            + increment header  - disable header
-    // parsing_field_name  = out[2] = enable header + increment header - parsing field value - parsing body
-    // parsing_field_value = out[3] = parsing field value - increment parsing header (zeroed every time new header starts)
+    // parsing_start       = out[0] = increment start - disable start
+    // parsing_header      = out[1] = (increment header - disable header) * parsing body
+    // parsing_field_name  = out[2] = (increment header - parsing field value) * parsing body
+    // parsing_field_value = out[3] = (parsing field value - disable parsing field value) * parsing body
     // parsing_body        = out[4] = enable body
     out <== [
-            (incrementParsingStart - disableParsingStart), 
+            (incrementParsingStart - disableParsingStart),
             (incrementParsingHeader - disableParsingHeader) * (1 - state[3]),
             (incrementParsingHeader - isParsingFieldValue) * (1 - state[3]),
             (isParsingFieldValue - disableParsingFieldValue) * (1 - state[3]),

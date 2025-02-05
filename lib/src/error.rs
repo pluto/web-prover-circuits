@@ -8,4 +8,6 @@ pub enum WitnessGeneratorError {
   SerdeJson(#[from] serde_json::Error),
   #[error("{0}")]
   JsonParser(String),
+  #[error("json key not found: {0}")]
+  JsonKeyError(String),
 }

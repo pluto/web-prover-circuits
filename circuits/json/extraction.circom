@@ -128,7 +128,6 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     // }
 
     // Verify we have now processed all the data properly
-    // TODO: This data is now the HTTP body, consider renaming
     signal ciphertext_digest_pow[DATA_BYTES+1]; // ciphertext_digest ** i (Accumulates the polynomial_input)
     signal mult_factor[DATA_BYTES]; // 1 if we padding, ciphertext_digest if we are not
     ciphertext_digest_pow[0] <== step_in[7]; // ciphertext_digest ** previous_data_bytes
