@@ -24,7 +24,7 @@ include "circomlib/circuits/poseidon.circom";
 // | # | N | N | N |
 // +---+---+---+---+
 // paramaterized by `DATA_BYTES` which is the plaintext length in bytes
-template PlaintextAuthentication(DATA_BYTES) {
+template PlaintextAuthentication(DATA_BYTES, PUBLIC_IO_LENGTH) {
   // key => 8 32-bit words = 32 bytes
   signal input key[8][32];
   // nonce => 3 32-bit words = 12 bytes
@@ -37,13 +37,12 @@ template PlaintextAuthentication(DATA_BYTES) {
   signal input plaintext[DATA_BYTES];
 
   signal input ciphertext_digest;
-  signal input plaintext_index_counter;
 
   // step_in should be the ciphertext digest + the HTTP digests + JSON seq digest
-  signal input step_in[1];
+  signal input step_in[PUBLIC_IO_LENGTH];
 
   // step_out should be the plaintext digest
-  signal output step_out[1];
+  signal output step_out[PUBLIC_IO_LENGTH];
 
   signal isPadding[DATA_BYTES]; // == 1 in the case we hit padding number
   signal plaintextBits[DATA_BYTES / 4][32];
@@ -145,13 +144,47 @@ template PlaintextAuthentication(DATA_BYTES) {
     }
   }
 
+  // for (var i = 0 ; i < DATA_BYTES ; i++) {
+  //   log("bigEndianCiphertext[",i,"]", bigEndianCiphertext[i]);
+  // }
+
+  // Count the number of non-padding bytes
+  signal ciphertext_digest_pow[DATA_BYTES+1];
+  ciphertext_digest_pow[0] <== step_in[1];
+  signal mult_factor[DATA_BYTES];
+  // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
   signal zeroed_plaintext[DATA_BYTES];
   for(var i = 0 ; i < DATA_BYTES ; i++) {
-     // Sets any padding bytes to zero (which are presumably at the end) so they don't accum into the poly hash
     zeroed_plaintext[i] <== (1 - isPadding[i]) * plaintext[i];
+    mult_factor[i] <== (1 - isPadding[i]) * ciphertext_digest + isPadding[i];
+    ciphertext_digest_pow[i+1] <== ciphertext_digest_pow[i] * mult_factor[i];
   }
-  signal part_ciphertext_digest <== DataHasher(DATA_BYTES)(bigEndianCiphertext);
-  signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, plaintext_index_counter);
+  signal part_ciphertext_digest <== DataHasherWithSeed(DATA_BYTES)(step_in[10],bigEndianCiphertext);
 
-  step_out[0] <== step_in[0] - part_ciphertext_digest + plaintext_digest;
+  // log("part_ciphertext_digest: ", part_ciphertext_digest);
+
+  signal plaintext_digest   <== PolynomialDigestWithCounter(DATA_BYTES)(zeroed_plaintext, ciphertext_digest, step_in[1]);
+
+  // log("plaintext_digest: ", plaintext_digest);
+
+  step_out[0] <== step_in[0] + step_in[10] - part_ciphertext_digest + plaintext_digest;
+  step_out[1] <== ciphertext_digest_pow[DATA_BYTES];
+  // TODO: I was lazy and put this at the end instead of in a better spot
+  step_out[10] <== part_ciphertext_digest;
+
+  // reset HTTP Verification inputs
+  step_out[2] <== step_in[2]; // Ciphertext digest POW accumulator
+  step_out[3] <== 1; // Machine state hash digest
+  for (var i = 4 ; i < PUBLIC_IO_LENGTH - 1 ; i++) {
+    if (i == 6) {
+      step_out[i] <== 0; // Body ciphertext digest pow counter
+    } else {
+      step_out[i] <== step_in[i];
+    }
+  }
+
+  // for (var i = 0; i < PUBLIC_IO_LENGTH ; i++) {
+  //   log("step_out[",i,"]", step_out[i]);
+  // }
+  // log("xxxxxx Authentication Done xxxxxx");
 }

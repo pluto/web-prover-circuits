@@ -73,8 +73,8 @@ export function PoseidonModular(input: Array<number | string | bigint>): bigint 
     return result;
 }
 
-export function DataHasher(input: number[]): bigint {
-    let hashes: bigint[] = [BigInt(0)];  // Initialize first hash as 0
+export function DataHasher(input: number[], seed: bigint): bigint {
+    let hashes: bigint[] = [seed];  // Initialize first hash as 0
 
     for (let i = 0; i < Math.ceil(input.length / 16); i++) {
         let packedInput = BigInt(0);

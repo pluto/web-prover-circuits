@@ -51,6 +51,38 @@ template DataHasher(DATA_BYTES) {
     out <== hashes[DATA_BYTES \ 16];
 }
 
+// TODO: Lazy so i made a new template when we should probably just reuse the other and refactor elsewhere
+template DataHasherWithSeed(DATA_BYTES) {
+    // TODO: add this assert back after witnesscalc supports
+    // assert(DATA_BYTES % 16 == 0);
+    signal input seed;
+    signal input in[DATA_BYTES];
+    signal output out;
+
+    signal not_to_hash[DATA_BYTES \ 16];
+    signal option_hash[DATA_BYTES \ 16];
+    signal hashes[DATA_BYTES \ 16 + 1];
+    signal isPadding[DATA_BYTES];
+    hashes[0] <== seed;
+    for(var i = 0 ; i < DATA_BYTES \ 16 ; i++) {
+        var packedInput = 0;
+        var isPaddedChunk = 0;
+        for(var j = 0 ; j < 16 ; j++) {
+            /*
+            If in[16 * i + j] is ever -1 we get `isPadding[16 * i + j] === 1` and since we add this
+            we get zero which does not change `packedInput`.
+            */
+            isPadding[16 * i + j] <== IsEqual()([in[16 * i + j], -1]);
+            isPaddedChunk          += isPadding[16 * i + j];
+            packedInput            += (in[16 * i + j] + isPadding[16 * i + j]) * 2**(8*j);
+        }
+        not_to_hash[i] <== IsEqual()([isPaddedChunk, 16]);
+        option_hash[i] <== Poseidon(2)([hashes[i],packedInput]);
+        hashes[i+1]    <== not_to_hash[i] * (hashes[i] - option_hash[i]) + option_hash[i]; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
+    }
+    out <== hashes[DATA_BYTES \ 16];
+}
+
 template PolynomialDigest(N) {
     signal input bytes[N];
     signal input polynomial_input;
@@ -73,7 +105,7 @@ template PolynomialDigest(N) {
 template PolynomialDigestWithCounter(N) {
     signal input bytes[N];
     signal input polynomial_input;
-    signal input counter;
+    signal input pow_ctr;
 
     var logN = log2Ceil(N);
 
@@ -82,18 +114,8 @@ template PolynomialDigestWithCounter(N) {
     signal monomials[N];
     signal terms[N];
 
-    signal pow_accumulation[N+1];
-    pow_accumulation[0] <== 1;
-    signal isLessThanCounter[N];
-    signal multFactor[N];
-    for (var i = 0 ; i < N ; i++) {
-        isLessThanCounter[i] <== LessThan(logN)([i, counter]);
-        multFactor[i]        <== isLessThanCounter[i] * polynomial_input + (1 - isLessThanCounter[i]);
-        pow_accumulation[i+1] <== pow_accumulation[i] * multFactor[i];
-    }
-
     // monomials[0] = polynomial_input ** counter
-    monomials[0] <== pow_accumulation[N];
+    monomials[0] <== pow_ctr;
     terms[0]     <== bytes[0] * monomials[0];
     var accumulation = terms[0];
     for(var i = 1 ; i < N ; i++) {

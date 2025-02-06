@@ -38,18 +38,24 @@ template HttpStateUpdate() {
     // Check if we had read previously CR / LF or multiple
     component prevReadCR     = IsEqual();
     prevReadCR.in          <== [line_status, 1];
+    component prevReadCRLF     = IsEqual();
+    prevReadCRLF.in          <== [line_status, 2];
     component prevReadCRLFCR = IsEqual();
     prevReadCRLFCR.in      <== [line_status, 3];
 
     signal readCRLF     <== prevReadCR.out * readLF.out;
+    signal readCRLFCR   <== prevReadCRLF.out * readCR.out;
     signal readCRLFCRLF <== prevReadCRLFCR.out * readLF.out;
     //---------------------------------------------------------------------------------//
 
     //---------------------------------------------------------------------------------//
     // Take current state and CRLF info to update state
-    signal state[3]          <== [parsing_start, parsing_header, parsing_field_value];
+    signal state[4]          <== [parsing_start, parsing_header, parsing_field_value, parsing_body];
     component stateChange      = StateChange();
+    stateChange.readCR       <== readCR.out;
+    stateChange.prevReadCRLF <== prevReadCRLF.out;
     stateChange.readCRLF     <== readCRLF;
+    stateChange.readCRLFCR   <== readCRLFCR;
     stateChange.readCRLFCRLF <== readCRLFCRLF;
     stateChange.readSP       <== readSP.out;
     stateChange.readColon    <== readColon.out;
@@ -65,19 +71,22 @@ template HttpStateUpdate() {
     next_parsing_field_name  <== nextState.out[2];
     next_parsing_field_value <== nextState.out[3];
     next_parsing_body        <== nextState.out[4];
-    next_line_status         <== line_status + readCR.out + readCRLF + readCRLFCRLF - line_status * notCRAndLF;
+    signal cancelTerm        <== line_status * (notCRAndLF + readCRLFCRLF);
+    next_line_status         <== (line_status + readCR.out + readCRLF - cancelTerm) * (1 - next_parsing_body);
 }
 
 // TODO:
 // - multiple space between start line values
-// - handle incrementParsingHeader being incremented for header -> body CRLF
 // - header value parsing doesn't handle SPACE between colon and actual value
 template StateChange() {
+    signal input prevReadCRLF;
+    signal input readCR;
     signal input readCRLF;
+    signal input readCRLFCR;
     signal input readCRLFCRLF;
     signal input readSP;
     signal input readColon;
-    signal input state[3];
+    signal input state[4];
     signal output out[5];
 
     // GreaterEqThan(2) because start line can have at most 3 values for request or response
@@ -85,15 +94,15 @@ template StateChange() {
     // increment parsing start counter on reading SP
     signal incrementParsingStart <== readSP * isParsingStart;
     // disable parsing start on reading CRLF
-    signal disableParsingStart <== readCRLF * state[0];
+    signal disableParsingStart <== readCR * state[0];
 
     // enable parsing header on reading CRLF
-    signal enableParsingHeader <== readCRLF * isParsingStart;
+    // signal enableParsingHeader <== readCRLF * isParsingStart;
     // check if we are parsing header
     // Allows for max headers to be 2^5 = 32
     signal isParsingHeader <== GreaterEqThan(5)([state[1], 1]);
     // increment parsing header counter on CRLF and parsing header
-    signal incrementParsingHeader <== readCRLF * isParsingHeader;
+    signal incrementParsingHeader <== prevReadCRLF * (1 - readCRLFCR);
     // disable parsing header on reading CRLF-CRLF
     signal disableParsingHeader <== readCRLFCRLF * state[1];
     // parsing field value when parsing header and read Colon `:`
@@ -103,16 +112,19 @@ template StateChange() {
     // parsing body when reading CRLF-CRLF and parsing header
     signal enableParsingBody <== readCRLFCRLF * isParsingHeader;
 
-    // parsing_start       = out[0] = enable header (default 1) + increment start - disable start
-    // parsing_header      = out[1] = enable header            + increment header  - disable header
-    // parsing_field_name  = out[2] = enable header + increment header - parsing field value - parsing body
-    // parsing_field_value = out[3] = parsing field value - increment parsing header (zeroed every time new header starts)
+    // disable the parsing field value if we should increment parsing header and were previously parsing field value too
+    signal disableParsingFieldValue <== readCR * state[2];
+
+    // parsing_start       = out[0] = increment start - disable start
+    // parsing_header      = out[1] = (increment header - disable header) * parsing body
+    // parsing_field_name  = out[2] = (increment header - parsing field value) * parsing body
+    // parsing_field_value = out[3] = (parsing field value - disable parsing field value) * parsing body
     // parsing_body        = out[4] = enable body
     out <== [
-            incrementParsingStart - disableParsingStart, 
-            enableParsingHeader + incrementParsingHeader - disableParsingHeader,
-            enableParsingHeader + incrementParsingHeader - isParsingFieldValue - enableParsingBody,
-            isParsingFieldValue - incrementParsingHeader,
+            (incrementParsingStart - disableParsingStart),
+            (incrementParsingHeader - disableParsingHeader) * (1 - state[3]),
+            (incrementParsingHeader - isParsingFieldValue) * (1 - state[3]),
+            (isParsingFieldValue - disableParsingFieldValue) * (1 - state[3]),
             enableParsingBody
             ];
 }
