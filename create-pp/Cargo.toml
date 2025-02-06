@@ -1,0 +1,12 @@
+[package]
+name = "create-pp"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+proofs = { git = "https://github.com/pluto/web-prover", rev = "d8c81d5" }
+anyhow = "1.0"
+
+[[bin]]
+name = "create_pp"
+path = "src/main.rs"
