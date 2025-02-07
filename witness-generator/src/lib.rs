@@ -42,6 +42,11 @@ impl ByteOrPad {
     result.extend(std::iter::repeat(Self::Pad).take(padding));
     result
   }
+
+  pub fn pad_to_nearest_multiple(bytes: &[u8], multiple: usize) -> Vec<ByteOrPad> {
+    let padding = multiple - (bytes.len() % multiple);
+    Self::from_bytes_with_padding(bytes, padding)
+  }
 }
 
 impl From<u8> for ByteOrPad {
