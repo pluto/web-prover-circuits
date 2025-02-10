@@ -193,6 +193,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
         (Status::None | Status::ParsingNumber(_), Location::ObjectValue) => {
           machine.location[machine.pointer() - 1] = Location::ObjectKey;
           machine.status = Status::None;
+          machine.clear_array_index_label();
         },
         (Status::None | Status::ParsingNumber(_), Location::ArrayIndex(idx)) => {
           machine.location[machine.pointer() - 1] = Location::ArrayIndex(idx + 1);
