@@ -2,7 +2,7 @@ use super::*;
 
 pub mod parser;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum JsonKey {
   /// Object key
