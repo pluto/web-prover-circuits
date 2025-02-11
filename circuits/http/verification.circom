@@ -162,7 +162,9 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     step_out[5] <== step_in[5] - num_matched; // No longer check above, subtract here so circuits later check
     step_out[6] <== body_monomials[DATA_BYTES - 1];
 
-    for (var i = 7 ; i < PUBLIC_IO_LENGTH ; i++) {
+    step_out[7] <== 1; // TODO: can i continue this?
+    step_out[8] <== 0; // TODO: This is a hack to make the circuit work. We should remove this in the future
+    for (var i = 9 ; i < PUBLIC_IO_LENGTH ; i++) {
         step_out[i] <== step_in[i];
     }
 

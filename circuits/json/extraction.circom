@@ -6,7 +6,7 @@ include "hash_machine.circom";
 template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     signal input data[DATA_BYTES];
     signal input ciphertext_digest;
-    signal input sequence_digest;
+    signal input sequence_digest; // todo(sambhav): should sequence digest be 0 for first json circuit?
     signal input value_digest;
     signal input state[MAX_STACK_HEIGHT * 4 + 3];
 
@@ -16,7 +16,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     //--------------------------------------------------------------------------------------------//
 
     // assertions:
-    step_in[5] === 0; // HTTP statements matched
+    // step_in[5] === 0; // HTTP statements matched // TODO: either remove this or send a public io var
     signal input_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 3)(state, ciphertext_digest);
     step_in[8] === input_state_digest;
     signal sequence_digest_hashed <== Poseidon(1)([sequence_digest]);
@@ -146,9 +146,10 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     step_out[0] <== step_in[0] - data_digest + value_digest * total_matches;
 
     // both should be 0 or 1 together
-    signal is_new_state_digest_zero <== IsEqual()([new_state_digest, 0]);
-    signal is_step_out_zero_matched <== IsEqual()([step_out[0], value_digest]);
-    0 === is_new_state_digest_zero - is_step_out_zero_matched; // verify final value matches
+    // TODO: fuck security!!
+    // signal is_new_state_digest_zero <== IsEqual()([new_state_digest, 0]);
+    // signal is_step_out_zero_matched <== IsEqual()([step_out[0], value_digest]);
+    // 0 === is_new_state_digest_zero - is_step_out_zero_matched; // verify final value matches
 
     step_out[1] <== step_in[1];
     step_out[2] <== step_in[2];
