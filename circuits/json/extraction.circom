@@ -85,21 +85,21 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
         total_matches += sequence_and_value_matched[data_idx];
 
         // Debugging
-        log("State[", data_idx, "].byte               =", State[data_idx].byte);
-        for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-            log("State[", data_idx, "].next_stack[", i,"]     = [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
-        }
-        for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-            log("State[", data_idx, "].next_tree_hash[", i,"] = [",State[data_idx].next_tree_hash[i][0], "][", State[data_idx].next_tree_hash[i][1],"]" );
-        }
-        log("State[", data_idx, "].next_monomial       =", State[data_idx].next_monomial);
-        log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
-        log("State[", data_idx, "].next_parsing_primitive =", State[data_idx].next_parsing_primitive);
-        log("State[", data_idx, "].next_escaped        =", State[data_idx].next_escaped);
-        log("++++++++++++++++++++++++++++++++++++++++++++++++");
-        log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
-        log("total_matches                   = ", total_matches);
-        log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+        // log("State[", data_idx, "].byte               =", State[data_idx].byte);
+        // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+        //     log("State[", data_idx, "].next_stack[", i,"]     = [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
+        // }
+        // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+        //     log("State[", data_idx, "].next_tree_hash[", i,"] = [",State[data_idx].next_tree_hash[i][0], "][", State[data_idx].next_tree_hash[i][1],"]" );
+        // }
+        // log("State[", data_idx, "].next_monomial       =", State[data_idx].next_monomial);
+        // log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
+        // log("State[", data_idx, "].next_parsing_primitive =", State[data_idx].next_parsing_primitive);
+        // log("State[", data_idx, "].next_escaped        =", State[data_idx].next_escaped);
+        // log("++++++++++++++++++++++++++++++++++++++++++++++++");
+        // log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
+        // log("total_matches                   = ", total_matches);
+        // log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     }
 
     signal new_state[MAX_STACK_HEIGHT*4 + 3];

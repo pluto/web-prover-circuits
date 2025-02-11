@@ -25,7 +25,7 @@ pub enum Status {
   #[default]
   None,
   ParsingString((String, bool)),
-  ParsingNumber(String),
+  ParsingPrimitive(String),
 }
 
 #[derive(Clone, Debug)]
@@ -38,25 +38,25 @@ pub struct JsonMachine<const MAX_STACK_HEIGHT: usize> {
 
 #[derive(Clone, Debug)]
 pub struct RawJsonMachine<const MAX_STACK_HEIGHT: usize> {
-  pub polynomial_input: F,
-  pub stack:            [(F, F); MAX_STACK_HEIGHT],
-  pub tree_hash:        [(F, F); MAX_STACK_HEIGHT],
-  pub parsing_string:   F,
-  pub parsing_number:   F,
-  pub escaped:          F,
-  pub monomial:         F,
+  pub polynomial_input:  F,
+  pub stack:             [(F, F); MAX_STACK_HEIGHT],
+  pub tree_hash:         [(F, F); MAX_STACK_HEIGHT],
+  pub parsing_string:    F,
+  pub parsing_primitive: F,
+  pub escaped:           F,
+  pub monomial:          F,
 }
 
 impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
   pub fn initial_state() -> Self {
     Self {
-      polynomial_input: F::ZERO,
-      stack:            [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT],
-      tree_hash:        [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT],
-      parsing_string:   F::ZERO,
-      parsing_number:   F::ZERO,
-      monomial:         F::ZERO,
-      escaped:          F::ZERO,
+      polynomial_input:  F::ZERO,
+      stack:             [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT],
+      tree_hash:         [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT],
+      parsing_string:    F::ZERO,
+      parsing_primitive: F::ZERO,
+      monomial:          F::ZERO,
+      escaped:           F::ZERO,
     }
   }
 
@@ -111,7 +111,7 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
       polynomial_input,
       stack,
       tree_hash,
-      parsing_number: F::ZERO,
+      parsing_primitive: F::ZERO,
       parsing_string: F::ZERO,
       monomial: F::ZERO,
       escaped: F::ZERO,
@@ -130,7 +130,7 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
     }
     output[MAX_STACK_HEIGHT * 4] = self.monomial;
     output[MAX_STACK_HEIGHT * 4 + 1] = self.parsing_string;
-    output[MAX_STACK_HEIGHT * 4 + 2] = self.parsing_number;
+    output[MAX_STACK_HEIGHT * 4 + 2] = self.parsing_primitive;
     output[MAX_STACK_HEIGHT * 4 + 3] = self.escaped;
     output
   }

@@ -16,7 +16,7 @@ impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
       );
     }
     let monomial = match (value.current_location(), value.clone().status) {
-      (Location::ObjectKey, Status::ParsingNumber(_) | Status::ParsingString(_)) =>
+      (Location::ObjectKey, Status::ParsingPrimitive(_) | Status::ParsingString(_)) =>
         if value.label_stack[value.pointer() - 1].0.is_empty() {
           F::ZERO
         } else {
@@ -25,7 +25,7 @@ impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
 
       (
         Location::ObjectValue | Location::ArrayIndex(_),
-        Status::ParsingNumber(_) | Status::ParsingString(_),
+        Status::ParsingPrimitive(_) | Status::ParsingString(_),
       ) =>
         if value.label_stack[value.pointer() - 1].1.is_empty() {
           // dbg!(value.pointer());
@@ -43,7 +43,7 @@ impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
     let mut parsing_string = F::ZERO;
     let mut escaped = F::ZERO;
     match value.status {
-      Status::ParsingNumber(_) => parsing_number = F::ONE,
+      Status::ParsingPrimitive(_) => parsing_number = F::ONE,
       Status::ParsingString((_, escaped_bool)) => {
         parsing_string = F::ONE;
         if escaped_bool {
@@ -56,7 +56,7 @@ impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
       polynomial_input: value.polynomial_input,
       stack,
       tree_hash,
-      parsing_number,
+      parsing_primitive: parsing_number,
       parsing_string,
       monomial,
       escaped,
@@ -88,16 +88,16 @@ impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
 
   fn write_to_label_stack(&mut self) {
     match self.status.clone() {
-      Status::ParsingNumber(str) | Status::ParsingString((str, _)) => match self.current_location()
-      {
-        Location::ArrayIndex(_) | Location::ObjectValue =>
-          self.label_stack[self.pointer() - 1].1 = str,
-        Location::ObjectKey => {
-          self.label_stack[self.pointer() - 1].0 = str;
-          self.label_stack[self.pointer() - 1].1 = String::new();
+      Status::ParsingPrimitive(str) | Status::ParsingString((str, _)) =>
+        match self.current_location() {
+          Location::ArrayIndex(_) | Location::ObjectValue =>
+            self.label_stack[self.pointer() - 1].1 = str,
+          Location::ObjectKey => {
+            self.label_stack[self.pointer() - 1].0 = str;
+            self.label_stack[self.pointer() - 1].1 = String::new();
+          },
+          Location::None => {},
         },
-        Location::None => {},
-      },
       Status::None => {},
     }
   }
@@ -129,7 +129,11 @@ const END_BRACKET: u8 = 93;
 const COLON: u8 = 58;
 const COMMA: u8 = 44;
 const QUOTE: u8 = 34;
-const NUMBER: [u8; 10] = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57];
+// const NUMBER: [u8; 10] = ;
+const PRIMITIVE: [u8; 23] = [
+  48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 110, 117, 108, 102, 97, 115, 101, 116, 114, 46, 69, 43,
+  45,
+];
 const ESCAPE: u8 = 92;
 
 // Tell clippy to eat shit
@@ -162,7 +166,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           )),
       },
       END_BRACE => match (machine.clone().status, machine.current_location()) {
-        (Status::None | Status::ParsingNumber(_), Location::ObjectValue) => {
+        (Status::None | Status::ParsingPrimitive(_), Location::ObjectValue) => {
           machine.location[machine.pointer() - 1] = Location::None;
           machine.status = Status::None;
           machine.clear_label_stack();
@@ -182,8 +186,9 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           )),
       },
       END_BRACKET => match (machine.clone().status, machine.current_location()) {
-        (Status::None, Location::ArrayIndex(_)) => {
+        (Status::None | Status::ParsingPrimitive(_), Location::ArrayIndex(_)) => {
           machine.location[machine.pointer() - 1] = Location::None;
+          machine.status = Status::None;
           machine.clear_label_stack();
         },
         _ =>
@@ -195,17 +200,17 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
         (Status::None, Location::ObjectKey) => {
           machine.location[machine.pointer() - 1] = Location::ObjectValue;
         },
-        (Status::ParsingString(_) | Status::ParsingNumber(_), _) => {},
+        (Status::ParsingString(_) | Status::ParsingPrimitive(_), _) => {},
         _ =>
           return Err(WitnessGeneratorError::JsonParser("Colon in invalid position!".to_string())),
       },
       COMMA => match (machine.clone().status, machine.current_location()) {
-        (Status::None | Status::ParsingNumber(_), Location::ObjectValue) => {
+        (Status::None | Status::ParsingPrimitive(_), Location::ObjectValue) => {
           machine.location[machine.pointer() - 1] = Location::ObjectKey;
           machine.status = Status::None;
           machine.clear_array_index_label();
         },
-        (Status::None | Status::ParsingNumber(_), Location::ArrayIndex(idx)) => {
+        (Status::None | Status::ParsingPrimitive(_), Location::ArrayIndex(idx)) => {
           machine.location[machine.pointer() - 1] = Location::ArrayIndex(idx + 1);
           machine.status = Status::None;
           machine.clear_array_index_label();
@@ -229,7 +234,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           str.push(*char as char);
           machine.status = Status::ParsingString((str, false));
         },
-        Status::ParsingNumber(_) =>
+        Status::ParsingPrimitive(_) =>
           return Err(WitnessGeneratorError::JsonParser(
             "Quote found while parsing number!".to_string(),
           )),
@@ -238,11 +243,11 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
         if let Status::ParsingString((str, false)) = machine.status {
           machine.status = Status::ParsingString((str, true));
         },
-      c if NUMBER.contains(&c) => match machine.clone().status {
-        Status::None => machine.status = Status::ParsingNumber(String::from(c as char)),
-        Status::ParsingNumber(mut str) => {
+      c if PRIMITIVE.contains(&c) => match machine.clone().status {
+        Status::None => machine.status = Status::ParsingPrimitive(String::from(c as char)),
+        Status::ParsingPrimitive(mut str) => {
           str.push(*char as char);
-          machine.status = Status::ParsingNumber(str);
+          machine.status = Status::ParsingPrimitive(str);
         },
         Status::ParsingString((mut str, _)) => {
           str.push(*char as char);
@@ -250,7 +255,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
         },
       },
       _ => match machine.status.clone() {
-        Status::ParsingNumber(_) => {
+        Status::ParsingPrimitive(_) => {
           machine.status = Status::None;
           machine.clear_array_index_label();
         },
@@ -316,7 +321,7 @@ mod tests {
   ) {
     assert_eq!(last_state.stack, [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT]);
     assert_eq!(last_state.tree_hash, [(F::ZERO, F::ZERO); MAX_STACK_HEIGHT]);
-    assert_eq!(last_state.parsing_number, F::ZERO);
+    assert_eq!(last_state.parsing_primitive, F::ZERO);
     assert_eq!(last_state.parsing_string, F::ZERO);
     assert_eq!(last_state.monomial, F::ZERO);
   }
@@ -378,18 +383,23 @@ mod tests {
   #[case::value_object(r#"{ "a" : { "d" : "e" , "e" : "c" } , "e" : { "f" : "a" , "e" : "2" } , "g" : { "h" : { "a" : "c" } } , "ab" : "foobar" , "bc" : 42 , "dc" : [ 0 , 1 , "a" ] }"#)]
   #[case::value_float(r#"{"data":{"redditorInfoByName":{"id":"t2_tazi6mk","karma":{"fromAwardsGiven":0.0,"fromAwardsReceived":0.0,"fromComments":24.0,"fromPosts":1765.0,"total":1789.0}}}}"#)]
   #[case::string_escape(r#"{"a": "\"b\""}"#)]
+  #[case::primitives(
+    r#"{"null": null, "false": false, "true": true, "num1": 2.0E-1, "num2": 2.0e+1}"#
+  )]
+  #[case::primitives_array(r#"[null,false,true,2.0E-1,2.0e+1]"#)]
   fn test_json_parser_valid(#[case] input: &str) {
     let polynomial_input = create_polynomial_input();
 
-    let states = parse::<2>(input.as_bytes(), polynomial_input).unwrap();
-    assert_eq!(states.last().unwrap().location, [Location::None; 2]);
+    // TODO: Need to change the max stack back to 5 or whatever
+    let states = parse::<5>(input.as_bytes(), polynomial_input).unwrap();
+    assert_eq!(states.last().unwrap().location, [Location::None; 5]);
     assert_eq!(
       states.last().unwrap().label_stack,
       std::array::from_fn(|_| (String::new(), String::new()))
     );
 
     let raw_states =
-      states.into_iter().map(RawJsonMachine::from).collect::<Vec<RawJsonMachine<2>>>();
+      states.into_iter().map(RawJsonMachine::from).collect::<Vec<RawJsonMachine<5>>>();
     assert_eq!(raw_states.len(), input.len());
 
     verify_final_state(raw_states.last().unwrap());
