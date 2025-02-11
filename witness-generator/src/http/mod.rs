@@ -76,7 +76,9 @@ impl From<HttpMachine> for RawHttpMachine {
 }
 
 impl RawHttpMachine {
-  pub fn initial_state() -> Self { Self { parsing_start: F::ONE, ..Default::default() } }
+  pub fn initial_state() -> Self {
+    Self { parsing_start: F::ONE, line_monomial: F::ONE, ..Default::default() }
+  }
 
   pub fn flatten(&self) -> [F; 8] {
     [
