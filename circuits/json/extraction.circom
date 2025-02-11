@@ -34,18 +34,6 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     signal intermediate_digest[DATA_BYTES][3 * MAX_STACK_HEIGHT];
     signal state_digest[DATA_BYTES];
 
-    // Debugging
-    // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-    //     log("State[", 0, "].next_stack[", i,"]      = [",State[0].next_stack[i][0], "][", State[0].next_stack[i][1],"]" );
-    // }
-    // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-    //     log("State[", 0, "].next_tree_hash[", i,"]  = [",State[0].next_tree_hash[i][0], "][", State[0].next_tree_hash[i][1],"]" );
-    // }
-    // log("State[", 0, "].next_monomial        =", State[0].next_monomial);
-    // log("State[", 0, "].next_parsing_string  =", State[0].next_parsing_string);
-    // log("State[", 0, "].next_parsing_number  =", State[0].next_parsing_number);
-    // log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-
     var total_matches = 0;
     signal sequence_is_matched[DATA_BYTES];
     signal value_is_matched[DATA_BYTES];
@@ -61,7 +49,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
             State[0].polynomial_input <== ciphertext_digest;
             State[0].monomial         <== state[MAX_STACK_HEIGHT*4];
             State[0].parsing_string   <== state[MAX_STACK_HEIGHT*4 + 1];
-            State[0].parsing_number   <== state[MAX_STACK_HEIGHT*4 + 2];
+            State[0].parsing_primitive   <== state[MAX_STACK_HEIGHT*4 + 2];
             State[0].escaped          <== state[MAX_STACK_HEIGHT*4 + 3];
         } else {
             State[data_idx]                    = StateUpdateHasher(MAX_STACK_HEIGHT);
@@ -71,7 +59,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
             State[data_idx].tree_hash        <== State[data_idx - 1].next_tree_hash;
             State[data_idx].monomial         <== State[data_idx - 1].next_monomial;
             State[data_idx].parsing_string   <== State[data_idx - 1].next_parsing_string;
-            State[data_idx].parsing_number   <== State[data_idx - 1].next_parsing_number;
+            State[data_idx].parsing_primitive   <== State[data_idx - 1].next_parsing_primitive;
             State[data_idx].escaped          <== State[data_idx - 1].next_escaped;
         }
 
@@ -97,21 +85,21 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
         total_matches += sequence_and_value_matched[data_idx];
 
         // Debugging
-        // log("State[", data_idx, "].byte               =", State[data_idx].byte);
-        // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-        //     log("State[", data_idx, "].next_stack[", i,"]     = [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
-        // }
-        // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-        //     log("State[", data_idx, "].next_tree_hash[", i,"] = [",State[data_idx].next_tree_hash[i][0], "][", State[data_idx].next_tree_hash[i][1],"]" );
-        // }
-        // log("State[", data_idx, "].next_monomial       =", State[data_idx].next_monomial);
-        // log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
-        // log("State[", data_idx, "].next_parsing_number =", State[data_idx].next_parsing_number);
-        // log("State[", data_idx, "].next_escaped        =", State[data_idx].next_escaped);
-        // log("++++++++++++++++++++++++++++++++++++++++++++++++");
-        // log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
-        // log("total_matches                   = ", total_matches);
-        // log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+        log("State[", data_idx, "].byte               =", State[data_idx].byte);
+        for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+            log("State[", data_idx, "].next_stack[", i,"]     = [",State[data_idx].next_stack[i][0], "][", State[data_idx].next_stack[i][1],"]" );
+        }
+        for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
+            log("State[", data_idx, "].next_tree_hash[", i,"] = [",State[data_idx].next_tree_hash[i][0], "][", State[data_idx].next_tree_hash[i][1],"]" );
+        }
+        log("State[", data_idx, "].next_monomial       =", State[data_idx].next_monomial);
+        log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
+        log("State[", data_idx, "].next_parsing_primitive =", State[data_idx].next_parsing_primitive);
+        log("State[", data_idx, "].next_escaped        =", State[data_idx].next_escaped);
+        log("++++++++++++++++++++++++++++++++++++++++++++++++");
+        log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
+        log("total_matches                   = ", total_matches);
+        log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     }
 
     signal new_state[MAX_STACK_HEIGHT*4 + 3];
@@ -123,7 +111,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     }
     new_state[MAX_STACK_HEIGHT*4]     <== State[DATA_BYTES - 1].next_monomial;
     new_state[MAX_STACK_HEIGHT*4 + 1] <== State[DATA_BYTES - 1].next_parsing_string;
-    new_state[MAX_STACK_HEIGHT*4 + 2] <== State[DATA_BYTES - 1].next_parsing_number;
+    new_state[MAX_STACK_HEIGHT*4 + 2] <== State[DATA_BYTES - 1].next_parsing_primitive;
     signal new_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 3)(new_state, ciphertext_digest);
 
     // for (var i = 0 ; i < MAX_STACK_HEIGHT * 4 + 3 ; i++) {
