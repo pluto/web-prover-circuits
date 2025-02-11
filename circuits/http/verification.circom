@@ -8,8 +8,8 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     signal input step_in[PUBLIC_IO_LENGTH];
     signal output step_out[PUBLIC_IO_LENGTH];
 
-    // next_parsing_start, next_parsing_header, next_parsing_field_name, next_parsing_field_value, next_parsing_body, next_line_status, inner_main_digest
-    signal input machine_state[7];
+    // next_parsing_start, next_parsing_header, next_parsing_field_name, next_parsing_field_value, next_parsing_body, next_line_status, line_digest, main_monomial
+    signal input machine_state[8];
 
     signal input ciphertext_digest;
 
@@ -39,10 +39,10 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
 
     // assertions:
     // - check step_in[3] = machine state hash digest
-    // for (var i = 0 ; i < 7 ; i++) {
+    // for (var i = 0 ; i < 8 ; i++) {
     //     log("machine_state[",i,"] = ", machine_state[i]);
     // }
-    signal machine_state_digest <== PolynomialDigest(7)(machine_state, ciphertext_digest);
+    signal machine_state_digest <== PolynomialDigest(8)(machine_state, ciphertext_digest);
     // log("machine_state_digest: ", machine_state_digest);
     step_in[3] === machine_state_digest;
     // - check step_in[4] = start line hash digest + all header hash digests
@@ -80,7 +80,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
 
 
     signal main_monomials[DATA_BYTES];
-    main_monomials[0] <== 1;
+    main_monomials[0] <== machine_state[7];
 
     signal is_line_change[DATA_BYTES-1];
     signal was_cleared[DATA_BYTES-1];
@@ -107,7 +107,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     for(var i = 0 ; i < DATA_BYTES ; i++) {
         monomial_is_zero[i]    <== IsZero()(main_monomials[i]);
         accum_prev[i]          <== (1 - monomial_is_zero[i]) * line_digest[i];
-        line_digest[i+1] <== accum_prev[i] + data[i] * main_monomials[i];
+        line_digest[i+1]       <== accum_prev[i] + data[i] * main_monomials[i];
         is_zero[i]             <== IsZero()(line_digest[i+1]);
         contains[i]            <== Contains(MAX_NUMBER_OF_HEADERS + 1)(line_digest[i+1], main_digests);
         is_match[i]            <== (1 - is_zero[i]) * contains[i];
@@ -147,14 +147,15 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     step_out[1] <== step_in[1];
     step_out[2] <== ciphertext_digest_pow[DATA_BYTES];
     // pass machine state to next iteration
-    step_out[3] <== PolynomialDigest(7)(
+    step_out[3] <== PolynomialDigest(8)(
         [State[DATA_BYTES - 1].next_parsing_start,
          State[DATA_BYTES - 1].next_parsing_header,
          State[DATA_BYTES - 1].next_parsing_field_name,
          State[DATA_BYTES - 1].next_parsing_field_value,
          State[DATA_BYTES - 1].next_parsing_body,
          State[DATA_BYTES - 1].next_line_status,
-         line_digest[DATA_BYTES]
+         line_digest[DATA_BYTES],
+         main_monomials[DATA_BYTES - 1] * ciphertext_digest
         ],
         ciphertext_digest
     );
@@ -162,7 +163,7 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     step_out[5] <== step_in[5] - num_matched; // No longer check above, subtract here so circuits later check
     step_out[6] <== body_monomials[DATA_BYTES - 1];
 
-    step_out[7] <== 1; // TODO: can i continue this?
+    step_out[7] <== 1; // TODO: can i continue this counter?
     step_out[8] <== 0; // TODO: This is a hack to make the circuit work. We should remove this in the future
     for (var i = 9 ; i < PUBLIC_IO_LENGTH ; i++) {
         step_out[i] <== step_in[i];
@@ -175,10 +176,11 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     // log("next_parsing_body: ", State[DATA_BYTES - 1].next_parsing_body);
     // log("next_line_status: ", State[DATA_BYTES - 1].next_line_status);
     // log("line_digest: ", line_digest[DATA_BYTES]);
+    // log("main_monomial: ", main_monomials[DATA_BYTES - 1] * ciphertext_digest);
     // log("body_digest: ", body_digest[DATA_BYTES - 1]);
 
-//     for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {
-//         log("step_out[",i,"] = ", step_out[i]);
-//     }
-//     log("xxxxx HTTP Verification Done xxxxx");
+    // for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {
+    //     log("step_out[",i,"] = ", step_out[i]);
+    // }
+    // log("xxxxx HTTP Verification Done xxxxx");
 }

@@ -5,13 +5,14 @@ pub mod parser;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HttpMachine {
-  pub header_num:  usize,
-  pub status:      HttpStatus,
-  pub line_digest: F,
+  pub header_num:    usize,
+  pub status:        HttpStatus,
+  pub line_digest:   F,
+  pub line_monomial: F,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
-#[serde(into = "[String; 7]")]
+#[serde(into = "[String; 8]")]
 pub struct RawHttpMachine {
   pub parsing_start:       F,
   pub parsing_header:      F,
@@ -20,10 +21,11 @@ pub struct RawHttpMachine {
   pub parsing_body:        F,
   pub line_status:         F,
   pub line_digest:         F,
+  pub line_monomial:       F,
 }
 
-/// Implement From<RawHttpMachine> for [String; 7]
-impl From<RawHttpMachine> for [String; 7] {
+/// Implement From<RawHttpMachine> for [String; 8]
+impl From<RawHttpMachine> for [String; 8] {
   fn from(machine: RawHttpMachine) -> Self {
     [
       field_element_to_base10_string(machine.parsing_start),
@@ -33,6 +35,7 @@ impl From<RawHttpMachine> for [String; 7] {
       field_element_to_base10_string(machine.parsing_body),
       field_element_to_base10_string(machine.line_status),
       field_element_to_base10_string(machine.line_digest),
+      field_element_to_base10_string(machine.line_monomial),
     ]
   }
 }
@@ -42,6 +45,7 @@ impl From<HttpMachine> for RawHttpMachine {
     let mut raw_http_machine = RawHttpMachine {
       line_digest: value.line_digest,
       parsing_header: F::from(value.header_num as u64),
+      line_monomial: value.line_monomial,
       ..Default::default()
     };
     match value.status {
@@ -74,7 +78,7 @@ impl From<HttpMachine> for RawHttpMachine {
 impl RawHttpMachine {
   pub fn initial_state() -> Self { Self { parsing_start: F::ONE, ..Default::default() } }
 
-  pub fn flatten(&self) -> [F; 7] {
+  pub fn flatten(&self) -> [F; 8] {
     [
       self.parsing_start,
       self.parsing_header,
@@ -83,6 +87,7 @@ impl RawHttpMachine {
       self.parsing_body,
       self.line_status,
       self.line_digest,
+      self.line_monomial,
     ]
   }
 }
