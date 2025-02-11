@@ -3,8 +3,8 @@ import { Delimiters, WhiteSpace, Numbers, Escape, INITIAL_IN, INITIAL_OUT } from
 
 describe("StateUpdate :: Values", () => {
     let circuit: WitnessTester<
-        ["byte", "pointer", "stack", "parsing_string", "parsing_number"],
-        ["next_pointer", "next_stack", "next_parsing_string", "next_parsing_number"]
+        ["byte", "pointer", "stack", "parsing_string", "parsing_number", "escaped"],
+        ["next_pointer", "next_stack", "next_parsing_string", "next_parsing_number", "next_escaped"]
     >;
     before(async () => {
         circuit = await circomkit.WitnessTester(`GetTopOfStack`, {
