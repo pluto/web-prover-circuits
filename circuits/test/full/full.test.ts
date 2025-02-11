@@ -135,7 +135,7 @@ describe("Example NIVC Proof", async () => {
             { type: "Object", value: KEY3 },
         ];
 
-        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
 
         const padded_http_body = http_body.concat(Array(DATA_BYTES - http_body.length).fill(-1));
         const [stack, treeHashes] = jsonTreeHasher(ciphertext_digest, keySequence, MAX_STACK_HEIGHT);
@@ -256,7 +256,7 @@ describe("Example NIVC Proof", async () => {
         ];
 
         const padded_http_body = http_body.concat(Array(DATA_BYTES - http_body.length).fill(-1));
-        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         const [stack, treeHashes] = jsonTreeHasher(ciphertext_digest, keySequence, MAX_STACK_HEIGHT);
         const sequence_digest = compressTreeHash(ciphertext_digest, [stack, treeHashes]);
         const value_digest = PolynomialDigest(targetValue, ciphertext_digest, BigInt(0));
@@ -372,7 +372,7 @@ describe("Example NIVC Proof", async () => {
             { type: "Object", value: KEY0 },
         ];
 
-        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
 
         const [stack, treeHashes] = jsonTreeHasher(ciphertext_digest, keySequence, MAX_STACK_HEIGHT);
         const sequence_digest = compressTreeHash(ciphertext_digest, [stack, treeHashes]);
@@ -678,7 +678,7 @@ describe("Example NIVC Proof", async () => {
 
         const targetValue = strToBytes("ord_67890");
 
-        let initialState = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let initialState = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         let jsonState1: (bigint | number)[] = [
             1, 1,
             1, 1,
@@ -700,9 +700,9 @@ describe("Example NIVC Proof", async () => {
             0, 0,
             0, 0,
             0, 0,
-            1, 1, 0
+            1, 1, 0, 0
         ];
-        assert.deepEqual(jsonState1.length, MAX_STACK_HEIGHT * 4 + 3);
+        assert.deepEqual(jsonState1.length, MAX_STACK_HEIGHT * 4 + 4);
         let state = [initialState, jsonState1];
 
         const [stack, treeHashes] = jsonTreeHasher(ciphertext_digest, manifest.response.body.json, MAX_STACK_HEIGHT);

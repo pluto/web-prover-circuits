@@ -8,7 +8,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     signal input ciphertext_digest;
     signal input sequence_digest; // todo(sambhav): should sequence digest be 0 for first json circuit?
     signal input value_digest;
-    signal input state[MAX_STACK_HEIGHT * 4 + 3];
+    signal input state[MAX_STACK_HEIGHT * 4 + 4];
 
     signal input step_in[PUBLIC_IO_LENGTH];
     signal output step_out[PUBLIC_IO_LENGTH];
@@ -17,7 +17,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
 
     // assertions:
     // step_in[5] === 0; // HTTP statements matched // TODO: either remove this or send a public io var
-    signal input_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 3)(state, ciphertext_digest);
+    signal input_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 4)(state, ciphertext_digest);
     step_in[8] === input_state_digest;
     signal sequence_digest_hashed <== Poseidon(1)([sequence_digest]);
     step_in[9] === sequence_digest_hashed;
@@ -62,6 +62,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
             State[0].monomial         <== state[MAX_STACK_HEIGHT*4];
             State[0].parsing_string   <== state[MAX_STACK_HEIGHT*4 + 1];
             State[0].parsing_number   <== state[MAX_STACK_HEIGHT*4 + 2];
+            State[0].escaped          <== state[MAX_STACK_HEIGHT*4 + 3];
         } else {
             State[data_idx]                    = StateUpdateHasher(MAX_STACK_HEIGHT);
             State[data_idx].byte             <== data[data_idx];
@@ -71,6 +72,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
             State[data_idx].monomial         <== State[data_idx - 1].next_monomial;
             State[data_idx].parsing_string   <== State[data_idx - 1].next_parsing_string;
             State[data_idx].parsing_number   <== State[data_idx - 1].next_parsing_number;
+            State[data_idx].escaped          <== State[data_idx - 1].next_escaped;
         }
 
         // Digest the whole stack and key tree hash
@@ -105,6 +107,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
         // log("State[", data_idx, "].next_monomial       =", State[data_idx].next_monomial);
         // log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
         // log("State[", data_idx, "].next_parsing_number =", State[data_idx].next_parsing_number);
+        // log("State[", data_idx, "].next_escaped        =", State[data_idx].next_escaped);
         // log("++++++++++++++++++++++++++++++++++++++++++++++++");
         // log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
         // log("total_matches                   = ", total_matches);

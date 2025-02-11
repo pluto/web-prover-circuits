@@ -28,6 +28,7 @@ template Syntax() {
     signal output NUMBER_START  <== 48;
     signal output NUMBER_END    <== 57;
 
+    signal output DOT           <== 46;
 }
 
 template Command() {

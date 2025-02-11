@@ -55,14 +55,17 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     signal input polynomial_input;
     signal input monomial;
     signal input tree_hash[MAX_STACK_HEIGHT][2];
+    signal input escaped;
 
     signal output next_stack[MAX_STACK_HEIGHT][2];
     signal output next_parsing_string;
     signal output next_parsing_number;
     signal output next_monomial;
     signal output next_tree_hash[MAX_STACK_HEIGHT][2];
+    signal output next_escaped;
 
     component Command = Command();
+    component Syntax = Syntax();
 
     // log("--------------------------------");
     // log("byte:         ", byte);
@@ -72,25 +75,25 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     // Break down what was read
     // * read in a start brace `{` *
     component readStartBrace   = IsEqual();
-    readStartBrace.in        <== [byte, 123];
+    readStartBrace.in        <== [byte, Syntax.START_BRACE];
     // * read in an end brace `}` *
     component readEndBrace     = IsEqual();
-    readEndBrace.in          <== [byte, 125];
+    readEndBrace.in          <== [byte, Syntax.END_BRACE];
     // * read in a start bracket `[` *
     component readStartBracket = IsEqual();
-    readStartBracket.in      <== [byte, 91];
+    readStartBracket.in      <== [byte, Syntax.START_BRACKET];
     // * read in an end bracket `]` *
     component readEndBracket   = IsEqual();
-    readEndBracket.in        <== [byte, 93];
+    readEndBracket.in        <== [byte, Syntax.END_BRACKET];
     // * read in a colon `:` *
     component readColon        = IsEqual();
-    readColon.in             <== [byte, 58];
+    readColon.in             <== [byte, Syntax.COLON];
     // * read in a comma `,` *
     component readComma        = IsEqual();
-    readComma.in             <== [byte, 44];
+    readComma.in             <== [byte, Syntax.COMMA];
 
     component readDot         = IsEqual();
-    readDot.in               <== [byte, 46];
+    readDot.in               <== [byte, Syntax.DOT];
 
     // * read in some delimeter *
     signal readDelimeter     <== readStartBrace.out + readEndBrace.out + readStartBracket.out + readEndBracket.out
@@ -98,10 +101,14 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     // * read in some number *
     component readNumber       = InRange(8);
     readNumber.in            <== byte;
-    readNumber.range         <== [48, 57]; // This is the range where ASCII digits are
+    readNumber.range         <== [Syntax.NUMBER_START, Syntax.NUMBER_END]; // This is the range where ASCII digits are
     // * read in a quote `"` *
     component readQuote        = IsEqual();
-    readQuote.in             <== [byte, 34];
+    readQuote.in             <== [byte, Syntax.QUOTE];
+    // * read in a escape `\` *
+    component readEscape       = IsEqual();
+    readEscape.in            <== [byte, Syntax.ESCAPE];
+
     component readOther        = IsZero();
     readOther.in             <== readDelimeter + readNumber.out + readQuote.out + readDot.out;
     //--------------------------------------------------------------------------------------------//
@@ -149,7 +156,7 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     mulMaskAndOut.lhs        <== mask.out;
     mulMaskAndOut.rhs        <== [Instruction.out[0], Instruction.out[1], Instruction.out[2]  - readOther.out];
 
-    next_parsing_string       <== parsing_string + mulMaskAndOut.out[1];
+    next_parsing_string       <== escaped * (parsing_string - (parsing_string + mulMaskAndOut.out[1])) + (parsing_string + mulMaskAndOut.out[1]);
     next_parsing_number       <== parsing_number + mulMaskAndOut.out[2];
 
     component newStack          = RewriteStack(MAX_STACK_HEIGHT);
@@ -170,10 +177,17 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     newStack.next_parsing_number <== next_parsing_number;
     newStack.byte                <== byte;
     newStack.polynomial_input    <== polynomial_input;
-    // * set all the next state of the parser *
-    next_stack                <== newStack.next_stack;
-    next_tree_hash            <== newStack.next_tree_hash;
-    next_monomial             <== newStack.next_monomial;
+    newStack.escaped             <== escaped;
+    // * set all the next state of the parser using the escaped toggle *
+    // Toggle escaped if read
+    next_escaped              <== readEscape.out * (1 - escaped);
+    for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++) {
+        next_stack[i][0] <== next_escaped * (stack[i][0] - newStack.next_stack[i][0]) + newStack.next_stack[i][0];
+        next_stack[i][1] <== next_escaped * (stack[i][1] - newStack.next_stack[i][1]) + newStack.next_stack[i][1];
+        next_tree_hash[i][0] <== next_escaped * (tree_hash[i][0] - newStack.next_tree_hash[i][0]) + newStack.next_tree_hash[i][0];
+        next_tree_hash[i][1] <== next_escaped * (tree_hash[i][1] - newStack.next_tree_hash[i][1]) + newStack.next_tree_hash[i][1];
+    }
+    next_monomial             <== next_escaped * (monomial - newStack.next_monomial) + newStack.next_monomial;
 }
 
 /*
@@ -300,6 +314,7 @@ template RewriteStack(n) {
     signal input readColon;
     signal input readComma;
     signal input readQuote;
+    signal input escaped;
 
     signal input parsing_number;
     signal input parsing_string;
@@ -399,7 +414,8 @@ template RewriteStack(n) {
 
     signal to_clear_zeroth <== end_kv;
     signal stopped_parsing_number <== IsEqual()([(parsing_number - next_parsing_number), 1]);
-    signal not_to_clear_first <== IsZero()(end_kv + readQuote * parsing_string + stopped_parsing_number);
+    signal read_quote_not_escaped <== readQuote * (1 - escaped);
+    signal not_to_clear_first <== IsZero()(end_kv + read_quote_not_escaped * parsing_string + stopped_parsing_number);
     signal to_clear_first <== (1 - not_to_clear_first);
     signal tree_hash_change_value[2] <== [(1 - to_clear_zeroth) * next_state_hash[0], (1 - to_clear_first) * next_state_hash[1]];
 

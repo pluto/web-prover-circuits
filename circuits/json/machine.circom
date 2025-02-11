@@ -153,11 +153,11 @@ template StateUpdate(MAX_STACK_HEIGHT) {
     // * set all the next state of the parser *
     // b * (y - x) + x --> Simple way of doing a switch with boolean b
     for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++) {
-        next_stack[i][0] <== escaped * (stack[i][0] - newStack.next_stack[i][0]) + newStack.next_stack[i][0];
-        next_stack[i][1] <== escaped * (stack[i][1] - newStack.next_stack[i][1]) + newStack.next_stack[i][1];
+        next_stack[i][0] <== readEscape.out * (stack[i][0] - newStack.next_stack[i][0]) + newStack.next_stack[i][0];
+        next_stack[i][1] <== readEscape.out * (stack[i][1] - newStack.next_stack[i][1]) + newStack.next_stack[i][1];
     }
-    next_parsing_string       <== escaped * (parsing_string - (parsing_string + mulMaskAndOut.out[1])) + (parsing_string + mulMaskAndOut.out[1]);
-    next_parsing_number       <== escaped * (parsing_number - (parsing_number + mulMaskAndOut.out[2])) + (parsing_number + mulMaskAndOut.out[2]);
+    next_parsing_string       <== readEscape.out * (parsing_string - (parsing_string + mulMaskAndOut.out[1])) + (parsing_string + mulMaskAndOut.out[1]);
+    next_parsing_number       <== readEscape.out * (parsing_number - (parsing_number + mulMaskAndOut.out[2])) + (parsing_number + mulMaskAndOut.out[2]);
     // Toggle escaped if read
     next_escaped              <== readEscape.out * (1 - escaped);
     //--------------------------------------------------------------------------------------------//
