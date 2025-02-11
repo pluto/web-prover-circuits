@@ -41,9 +41,15 @@ impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
 
     let mut parsing_number = F::ZERO;
     let mut parsing_string = F::ZERO;
+    let mut escaped = F::ZERO;
     match value.status {
       Status::ParsingNumber(_) => parsing_number = F::ONE,
-      Status::ParsingString(_) => parsing_string = F::ONE,
+      Status::ParsingString((_, escaped_bool)) => {
+        parsing_string = F::ONE;
+        if escaped_bool {
+          escaped = F::ONE;
+        }
+      },
       Status::None => {},
     }
     Self {
@@ -53,6 +59,7 @@ impl<const MAX_STACK_HEIGHT: usize> From<JsonMachine<MAX_STACK_HEIGHT>>
       parsing_number,
       parsing_string,
       monomial,
+      escaped,
     }
   }
 }
@@ -81,7 +88,8 @@ impl<const MAX_STACK_HEIGHT: usize> JsonMachine<MAX_STACK_HEIGHT> {
 
   fn write_to_label_stack(&mut self) {
     match self.status.clone() {
-      Status::ParsingNumber(str) | Status::ParsingString(str) => match self.current_location() {
+      Status::ParsingNumber(str) | Status::ParsingString((str, _)) => match self.current_location()
+      {
         Location::ArrayIndex(_) | Location::ObjectValue =>
           self.label_stack[self.pointer() - 1].1 = str,
         Location::ObjectKey => {
@@ -122,6 +130,7 @@ const COLON: u8 = 58;
 const COMMA: u8 = 44;
 const QUOTE: u8 = 34;
 const NUMBER: [u8; 10] = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57];
+const ESCAPE: u8 = 92;
 
 // Tell clippy to eat shit
 #[allow(clippy::too_many_lines)]
@@ -140,8 +149,8 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
   let mut ctr = 0;
   for char in bytes {
     // Update the machine
-    // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    // println!("char: {}, ctr: {}", *char as char, ctr);
+    println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    println!("char: {}, ctr: {}", *char as char, ctr);
     match *char {
       START_BRACE => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::None | Location::ObjectValue | Location::ArrayIndex(_)) => {
@@ -205,8 +214,8 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           return Err(WitnessGeneratorError::JsonParser("Comma in invalid position!".to_string())),
       },
       QUOTE => match machine.status {
-        Status::None => machine.status = Status::ParsingString(String::new()),
-        Status::ParsingString(_) => {
+        Status::None => machine.status = Status::ParsingString((String::new(), false)),
+        Status::ParsingString((_, false)) => {
           machine.status = Status::None;
 
           match machine.current_location() {
@@ -216,20 +225,28 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
             _ => {},
           }
         },
+        Status::ParsingString((mut str, true)) => {
+          str.push(*char as char);
+          machine.status = Status::ParsingString((str, false));
+        },
         Status::ParsingNumber(_) =>
           return Err(WitnessGeneratorError::JsonParser(
             "Quote found while parsing number!".to_string(),
           )),
       },
+      ESCAPE =>
+        if let Status::ParsingString((str, false)) = machine.status {
+          machine.status = Status::ParsingString((str, true));
+        },
       c if NUMBER.contains(&c) => match machine.clone().status {
         Status::None => machine.status = Status::ParsingNumber(String::from(c as char)),
         Status::ParsingNumber(mut str) => {
           str.push(*char as char);
           machine.status = Status::ParsingNumber(str);
         },
-        Status::ParsingString(mut str) => {
+        Status::ParsingString((mut str, _)) => {
           str.push(*char as char);
-          machine.status = Status::ParsingString(str);
+          machine.status = Status::ParsingString((str, false));
         },
       },
       _ => match machine.status.clone() {
@@ -237,9 +254,9 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           machine.status = Status::None;
           machine.clear_array_index_label();
         },
-        Status::ParsingString(mut str) => {
+        Status::ParsingString((mut str, _)) => {
           str.push(*char as char);
-          machine.status = Status::ParsingString(str);
+          machine.status = Status::ParsingString((str, false));
         },
         Status::None => {},
       },
@@ -277,7 +294,10 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
     //   "state[ {ctr:?} ].parsing_number = {:?}",
     //   BigUint::from_bytes_le(&raw_state.parsing_number.to_bytes())
     // );
-
+    // println!(
+    //   "state[ {ctr:?} ].escaped        = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.escaped.to_bytes())
+    // );
     ctr += 1;
     // dbg!(&RawJsonMachine::from(machine.clone()));
   }
@@ -357,18 +377,19 @@ mod tests {
   #[case::value_array_object(r#"{ "a" : [ { "b" : [ 1 , 4 ] } , { "c" : "b" } ] }"#)]
   #[case::value_object(r#"{ "a" : { "d" : "e" , "e" : "c" } , "e" : { "f" : "a" , "e" : "2" } , "g" : { "h" : { "a" : "c" } } , "ab" : "foobar" , "bc" : 42 , "dc" : [ 0 , 1 , "a" ] }"#)]
   #[case::value_float(r#"{"data":{"redditorInfoByName":{"id":"t2_tazi6mk","karma":{"fromAwardsGiven":0.0,"fromAwardsReceived":0.0,"fromComments":24.0,"fromPosts":1765.0,"total":1789.0}}}}"#)]
+  #[case::string_escape(r#"{"a": "\"b\""}"#)]
   fn test_json_parser_valid(#[case] input: &str) {
     let polynomial_input = create_polynomial_input();
 
-    let states = parse::<5>(input.as_bytes(), polynomial_input).unwrap();
-    assert_eq!(states.last().unwrap().location, [Location::None; 5]);
+    let states = parse::<2>(input.as_bytes(), polynomial_input).unwrap();
+    assert_eq!(states.last().unwrap().location, [Location::None; 2]);
     assert_eq!(
       states.last().unwrap().label_stack,
       std::array::from_fn(|_| (String::new(), String::new()))
     );
 
     let raw_states =
-      states.into_iter().map(RawJsonMachine::from).collect::<Vec<RawJsonMachine<5>>>();
+      states.into_iter().map(RawJsonMachine::from).collect::<Vec<RawJsonMachine<2>>>();
     assert_eq!(raw_states.len(), input.len());
 
     verify_final_state(raw_states.last().unwrap());

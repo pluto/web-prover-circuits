@@ -24,7 +24,7 @@ pub enum Location {
 pub enum Status {
   #[default]
   None,
-  ParsingString(String),
+  ParsingString((String, bool)),
   ParsingNumber(String),
 }
 
@@ -43,6 +43,7 @@ pub struct RawJsonMachine<const MAX_STACK_HEIGHT: usize> {
   pub tree_hash:        [(F, F); MAX_STACK_HEIGHT],
   pub parsing_string:   F,
   pub parsing_number:   F,
+  pub escaped:          F,
   pub monomial:         F,
 }
 
@@ -55,6 +56,7 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
       parsing_string:   F::ZERO,
       parsing_number:   F::ZERO,
       monomial:         F::ZERO,
+      escaped:          F::ZERO,
     }
   }
 
@@ -112,11 +114,12 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
       parsing_number: F::ZERO,
       parsing_string: F::ZERO,
       monomial: F::ZERO,
+      escaped: F::ZERO,
     })
   }
 
-  pub fn flatten(&self) -> [F; MAX_STACK_HEIGHT * 4 + 3] {
-    let mut output = [F::ZERO; MAX_STACK_HEIGHT * 4 + 3];
+  pub fn flatten(&self) -> [F; MAX_STACK_HEIGHT * 4 + 4] {
+    let mut output = [F::ZERO; MAX_STACK_HEIGHT * 4 + 4];
     for (idx, pair) in self.stack.iter().enumerate() {
       output[2 * idx] = pair.0;
       output[2 * idx + 1] = pair.1;
@@ -128,6 +131,7 @@ impl<const MAX_STACK_HEIGHT: usize> RawJsonMachine<MAX_STACK_HEIGHT> {
     output[MAX_STACK_HEIGHT * 4] = self.monomial;
     output[MAX_STACK_HEIGHT * 4 + 1] = self.parsing_string;
     output[MAX_STACK_HEIGHT * 4 + 2] = self.parsing_number;
+    output[MAX_STACK_HEIGHT * 4 + 3] = self.escaped;
     output
   }
 }
