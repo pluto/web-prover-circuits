@@ -263,17 +263,17 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
     }
     machine.write_to_label_stack();
     output.push(machine.clone());
-    // let raw_state = RawJsonMachine::from(machine.clone());
-    // let raw_stack = raw_state
-    //   .stack
-    //   .into_iter()
-    //   .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()),
-    // BigUint::from_bytes_le(&f.1.to_bytes())))   .collect::<Vec<(BigUint, BigUint)>>();
-    // let raw_tree_hash = raw_state
-    //   .tree_hash
-    //   .into_iter()
-    //   .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()),
-    // BigUint::from_bytes_le(&f.1.to_bytes())))   .collect::<Vec<(BigUint, BigUint)>>();
+    let raw_state = RawJsonMachine::from(machine.clone());
+    let raw_stack = raw_state
+      .stack
+      .into_iter()
+      .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()), BigUint::from_bytes_le(&f.1.to_bytes())))
+      .collect::<Vec<(BigUint, BigUint)>>();
+    let raw_tree_hash = raw_state
+      .tree_hash
+      .into_iter()
+      .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()), BigUint::from_bytes_le(&f.1.to_bytes())))
+      .collect::<Vec<(BigUint, BigUint)>>();
     // Debuggin'
 
     // for (i, (a, b)) in raw_stack.iter().enumerate() {
