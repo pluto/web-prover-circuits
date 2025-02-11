@@ -92,16 +92,13 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     component readComma        = IsEqual();
     readComma.in             <== [byte, Syntax.COMMA];
 
-    component readDot         = IsEqual();
-    readDot.in               <== [byte, Syntax.DOT];
-
     // * read in some delimeter *
     signal readDelimeter     <== readStartBrace.out + readEndBrace.out + readStartBracket.out + readEndBracket.out
                                + readColon.out + readComma.out;
     // * read in some number *
-    component readNumber       = InRange(8);
-    readNumber.in            <== byte;
-    readNumber.range         <== [Syntax.NUMBER_START, Syntax.NUMBER_END]; // This is the range where ASCII digits are
+    component readPrimitive       = Contains(23);
+    readPrimitive.in            <== byte;
+    readPrimitive.array         <== [Syntax.ZERO, Syntax.ONE, Syntax.TWO,Syntax.THREE, Syntax.FOUR, Syntax.FIVE, Syntax.SIX, Syntax.SEVEN, Syntax.EIGHT, Syntax.NINE, Syntax.n,Syntax.u,Syntax.l,Syntax.f,Syntax.a,Syntax.s,Syntax.e,Syntax.t,Syntax.r, Syntax.PERIOD, Syntax.E, Syntax.PLUS, Syntax.MINUS];
     // * read in a quote `"` *
     component readQuote        = IsEqual();
     readQuote.in             <== [byte, Syntax.QUOTE];
@@ -110,7 +107,7 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     readEscape.in            <== [byte, Syntax.ESCAPE];
 
     component readOther        = IsZero();
-    readOther.in             <== readDelimeter + readNumber.out + readQuote.out + readDot.out;
+    readOther.in             <== readDelimeter + readPrimitive.out + readQuote.out;
     //--------------------------------------------------------------------------------------------//
     // Yield instruction based on what byte we read *
     component readStartBraceInstruction   = ScalarArrayMul(3);
@@ -131,9 +128,9 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     component readCommaInstruction        = ScalarArrayMul(3);
     readCommaInstruction.scalar         <== readComma.out;
     readCommaInstruction.array          <== Command.COMMA;
-    component readNumberInstruction       = ScalarArrayMul(3);
-    readNumberInstruction.scalar        <== readNumber.out;
-    readNumberInstruction.array         <== Command.NUMBER;
+    component readPrimitiveInstruction       = ScalarArrayMul(3);
+    readPrimitiveInstruction.scalar        <== readPrimitive.out;
+    readPrimitiveInstruction.array         <== Command.NUMBER;
     component readQuoteInstruction        = ScalarArrayMul(3);
     readQuoteInstruction.scalar         <== readQuote.out;
     readQuoteInstruction.array          <== Command.QUOTE;
@@ -142,13 +139,13 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     Instruction.arrays                  <== [readStartBraceInstruction.out, readEndBraceInstruction.out,
                                              readStartBracketInstruction.out, readEndBracketInstruction.out,
                                              readColonInstruction.out, readCommaInstruction.out,
-                                             readNumberInstruction.out, readQuoteInstruction.out];
+                                             readPrimitiveInstruction.out, readQuoteInstruction.out];
     //--------------------------------------------------------------------------------------------//
     // Apply state changing data
     // * get the instruction mask based on current state *
     component mask              = StateToMask(MAX_STACK_HEIGHT);
     mask.readDelimeter        <== readDelimeter;
-    mask.readNumber           <== readNumber.out;
+    mask.readPrimitive           <== readPrimitive.out;
     mask.parsing_string       <== parsing_string;
     mask.parsing_primitive       <== parsing_primitive;
     // * multiply the mask array elementwise with the instruction array *
@@ -198,7 +195,7 @@ This template is for updating the state of the parser from a current state to a 
 
 # Inputs:
  - `readDelimeter` : a bool flag that indicates whether the byte value read was a delimeter.
- - `readNumber`    : a bool flag that indicates whether the byte value read was a number.
+ - `readPrimitive`    : a bool flag that indicates whether the byte value read was for a primitive value.
  - `parsing_primitive`: a bool flag that indicates whether the parser is currently parsing a string or not.
  - `parsing_primitive`: a bool flag that indicates whether the parser is currently parsing a number or not.
 
@@ -211,7 +208,7 @@ This template is for updating the state of the parser from a current state to a 
 template StateToMask(n) {
     // TODO: Probably need to assert things are bits where necessary.
     signal input readDelimeter;
-    signal input readNumber;
+    signal input readPrimitive;
     signal input parsing_string;
     signal input parsing_primitive;
     signal output out[3];
@@ -227,7 +224,7 @@ template StateToMask(n) {
     //--------------------------------------------------------------------------------------------//
     // `parsing_primitive` is more complicated to deal with
     /* We have the possible relevant states below:
-    [isParsingString, isParsingNumber, readNumber, readDelimeter];
+    [isParsingString, isParsingNumber, readPrimitive, readDelimeter];
              1                2             4             8
     Above is the binary value for each if is individually enabled
     This is a total of 2^4 states
@@ -238,12 +235,12 @@ template StateToMask(n) {
     Below is an optimized version that could instead be done with a `Switch`
     */
     signal parsingNumberReadDelimeter <== parsing_primitive * (readDelimeter);
-    signal readNumberNotParsingNumber <== (1 - parsing_primitive) * readNumber;
-    signal notParsingStringAndParsingNumberReadDelimeterOrReadNumberNotParsingNumber <== (1 - parsing_string) * (parsingNumberReadDelimeter + readNumberNotParsingNumber);
+    signal readPrimitiveNotParsingNumber <== (1 - parsing_primitive) * readPrimitive;
+    signal notParsingStringAndParsingNumberReadDelimeterOrreadPrimitiveNotParsingNumber <== (1 - parsing_string) * (parsingNumberReadDelimeter + readPrimitiveNotParsingNumber);
     //                                                                                                           10 above ^^^^^^^^^^^^^^^^^   4 above ^^^^^^^^^^^^^^^^^^
-    signal parsingNumberNotReadNumber <== parsing_primitive * (1 - readNumber) ;
-    signal parsingNumberNotReadNumberNotReadDelimeter <== parsingNumberNotReadNumber * (1-readDelimeter);
-    out[2] <== notParsingStringAndParsingNumberReadDelimeterOrReadNumberNotParsingNumber + parsingNumberNotReadNumberNotReadDelimeter;
+    signal parsingNumberNotreadPrimitive <== parsing_primitive * (1 - readPrimitive) ;
+    signal parsingNumberNotreadPrimitiveNotReadDelimeter <== parsingNumberNotreadPrimitive * (1-readDelimeter);
+    out[2] <== notParsingStringAndParsingNumberReadDelimeterOrreadPrimitiveNotParsingNumber + parsingNumberNotreadPrimitiveNotReadDelimeter;
     // Sorry about the long names, but they hopefully read clearly!
 }
 
