@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { circomkit, WitnessTester, uintArray32ToBits, http_response_plaintext, http_response_ciphertext, http_start_line, http_header_0, http_header_1, http_body, PolynomialDigest, strToBytes, JsonMaskType, jsonTreeHasher, compressTreeHash, modAdd, InitialDigest, MockManifest, http_response_ciphertext_dup, PUBLIC_IO_VARIABLES, modPow, CombinedInitialDigest, findBodyIndex } from "../common";
-import { CombinedTestCaseManifest, test_case, test_case_combined, TestCaseManifest } from "./testCase.test";
+import { CombinedTestCaseManifest, reddit_test_case, test_case, test_case_combined, TestCaseManifest } from "./testCase.test";
 
 import { toInput } from "../chacha20/authentication.test";
 import { poseidon1 } from "poseidon-lite";
@@ -811,8 +811,8 @@ describe("512B circuit", function () {
             params: [DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_VARIABLES],
         });
 
-        let request = test_case_combined.request;
-        let response = test_case_combined.response;
+        let request = reddit_test_case.request;
+        let response = reddit_test_case.response;
         let manifest = CombinedTestCaseManifest();
 
         function nearestMultiplePad(input: number[], multiple: number): number[] {
@@ -902,11 +902,13 @@ describe("512B circuit", function () {
         assert.deepEqual(plaintextAuthenticationStepOut[0], modAdd(init_nivc_input[0] - requestCiphertextDigest, plaintextDigest));
 
         // Run HTTPVerification
-        let machineState = Array(7).fill(0);
+        let machineState = Array(8).fill(0);
         machineState[0] = 1; // Sets the parsing start to 1
-        let machineState2 = [0, 11, 0, 1, 0, 0, BigInt("6478557002040159009844936192109694275405493039011318769031046085766143389756")];
-        let machineState3 = [0, 0, 0, 0, 1, 0, 0];
-        let machineStates = [machineState, machineState2, machineState3, machineState3];
+        machineState[7] = 1; // Sets the line monomial to 1
+        let machineState2 = [0, 1, 0, 1, 0, 0, BigInt("21218358746262359245418567448753136091059684497465157067353670822841323691631"), BigInt("294712404858167615526411343770145012334003503108076178326684318832309721698")];
+        let machineState3 = [0, 1, 0, 1, 0, 0, BigInt("919717730919706340110590210863304851669750368287633403333916997274010222649"), BigInt("7642534564124920286762396311812311563644921918815497734336392450908097866647")];
+        let machineState4 = [0, 4, 0, 1, 0, 0, BigInt("16594509912132658633548398623473606113450450173523979681205586149623756925187"), BigInt("16036748119288573677512357943907797080397539423131796229203687601802883963153")];
+        let machineStates = [machineState, machineState2, machineState3, machineState4];
         let prevBodyCounter = BigInt(0);
 
         let requestBodyIndex = findBodyIndex(requestPlaintextCombined);
@@ -1098,11 +1100,12 @@ describe("512B circuit", function () {
         assert.deepEqual(responsePlaintextAuthenticationStepOut[0], modAdd(init_nivc_input[0] - prevResponseCtDigest, responsePlaintextDigest));
 
         // Run response HTTPVerification
-        let responseMachineState = Array(7).fill(0);
+        let responseMachineState = Array(8).fill(0);
         responseMachineState[0] = 1; // Sets the parsing start to 1
-        let responseMachineState2 = [0, 14, 0, 0, 0, 2, 0];
-        let responseMachineState3 = [0, 0, 0, 0, 1, 0, 0];
-        let responseMachineState4 = [0, 0, 0, 0, 1, 0, 0];
+        responseMachineState[7] = 1; // Sets the line monomial to 1
+        let responseMachineState2 = [0, 9, 0, 1, 0, 0, BigInt("20848396831015299078329888517201682120737434055968454964874253181566312587385"), BigInt("1127223840863862515198557295097962421105629773323840607111166584919676172461")];
+        let responseMachineState3 = [0, 19, 0, 1, 0, 0, BigInt("13322495516355679604764199542756975746572852905948014148501917822450065381679"), BigInt("10666397918167336865867404922425055437141132122568687218975061476458388639027")];
+        let responseMachineState4 = [0, 20, 0, 1, 0, 0, BigInt("12649825720393973615332758021959071459516676448706888536678587392957962764752"), BigInt("10155970281253632756670188800306451161176708763321775993434680795768541541484")];
         let responseMachineStates = [responseMachineState, responseMachineState2, responseMachineState3, responseMachineState4, responseMachineState4];
 
         let responseBodyIndex = findBodyIndex(responsePlaintextCombined);
@@ -1163,7 +1166,7 @@ describe("512B circuit", function () {
         let responseBody = responsePlaintextCombined.slice(responseBodyIndex);
         let responseJsonCircuitCount = Math.ceil(responseBody.length / DATA_BYTES);
 
-        const targetValue = strToBytes("ord_67890");
+        const targetValue = strToBytes("1789.0");
 
         let initialState = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
         let jsonState1: (bigint | number)[] = [
