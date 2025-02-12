@@ -480,6 +480,66 @@ describe("JSON Extraction", () => {
         console.log("> Fourth subtest passed.");
     });
 
+    it(`input: empty`, async () => {
+        let filename = "empty";
+        let [input, _keyUnicode, _output] = readJSONInputFile(`${filename}.json`, []);
+        let input_padded = input.concat(Array(DATA_BYTES - input.length).fill(-1));
+
+        // Test `{}` in "empty" key
+        let keySequence: JsonMaskType[] = [
+            { type: "Object", value: strToBytes("empty") },
+        ];
+        let [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, MAX_STACK_HEIGHT);
+        console.log(treeHashes);
+        let sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
+        let sequence_digest_hashed = poseidon1([sequence_digest]);
+
+        let value_digest = BigInt(0);
+
+        let data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
+
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
+        let state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
+
+        let step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];
+
+        let json_extraction_step_out = await hash_parser.compute({
+            data: input_padded,
+            ciphertext_digest: mock_ct_digest,
+            sequence_digest,
+            value_digest,
+            step_in,
+            state,
+        }, ["step_out"]);
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[0], value_digest);
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[7], modPow(mock_ct_digest, BigInt(input.length)));
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[9], sequence_digest_hashed);
+        console.log("> First subtest passed.");
+
+        // Test `[]` in "arr" key
+        keySequence = [
+            { type: "Object", value: strToBytes("arr") },
+        ];
+        [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, MAX_STACK_HEIGHT);
+        sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
+        sequence_digest_hashed = poseidon1([sequence_digest]);
+        value_digest = BigInt(0);
+        step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];;
+
+        json_extraction_step_out = await hash_parser.compute({
+            data: input_padded,
+            ciphertext_digest: mock_ct_digest,
+            sequence_digest,
+            value_digest,
+            step_in,
+            state,
+        }, ["step_out"]);
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[0], value_digest);
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[7], modPow(mock_ct_digest, BigInt(input.length)));
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[9], sequence_digest_hashed);
+        console.log("> Second subtest passed.");
+    });
+
     it(`input: spotify`, async () => {
         let filename = "spotify";
         let [input, _keyUnicode, _output] = readJSONInputFile(`${filename}.json`, []);
