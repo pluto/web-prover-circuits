@@ -166,9 +166,11 @@ pub fn json_value_digest<const MAX_STACK_HEIGHT: usize>(
   let value = match json {
     Value::Number(num) => num.to_string(),
     Value::String(val) => val,
+    Value::Bool(val) => val.to_string(),
+    val @ Value::Null => val.to_string(),
     _ =>
       return Err(WitnessGeneratorError::JsonKeyError(
-        "Value is not a string or number".to_string(),
+        "Value is not a string or other primitive type".to_string(),
       )),
   };
 
