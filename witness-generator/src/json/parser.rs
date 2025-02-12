@@ -137,7 +137,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
   };
   let mut output = vec![];
   // ctr used only for debuggin
-  // let mut ctr = 0;
+  let mut ctr = 0;
   for char in bytes {
     // Update the machine
     // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
@@ -153,8 +153,9 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           )),
       },
       END_BRACE => match (machine.clone().status, machine.current_location()) {
-        (Status::None, Location::ObjectValue) => {
+        (Status::None | Status::ParsingNumber(_), Location::ObjectValue) => {
           machine.location[machine.pointer() - 1] = Location::None;
+          machine.status = Status::None;
           machine.clear_label_stack();
         },
         _ =>
@@ -277,7 +278,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
     //   BigUint::from_bytes_le(&raw_state.parsing_number.to_bytes())
     // );
 
-    // ctr += 1;
+    ctr += 1;
     // dbg!(&RawJsonMachine::from(machine.clone()));
   }
   Ok(output)
@@ -355,6 +356,7 @@ mod tests {
   )]
   #[case::value_array_object(r#"{ "a" : [ { "b" : [ 1 , 4 ] } , { "c" : "b" } ] }"#)]
   #[case::value_object(r#"{ "a" : { "d" : "e" , "e" : "c" } , "e" : { "f" : "a" , "e" : "2" } , "g" : { "h" : { "a" : "c" } } , "ab" : "foobar" , "bc" : 42 , "dc" : [ 0 , 1 , "a" ] }"#)]
+  #[case::value_float(r#"{"data":{"redditorInfoByName":{"id":"t2_tazi6mk","karma":{"fromAwardsGiven":0.0,"fromAwardsReceived":0.0,"fromComments":24.0,"fromPosts":1765.0,"total":1789.0}}}}"#)]
   fn test_json_parser_valid(#[case] input: &str) {
     let polynomial_input = create_polynomial_input();
 

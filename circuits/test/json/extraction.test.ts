@@ -3,7 +3,7 @@ import { circomkit, WitnessTester, readJSONInputFile, strToBytes, JsonMaskType, 
 import { assert } from "chai";
 
 const DATA_BYTES = 320;
-const MAX_STACK_HEIGHT = 5;
+const MAX_STACK_HEIGHT = 6;
 
 describe("JSON Extraction", () => {
     let hash_parser: WitnessTester<["step_in", "ciphertext_digest", "data", "sequence_digest", "value_digest", "state"]>;
@@ -268,11 +268,13 @@ describe("JSON Extraction", () => {
             2, 0,
             1, 1,
             1, 1,
+            0, 0,
             BigInt("21114443489864049154001762655191180301122514770016290267650674674192767465697"), 0,
             BigInt("5598430990202924133535403001375485211379346439428387975269023087121609504266"), 0,
             BigInt("0"), 0,
             BigInt("4215832829314030653029106205864494290655121331068956006579751774144816160308"), 0,
             BigInt("10193689792027765875739665277472584711579103240499433210836208365265070585573"), 51,
+            0, 0,
             1, 0, 1
         ];
         state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
@@ -297,11 +299,13 @@ describe("JSON Extraction", () => {
             2, 1,
             1, 1,
             1, 1,
+            0, 0,
             BigInt("21114443489864049154001762655191180301122514770016290267650674674192767465697"), 0,
             BigInt("5598430990202924133535403001375485211379346439428387975269023087121609504266"), 0,
             BigInt("0"), 0,
             BigInt("4215832829314030653029106205864494290655121331068956006579751774144816160308"), 0,
             BigInt("10193689792027765875739665277472584711579103240499433210836208365265070585573"), 0,
+            0, 0,
             0, 0, 0
         ];
         state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
@@ -313,6 +317,52 @@ describe("JSON Extraction", () => {
             sequence_digest,
             value_digest,
             step_in: json_extraction_step_out.step_out as bigint[],
+            state,
+        }, ["step_out"]);
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[0], value_digest);
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[7], modPow(mock_ct_digest, BigInt(input.length)));
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[9], sequence_digest_hashed);
+    });
+
+    it(`input: venmo`, async () => {
+        let filename = "venmo";
+        let [input, _keyUnicode, _output] = readJSONInputFile(`${filename}.json`, []);
+        let input_padded = input.concat(Array(DATA_BYTES - input.length).fill(-1));
+
+
+        const KEY0 = strToBytes("data");
+        const KEY1 = strToBytes("profile");
+        const KEY2 = strToBytes("identity");
+        const KEY3 = strToBytes("balance");
+        const KEY4 = strToBytes("userBalance");
+        const KEY5 = strToBytes("value");
+        const targetValue = strToBytes("523.69");
+
+        const keySequence: JsonMaskType[] = [
+            { type: "Object", value: KEY0 },
+            { type: "Object", value: KEY1 },
+            { type: "Object", value: KEY2 },
+            { type: "Object", value: KEY3 },
+            { type: "Object", value: KEY4 },
+            { type: "Object", value: KEY5 },
+        ];
+
+        const [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, 10);
+        const sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
+        const sequence_digest_hashed = poseidon1([sequence_digest]);
+        const data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
+
+        const value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
+        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
+        const step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];
+
+        let json_extraction_step_out = await hash_parser.compute({
+            data: input_padded,
+            ciphertext_digest: mock_ct_digest,
+            sequence_digest,
+            value_digest,
+            step_in,
             state,
         }, ["step_out"]);
         assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[0], value_digest);

@@ -88,6 +88,10 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     // * read in a comma `,` *
     component readComma        = IsEqual();
     readComma.in             <== [byte, 44];
+
+    component readDot         = IsEqual();
+    readDot.in               <== [byte, 46];
+
     // * read in some delimeter *
     signal readDelimeter     <== readStartBrace.out + readEndBrace.out + readStartBracket.out + readEndBracket.out
                                + readColon.out + readComma.out;
@@ -99,7 +103,7 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     component readQuote        = IsEqual();
     readQuote.in             <== [byte, 34];
     component readOther        = IsZero();
-    readOther.in             <== readDelimeter + readNumber.out + readQuote.out;
+    readOther.in             <== readDelimeter + readNumber.out + readQuote.out + readDot.out;
     //--------------------------------------------------------------------------------------------//
     // Yield instruction based on what byte we read *
     component readStartBraceInstruction   = ScalarArrayMul(3);
