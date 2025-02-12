@@ -38,20 +38,20 @@ This template is for updating the state of the parser from a current state to a 
 # Inputs:
  - `byte`                      : the byte value of ASCII that was read by the parser.
  - `stack[MAX_STACK_HEIGHT][2]`: the stack machine's current stack.
- - `parsing_number`            : a bool flag that indicates whether the parser is currently parsing a string or not.
- - `parsing_number`            : a bool flag that indicates whether the parser is currently parsing a number or not.
+ - `parsing_string`            : a bool flag that indicates whether the parser is currently parsing a string or not.
+ - `parsing_primitive`            : a bool flag that indicates whether the parser is currently parsing a number or not.
 
 # Outputs:
  - `next_stack[MAX_STACK_HEIGHT][2]`: the stack machine's stack after reading `byte`.
- - `next_parsing_number`            : a bool flag that indicates whether the parser is currently parsing a string or not after reading `byte`.
- - `next_parsing_number`            : a bool flag that indicates whether the parser is currently parsing a number or not after reading `byte`.
+ - `next_parsing_string`            : a bool flag that indicates whether the parser is currently parsing a string or not after reading `byte`.
+ - `next_parsing_primitive`            : a bool flag that indicates whether the parser is currently parsing a number or not after reading `byte`.
 */
 template StateUpdateHasher(MAX_STACK_HEIGHT) {
     signal input byte;
 
     signal input stack[MAX_STACK_HEIGHT][2];
     signal input parsing_string;
-    signal input parsing_number;
+    signal input parsing_primitive;
     signal input polynomial_input;
     signal input monomial;
     signal input tree_hash[MAX_STACK_HEIGHT][2];
@@ -59,7 +59,7 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
 
     signal output next_stack[MAX_STACK_HEIGHT][2];
     signal output next_parsing_string;
-    signal output next_parsing_number;
+    signal output next_parsing_primitive;
     signal output next_monomial;
     signal output next_tree_hash[MAX_STACK_HEIGHT][2];
     signal output next_escaped;
@@ -92,16 +92,13 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     component readComma        = IsEqual();
     readComma.in             <== [byte, Syntax.COMMA];
 
-    component readDot         = IsEqual();
-    readDot.in               <== [byte, Syntax.DOT];
-
     // * read in some delimeter *
     signal readDelimeter     <== readStartBrace.out + readEndBrace.out + readStartBracket.out + readEndBracket.out
                                + readColon.out + readComma.out;
     // * read in some number *
-    component readNumber       = InRange(8);
-    readNumber.in            <== byte;
-    readNumber.range         <== [Syntax.NUMBER_START, Syntax.NUMBER_END]; // This is the range where ASCII digits are
+    component readPrimitive       = Contains(23);
+    readPrimitive.in            <== byte;
+    readPrimitive.array         <== [Syntax.ZERO, Syntax.ONE, Syntax.TWO,Syntax.THREE, Syntax.FOUR, Syntax.FIVE, Syntax.SIX, Syntax.SEVEN, Syntax.EIGHT, Syntax.NINE, Syntax.n,Syntax.u,Syntax.l,Syntax.f,Syntax.a,Syntax.s,Syntax.e,Syntax.t,Syntax.r, Syntax.PERIOD, Syntax.E, Syntax.PLUS, Syntax.MINUS];
     // * read in a quote `"` *
     component readQuote        = IsEqual();
     readQuote.in             <== [byte, Syntax.QUOTE];
@@ -110,7 +107,7 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     readEscape.in            <== [byte, Syntax.ESCAPE];
 
     component readOther        = IsZero();
-    readOther.in             <== readDelimeter + readNumber.out + readQuote.out + readDot.out;
+    readOther.in             <== readDelimeter + readPrimitive.out + readQuote.out;
     //--------------------------------------------------------------------------------------------//
     // Yield instruction based on what byte we read *
     component readStartBraceInstruction   = ScalarArrayMul(3);
@@ -131,9 +128,9 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     component readCommaInstruction        = ScalarArrayMul(3);
     readCommaInstruction.scalar         <== readComma.out;
     readCommaInstruction.array          <== Command.COMMA;
-    component readNumberInstruction       = ScalarArrayMul(3);
-    readNumberInstruction.scalar        <== readNumber.out;
-    readNumberInstruction.array         <== Command.NUMBER;
+    component readPrimitiveInstruction       = ScalarArrayMul(3);
+    readPrimitiveInstruction.scalar        <== readPrimitive.out;
+    readPrimitiveInstruction.array         <== Command.NUMBER;
     component readQuoteInstruction        = ScalarArrayMul(3);
     readQuoteInstruction.scalar         <== readQuote.out;
     readQuoteInstruction.array          <== Command.QUOTE;
@@ -142,22 +139,22 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     Instruction.arrays                  <== [readStartBraceInstruction.out, readEndBraceInstruction.out,
                                              readStartBracketInstruction.out, readEndBracketInstruction.out,
                                              readColonInstruction.out, readCommaInstruction.out,
-                                             readNumberInstruction.out, readQuoteInstruction.out];
+                                             readPrimitiveInstruction.out, readQuoteInstruction.out];
     //--------------------------------------------------------------------------------------------//
     // Apply state changing data
     // * get the instruction mask based on current state *
     component mask              = StateToMask(MAX_STACK_HEIGHT);
     mask.readDelimeter        <== readDelimeter;
-    mask.readNumber           <== readNumber.out;
+    mask.readPrimitive           <== readPrimitive.out;
     mask.parsing_string       <== parsing_string;
-    mask.parsing_number       <== parsing_number;
+    mask.parsing_primitive       <== parsing_primitive;
     // * multiply the mask array elementwise with the instruction array *
     component mulMaskAndOut    = ArrayMul(3);
     mulMaskAndOut.lhs        <== mask.out;
     mulMaskAndOut.rhs        <== [Instruction.out[0], Instruction.out[1], Instruction.out[2]  - readOther.out];
 
     next_parsing_string       <== escaped * (parsing_string - (parsing_string + mulMaskAndOut.out[1])) + (parsing_string + mulMaskAndOut.out[1]);
-    next_parsing_number       <== parsing_number + mulMaskAndOut.out[2];
+    next_parsing_primitive       <== parsing_primitive + mulMaskAndOut.out[2];
 
     component newStack          = RewriteStack(MAX_STACK_HEIGHT);
     newStack.stack            <== stack;
@@ -171,10 +168,10 @@ template StateUpdateHasher(MAX_STACK_HEIGHT) {
     newStack.readComma        <== readComma.out;
     newStack.readQuote        <== readQuote.out;
     newStack.parsing_string   <== parsing_string;
-    newStack.parsing_number      <== parsing_number;
+    newStack.parsing_primitive      <== parsing_primitive;
     newStack.monomial            <== monomial;
     newStack.next_parsing_string <== next_parsing_string;
-    newStack.next_parsing_number <== next_parsing_number;
+    newStack.next_parsing_primitive <== next_parsing_primitive;
     newStack.byte                <== byte;
     newStack.polynomial_input    <== polynomial_input;
     newStack.escaped             <== escaped;
@@ -198,22 +195,22 @@ This template is for updating the state of the parser from a current state to a 
 
 # Inputs:
  - `readDelimeter` : a bool flag that indicates whether the byte value read was a delimeter.
- - `readNumber`    : a bool flag that indicates whether the byte value read was a number.
- - `parsing_number`: a bool flag that indicates whether the parser is currently parsing a string or not.
- - `parsing_number`: a bool flag that indicates whether the parser is currently parsing a number or not.
+ - `readPrimitive`    : a bool flag that indicates whether the byte value read was for a primitive value.
+ - `parsing_primitive`: a bool flag that indicates whether the parser is currently parsing a string or not.
+ - `parsing_primitive`: a bool flag that indicates whether the parser is currently parsing a number or not.
 
 # Outputs:
  - `out[3]`: an array of values fed to update the stack and the parsing state flags.
     - 0: mask for `read_write_value`
     - 1: mask for `parsing_string`
-    - 2: mask for `parsing_number`
+    - 2: mask for `parsing_primitive`
 */
 template StateToMask(n) {
     // TODO: Probably need to assert things are bits where necessary.
     signal input readDelimeter;
-    signal input readNumber;
+    signal input readPrimitive;
     signal input parsing_string;
-    signal input parsing_number;
+    signal input parsing_primitive;
     signal output out[3];
 
 
@@ -225,25 +222,25 @@ template StateToMask(n) {
 
 
     //--------------------------------------------------------------------------------------------//
-    // `parsing_number` is more complicated to deal with
+    // `parsing_primitive` is more complicated to deal with
     /* We have the possible relevant states below:
-    [isParsingString, isParsingNumber, readNumber, readDelimeter];
+    [isParsingString, isParsingNumber, readPrimitive, readDelimeter];
              1                2             4             8
     Above is the binary value for each if is individually enabled
     This is a total of 2^4 states
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
     [0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1,  0,  0,  0,  0,   0];
-    and the above is what we want to set `next_parsing_number` to given those
+    and the above is what we want to set `next_parsing_primitive` to given those
     possible.
     Below is an optimized version that could instead be done with a `Switch`
     */
-    signal parsingNumberReadDelimeter <== parsing_number * (readDelimeter);
-    signal readNumberNotParsingNumber <== (1 - parsing_number) * readNumber;
-    signal notParsingStringAndParsingNumberReadDelimeterOrReadNumberNotParsingNumber <== (1 - parsing_string) * (parsingNumberReadDelimeter + readNumberNotParsingNumber);
+    signal parsingNumberReadDelimeter <== parsing_primitive * (readDelimeter);
+    signal readPrimitiveNotParsingNumber <== (1 - parsing_primitive) * readPrimitive;
+    signal notParsingStringAndParsingNumberReadDelimeterOrreadPrimitiveNotParsingNumber <== (1 - parsing_string) * (parsingNumberReadDelimeter + readPrimitiveNotParsingNumber);
     //                                                                                                           10 above ^^^^^^^^^^^^^^^^^   4 above ^^^^^^^^^^^^^^^^^^
-    signal parsingNumberNotReadNumber <== parsing_number * (1 - readNumber) ;
-    signal parsingNumberNotReadNumberNotReadDelimeter <== parsingNumberNotReadNumber * (1-readDelimeter);
-    out[2] <== notParsingStringAndParsingNumberReadDelimeterOrReadNumberNotParsingNumber + parsingNumberNotReadNumberNotReadDelimeter;
+    signal parsingNumberNotreadPrimitive <== parsing_primitive * (1 - readPrimitive) ;
+    signal parsingNumberNotreadPrimitiveNotReadDelimeter <== parsingNumberNotreadPrimitive * (1-readDelimeter);
+    out[2] <== notParsingStringAndParsingNumberReadDelimeterOrreadPrimitiveNotParsingNumber + parsingNumberNotreadPrimitiveNotReadDelimeter;
     // Sorry about the long names, but they hopefully read clearly!
 }
 
@@ -316,10 +313,10 @@ template RewriteStack(n) {
     signal input readQuote;
     signal input escaped;
 
-    signal input parsing_number;
+    signal input parsing_primitive;
     signal input parsing_string;
     signal input next_parsing_string;
-    signal input next_parsing_number;
+    signal input next_parsing_primitive;
     signal input byte;
     signal input polynomial_input;
     signal input monomial;
@@ -379,7 +376,7 @@ template RewriteStack(n) {
     signal is_object_value <== IsEqualArray(2)([current_value,[1,1]]);
     signal is_array        <== IsEqual()([current_value[0], 2]);
 
-    signal not_to_hash <== IsZero()(parsing_string * next_parsing_string + next_parsing_number);
+    signal not_to_hash <== IsZero()(parsing_string * next_parsing_string + next_parsing_primitive);
     signal hash_0      <== is_object_key * stateHash[0].out; // TODO: I think these may not be needed
     signal hash_1      <== (is_object_value + is_array) * stateHash[1].out; // TODO: I think these may not be needed
 
@@ -407,15 +404,15 @@ template RewriteStack(n) {
     // signal not_array_and_not_end_kv <== (1 - is_array) * (1 - end_kv);
     signal to_change_zeroth         <== (1 - is_array) * still_parsing_object_key + end_kv;
 
-    signal not_end_char_for_first    <== IsZero()(readColonAndNotParsingString + readCommaAndNotParsingString + readQuote + (1-next_parsing_number));
+    signal not_end_char_for_first    <== IsZero()(readColonAndNotParsingString + readCommaAndNotParsingString + readQuote + (1-next_parsing_primitive));
     signal maintain_zeroth           <== is_object_value * stateHash[0].out;
     signal to_change_first           <== is_object_value + is_array;
     // signal tree_hash_change_value[2] <== [not_array_and_not_object_value_and_not_end_kv * next_state_hash[0], to_change_first * next_state_hash[1]];
 
     signal to_clear_zeroth <== end_kv;
-    signal stopped_parsing_number <== IsEqual()([(parsing_number - next_parsing_number), 1]);
+    signal stopped_parsing_primitive <== IsEqual()([(parsing_primitive - next_parsing_primitive), 1]);
     signal read_quote_not_escaped <== readQuote * (1 - escaped);
-    signal not_to_clear_first <== IsZero()(end_kv + read_quote_not_escaped * parsing_string + stopped_parsing_number);
+    signal not_to_clear_first <== IsZero()(end_kv + read_quote_not_escaped * parsing_string + stopped_parsing_primitive);
     signal to_clear_first <== (1 - not_to_clear_first);
     signal tree_hash_change_value[2] <== [(1 - to_clear_zeroth) * next_state_hash[0], (1 - to_clear_first) * next_state_hash[1]];
 

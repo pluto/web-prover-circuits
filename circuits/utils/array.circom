@@ -67,20 +67,17 @@ template Contains(n) {
     signal input array[n];
     signal output out;
 
-    var accum = 0;
+    signal accum[n+1];
+    accum[0] <== 1;
     component equalComponent[n];
     for(var i = 0; i < n; i++) {
-        equalComponent[i] = IsEqual();
-        equalComponent[i].in[0] <== in;
-        equalComponent[i].in[1] <== array[i];
-        accum = accum + equalComponent[i].out;
+        accum[i+1] <== accum[i] * (array[i] - in);
     }
 
     component someEqual = IsZero();
-    someEqual.in <== accum;
+    someEqual.in <== accum[n];
 
-    // Apply `not` to this by 1-x
-    out <== 1 - someEqual.out;
+    out <== someEqual.out;
 }
 
 /*
