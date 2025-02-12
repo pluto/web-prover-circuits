@@ -365,10 +365,6 @@ template RewriteStack(n) {
     signal stateHash[2][n+1];
     stateHash[0][0] <== 0;
     stateHash[1][0] <== 0;
-    // stateHash[0] = IndexSelector(n);
-    // stateHash[0].index <== pointer - 1;
-    // stateHash[1] = IndexSelector(n);
-    // stateHash[1].index <== pointer - 1;
     for(var i = 0 ; i < n ; i++) {
         stateHash[0][i+1] <== stateHash[0][i] + tree_hash_indicator[i] * tree_hash[i][0];
         stateHash[1][i+1] <== stateHash[1][i] + tree_hash_indicator[i] * tree_hash[i][1];
