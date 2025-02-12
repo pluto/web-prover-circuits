@@ -4,10 +4,10 @@ import { assert } from "chai";
 
 const DATA_BYTES = 320;
 const MAX_STACK_HEIGHT = 6;
+const mock_ct_digest = poseidon2([69, 420]);
 
 describe("JSON Extraction", () => {
     let hash_parser: WitnessTester<["step_in", "ciphertext_digest", "data", "sequence_digest", "value_digest", "state"]>;
-    const mock_ct_digest = poseidon2([69, 420]);
 
     before(async () => {
         hash_parser = await circomkit.WitnessTester(`Parser`, {
@@ -35,7 +35,7 @@ describe("JSON Extraction", () => {
 
         let data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
 
-        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         let state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
 
         let step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];
@@ -96,7 +96,7 @@ describe("JSON Extraction", () => {
         let data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
 
         let value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
-        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         let state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
         let step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];
 
@@ -159,8 +159,44 @@ describe("JSON Extraction", () => {
         const sequence_digest_hashed = poseidon1([sequence_digest]);
         const data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
         const value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
-        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         const state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
+        const step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];
+
+        let json_extraction_step_out = await hash_parser.compute({
+            data: input_padded,
+            ciphertext_digest: mock_ct_digest,
+            sequence_digest,
+            value_digest,
+            step_in,
+            state,
+        }, ["step_out"]);
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[0], value_digest);
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[7], modPow(mock_ct_digest, BigInt(input.length)));
+        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[9], sequence_digest_hashed);
+    });
+
+    it(`input: string escape`, async () => {
+        let filename = "string_escape";
+        let [input, _keyUnicode, _output] = readJSONInputFile(`${filename}.json`, []);
+        let input_padded = input.concat(Array(DATA_BYTES - input.length).fill(-1));
+
+        const KEY0 = strToBytes("a");
+        const targetValue = strToBytes("\"b\"");
+        console.log(targetValue);
+
+        const keySequence: JsonMaskType[] = [
+            { type: "Object", value: KEY0 },
+        ];
+
+        const [stack, treeHashes] = jsonTreeHasher(mock_ct_digest, keySequence, 10);
+        const sequence_digest = compressTreeHash(mock_ct_digest, [stack, treeHashes]);
+        const sequence_digest_hashed = poseidon1([sequence_digest]);
+        const data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
+
+        const value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
+        let state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
         const step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];
 
         let json_extraction_step_out = await hash_parser.compute({
@@ -201,7 +237,7 @@ describe("JSON Extraction", () => {
         const data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
 
         const value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
-        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         let state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
         const step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];
 
@@ -245,7 +281,7 @@ describe("JSON Extraction", () => {
         let split_data_digest = PolynomialDigest(input1, mock_ct_digest, BigInt(0));
 
         const value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
-        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         let state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
         let step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];
 
@@ -275,7 +311,7 @@ describe("JSON Extraction", () => {
             BigInt("4215832829314030653029106205864494290655121331068956006579751774144816160308"), 0,
             BigInt("10193689792027765875739665277472584711579103240499433210836208365265070585573"), 51,
             0, 0,
-            1, 0, 1
+            1, 0, 1, 0
         ];
         state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
         assert.deepEqual(state_digest, json_step_out[8]);
@@ -306,7 +342,7 @@ describe("JSON Extraction", () => {
             BigInt("4215832829314030653029106205864494290655121331068956006579751774144816160308"), 0,
             BigInt("10193689792027765875739665277472584711579103240499433210836208365265070585573"), 0,
             0, 0,
-            0, 0, 0
+            0, 0, 0, 0
         ];
         state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
         assert.deepEqual(state_digest, (json_extraction_step_out.step_out as BigInt[])[8]);
@@ -353,7 +389,7 @@ describe("JSON Extraction", () => {
         const data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
 
         const value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
-        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         let state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
         const step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];
 

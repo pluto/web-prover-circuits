@@ -50,10 +50,12 @@ template StateUpdate(MAX_STACK_HEIGHT) {
     signal input stack[MAX_STACK_HEIGHT][2];
     signal input parsing_string;
     signal input parsing_number;
+    signal input escaped;
 
     signal output next_stack[MAX_STACK_HEIGHT][2];
     signal output next_parsing_string;
     signal output next_parsing_number;
+    signal output next_escaped;
 
     component Command = Command();
     component Syntax  = Syntax();
@@ -88,6 +90,10 @@ template StateUpdate(MAX_STACK_HEIGHT) {
     // * read in a quote `"` *
     component readQuote        = IsEqual();
     readQuote.in             <== [byte, Syntax.QUOTE];
+    // * read in a escape `\` *
+    component readEscape       = IsEqual();
+    readEscape.in            <== [byte, Syntax.ESCAPE];
+
     component readOther        = IsZero();
     readOther.in             <== readDelimeter + readNumber.out + readQuote.out;
     //--------------------------------------------------------------------------------------------//
@@ -145,9 +151,15 @@ template StateUpdate(MAX_STACK_HEIGHT) {
     newStack.readColon        <== readColon.out;
     newStack.readComma        <== readComma.out;
     // * set all the next state of the parser *
-    next_stack                <== newStack.next_stack;
-    next_parsing_string       <== parsing_string + mulMaskAndOut.out[1];
-    next_parsing_number       <== parsing_number + mulMaskAndOut.out[2];
+    // b * (y - x) + x --> Simple way of doing a switch with boolean b
+    for(var i = 0 ; i < MAX_STACK_HEIGHT ; i++) {
+        next_stack[i][0] <== readEscape.out * (stack[i][0] - newStack.next_stack[i][0]) + newStack.next_stack[i][0];
+        next_stack[i][1] <== readEscape.out * (stack[i][1] - newStack.next_stack[i][1]) + newStack.next_stack[i][1];
+    }
+    next_parsing_string       <== readEscape.out * (parsing_string - (parsing_string + mulMaskAndOut.out[1])) + (parsing_string + mulMaskAndOut.out[1]);
+    next_parsing_number       <== readEscape.out * (parsing_number - (parsing_number + mulMaskAndOut.out[2])) + (parsing_number + mulMaskAndOut.out[2]);
+    // Toggle escaped if read
+    next_escaped              <== readEscape.out * (1 - escaped);
     //--------------------------------------------------------------------------------------------//
 }
 
