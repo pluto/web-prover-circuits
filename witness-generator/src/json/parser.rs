@@ -166,7 +166,10 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
           )),
       },
       END_BRACE => match (machine.clone().status, machine.current_location()) {
-        (Status::None | Status::ParsingPrimitive(_), Location::ObjectValue) => {
+        (
+          Status::None | Status::ParsingPrimitive(_),
+          Location::ObjectKey | Location::ObjectValue,
+        ) => {
           machine.location[machine.pointer() - 1] = Location::None;
           machine.status = Status::None;
           machine.clear_label_stack();
@@ -387,6 +390,7 @@ mod tests {
     r#"{"null": null, "false": false, "true": true, "num1": 2.0E-1, "num2": 2.0e+1}"#
   )]
   #[case::primitives_array(r#"[null,false,true,2.0E-1,2.0e+1]"#)]
+  #[case::empty(r#"{"object":{},"arr":[]}"#)]
   fn test_json_parser_valid(#[case] input: &str) {
     let polynomial_input = create_polynomial_input();
 
