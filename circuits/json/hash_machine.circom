@@ -362,14 +362,16 @@ template RewriteStack(n) {
     //--------------------------------------------------------------------------------------------//
     // Hash the next_* states to produce hash we need
     // TODO: This could be optimized -- we don't really need to do the index selector, we can just accumulate elsewhere
-    component stateHash[2];
-    stateHash[0] = IndexSelector(n);
-    stateHash[0].index <== pointer - 1;
-    stateHash[1] = IndexSelector(n);
-    stateHash[1].index <== pointer - 1;
+    signal stateHash[2][n+1];
+    stateHash[0][0] <== 0;
+    stateHash[1][0] <== 0;
+    // stateHash[0] = IndexSelector(n);
+    // stateHash[0].index <== pointer - 1;
+    // stateHash[1] = IndexSelector(n);
+    // stateHash[1].index <== pointer - 1;
     for(var i = 0 ; i < n ; i++) {
-        stateHash[0].in[i] <== tree_hash[i][0];
-        stateHash[1].in[i] <== tree_hash[i][1];
+        stateHash[0][i+1] <== stateHash[0][i] + tree_hash_indicator[i] * tree_hash[i][0];
+        stateHash[1][i+1] <== stateHash[1][i] + tree_hash_indicator[i] * tree_hash[i][1];
     }
 
     signal is_object_key   <== IsEqualArray(2)([current_value,[1,0]]);
@@ -377,8 +379,8 @@ template RewriteStack(n) {
     signal is_array        <== IsEqual()([current_value[0], 2]);
 
     signal not_to_hash <== IsZero()(parsing_string * next_parsing_string + next_parsing_primitive);
-    signal hash_0      <== is_object_key * stateHash[0].out; // TODO: I think these may not be needed
-    signal hash_1      <== (is_object_value + is_array) * stateHash[1].out; // TODO: I think these may not be needed
+    signal hash_0      <== is_object_key * stateHash[0][n]; // TODO: I think these may not be needed
+    signal hash_1      <== (is_object_value + is_array) * stateHash[1][n]; // TODO: I think these may not be needed
 
     signal monomial_is_zero <== IsZero()(monomial);
     signal increased_power  <== monomial * polynomial_input;
@@ -386,8 +388,8 @@ template RewriteStack(n) {
     signal option_hash      <== hash_0 + hash_1 + byte * next_monomial;
 
     signal next_state_hash[2];
-    next_state_hash[0] <== not_to_hash * (stateHash[0].out - option_hash) + option_hash; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
-    next_state_hash[1] <== not_to_hash * (stateHash[1].out - option_hash) + option_hash;
+    next_state_hash[0] <== not_to_hash * (stateHash[0][n] - option_hash) + option_hash; // same as: (1 - not_to_hash[i]) * option_hash[i] + not_to_hash[i] * hash[i];
+    next_state_hash[1] <== not_to_hash * (stateHash[1][n] - option_hash) + option_hash;
     // ^^^^ next_state_hash is the previous value (state_hash) or it is the newly computed value (option_hash)
     //--------------------------------------------------------------------------------------------//
 
@@ -405,7 +407,7 @@ template RewriteStack(n) {
     signal to_change_zeroth         <== (1 - is_array) * still_parsing_object_key + end_kv;
 
     signal not_end_char_for_first    <== IsZero()(readColonAndNotParsingString + readCommaAndNotParsingString + readQuote + (1-next_parsing_primitive));
-    signal maintain_zeroth           <== is_object_value * stateHash[0].out;
+    signal maintain_zeroth           <== is_object_value * stateHash[0][n];
     signal to_change_first           <== is_object_value + is_array;
     // signal tree_hash_change_value[2] <== [not_array_and_not_object_value_and_not_end_kv * next_state_hash[0], to_change_first * next_state_hash[1]];
 
