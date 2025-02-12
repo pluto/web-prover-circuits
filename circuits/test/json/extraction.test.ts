@@ -389,7 +389,7 @@ describe("JSON Extraction", () => {
         const data_digest = PolynomialDigest(input, mock_ct_digest, BigInt(0));
 
         const value_digest = PolynomialDigest(targetValue, mock_ct_digest, BigInt(0));
-        let state = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let state = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         let state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
         const step_in = [data_digest, 0, 0, 0, 0, 0, 0, 1, state_digest, sequence_digest_hashed, 0];
 

@@ -520,7 +520,7 @@ describe("Example NIVC Proof", async () => {
 
         // const requestTargetValue = strToBytes("0");
 
-        let requestJsonInitialState = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let requestJsonInitialState = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         const requestJsonState = [requestJsonInitialState, requestJsonInitialState];
 
         // TODO: request sequence digest is same as response sequence digest
@@ -997,7 +997,7 @@ describe("512B circuit", function () {
 
         // request JSON
 
-        const requestJsonInitialState = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        const requestJsonInitialState = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         const requestJsonState1 = [
             1, 1,
             1, 1,
@@ -1019,7 +1019,7 @@ describe("512B circuit", function () {
             0, 0,
             0, 0,
             0, 0,
-            0, 0, 0
+            0, 0, 0, 0
         ]
         const requestJsonState = [requestJsonInitialState, requestJsonState1];
 
@@ -1061,7 +1061,7 @@ describe("512B circuit", function () {
         let responseJsonCircuitCount = Math.ceil(responseBody.length / DATA_BYTES);
 
 
-        let initialState = Array(MAX_STACK_HEIGHT * 4 + 3).fill(0);
+        let initialState = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         let jsonState1: (bigint | number)[] = [
             1, 1,
             1, 1,
@@ -1083,7 +1083,7 @@ describe("512B circuit", function () {
             0, 0,
             0, 0,
             0, 0,
-            0, 0, 0
+            0, 0, 0, 0
         ];
         let jsonState2: (bigint | number)[] = [
             1, 1,
@@ -1106,7 +1106,7 @@ describe("512B circuit", function () {
             0, 0,
             0, 0,
             0, 0,
-            1, 1, 0
+            1, 1, 0, 0
         ];
         let jsonState3: (bigint | number)[] = [
             1, 1,
@@ -1129,9 +1129,9 @@ describe("512B circuit", function () {
             0, 0,
             0, 0,
             0, 0,
-            0, 1, 0
+            0, 1, 0, 0
         ];
-        assert.deepEqual(jsonState1.length, MAX_STACK_HEIGHT * 4 + 3);
+        assert.deepEqual(jsonState1.length, MAX_STACK_HEIGHT * 4 + 4);
         let jsonStates = [initialState, jsonState1, jsonState2, jsonState3];
 
         const [stack, treeHashes] = jsonTreeHasher(ciphertext_digest, manifest.response.body.json, MAX_STACK_HEIGHT);
