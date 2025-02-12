@@ -43,8 +43,6 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
     //     log("machine_state[",i,"] = ", machine_state[i]);
     // }
     signal machine_state_digest <== PolynomialDigest(8)(machine_state, ciphertext_digest);
-    log("machine_state_digest: ", machine_state_digest);
-    log("step_in[3]: ", step_in[3]);
     step_in[3] === machine_state_digest;
     // - check step_in[4] = start line hash digest + all header hash digests
     // TODO: I don't like this `MAX_NUMBER_OF_HEADERS + 1` now. It should just be `NUMBER_OF_STATEMENTS_TO_LOCK` or something

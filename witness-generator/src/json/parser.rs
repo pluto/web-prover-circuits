@@ -140,8 +140,8 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
   let mut ctr = 0;
   for char in bytes {
     // Update the machine
-    println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    println!("char: {}, ctr: {}", *char as char, ctr);
+    // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    // println!("char: {}, ctr: {}", *char as char, ctr);
     match *char {
       START_BRACE => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::None | Location::ObjectValue | Location::ArrayIndex(_)) => {
@@ -246,37 +246,37 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
     }
     machine.write_to_label_stack();
     output.push(machine.clone());
-    let raw_state = RawJsonMachine::from(machine.clone());
-    let raw_stack = raw_state
-      .stack
-      .into_iter()
-      .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()), BigUint::from_bytes_le(&f.1.to_bytes())))
-      .collect::<Vec<(BigUint, BigUint)>>();
-    let raw_tree_hash = raw_state
-      .tree_hash
-      .into_iter()
-      .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()), BigUint::from_bytes_le(&f.1.to_bytes())))
-      .collect::<Vec<(BigUint, BigUint)>>();
+    // let raw_state = RawJsonMachine::from(machine.clone());
+    // let raw_stack = raw_state
+    //   .stack
+    //   .into_iter()
+    //   .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()),
+    // BigUint::from_bytes_le(&f.1.to_bytes())))   .collect::<Vec<(BigUint, BigUint)>>();
+    // let raw_tree_hash = raw_state
+    //   .tree_hash
+    //   .into_iter()
+    //   .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()),
+    // BigUint::from_bytes_le(&f.1.to_bytes())))   .collect::<Vec<(BigUint, BigUint)>>();
     // Debuggin'
 
-    for (i, (a, b)) in raw_stack.iter().enumerate() {
-      println!("state[ {ctr:?} ].stack[{:2} ]     = [ {} ][ {} ]", i, a, b);
-    }
-    for (i, (a, b)) in raw_tree_hash.iter().enumerate() {
-      println!("state[ {ctr:?} ].tree_hash[{:2} ] = [ {} ][ {} ]", i, a, b);
-    }
-    println!(
-      "state[ {ctr:?} ].monomial       = {:?}",
-      BigUint::from_bytes_le(&raw_state.monomial.to_bytes())
-    );
-    println!(
-      "state[ {ctr:?} ].parsing_string = {:?}",
-      BigUint::from_bytes_le(&raw_state.parsing_string.to_bytes())
-    );
-    println!(
-      "state[ {ctr:?} ].parsing_number = {:?}",
-      BigUint::from_bytes_le(&raw_state.parsing_number.to_bytes())
-    );
+    // for (i, (a, b)) in raw_stack.iter().enumerate() {
+    //   println!("state[ {ctr:?} ].stack[{:2} ]     = [ {} ][ {} ]", i, a, b);
+    // }
+    // for (i, (a, b)) in raw_tree_hash.iter().enumerate() {
+    //   println!("state[ {ctr:?} ].tree_hash[{:2} ] = [ {} ][ {} ]", i, a, b);
+    // }
+    // println!(
+    //   "state[ {ctr:?} ].monomial       = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.monomial.to_bytes())
+    // );
+    // println!(
+    //   "state[ {ctr:?} ].parsing_string = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.parsing_string.to_bytes())
+    // );
+    // println!(
+    //   "state[ {ctr:?} ].parsing_number = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.parsing_number.to_bytes())
+    // );
 
     ctr += 1;
     // dbg!(&RawJsonMachine::from(machine.clone()));
