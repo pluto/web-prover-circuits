@@ -39,9 +39,6 @@ template HTTPVerification(DATA_BYTES, MAX_NUMBER_OF_HEADERS, PUBLIC_IO_LENGTH) {
 
     // assertions:
     // - check step_in[3] = machine state hash digest
-    // for (var i = 0 ; i < 8 ; i++) {
-    //     log("machine_state[",i,"] = ", machine_state[i]);
-    // }
     signal machine_state_digest <== PolynomialDigest(8)(machine_state, ciphertext_digest);
     step_in[3] === machine_state_digest;
     // - check step_in[4] = start line hash digest + all header hash digests

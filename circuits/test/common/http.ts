@@ -1,6 +1,15 @@
-import { toByte } from ".";
+import { PolynomialDigest, toByte } from ".";
 import { join } from "path";
 import { readFileSync } from "fs";
+
+export function defaultHttpMachineState(polynomial_input: bigint): [number[], bigint] {
+    let state = Array(8).fill(0);
+    state[0] = 1;
+    state[7] = 1;
+
+    let digest = PolynomialDigest(state, polynomial_input, BigInt(0));
+    return [state, digest];
+}
 
 export function readLockFile<T>(filename: string): T {
     const filePath = join(__dirname, "..", "..", "..", "examples", "http", "lockfile", filename);

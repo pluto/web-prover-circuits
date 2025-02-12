@@ -608,7 +608,6 @@ export function CombinedInitialDigest(
     initialHttpMachineState[0] = BigInt(1);
     initialHttpMachineState[7] = BigInt(1);
     let initialHttpMachineStateDigest = PolynomialDigest(initialHttpMachineState, ciphertextDigest, BigInt(0));
-    console.log("Initial HTTP Machine State Digest: ", initialHttpMachineStateDigest);
 
     const numMatches = 1 + Object.keys(manifest.response.headers).length + 1 + Object.keys(manifest.request.headers).length;
     return [ciphertextDigest, [ciphertextDigest, BigInt(1), BigInt(1), initialHttpMachineStateDigest, headerVerificationLock, BigInt(numMatches), BigInt(0), BigInt(1), BigInt(0), jsonSequenceDigestHash, BigInt(0)], allDigests];
