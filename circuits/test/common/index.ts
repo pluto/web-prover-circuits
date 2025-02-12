@@ -9,6 +9,15 @@ export const circomkit = new Circomkit({
 
 export { WitnessTester };
 
+export function nearestMultiplePad(input: number[], multiple: number): number[] {
+    let length = input.length;
+    let remainder = length % multiple;
+    if (remainder === 0) {
+        return input;
+    }
+    return input.concat(Array(multiple - remainder).fill(-1));
+}
+
 function stringifyValue(value: any): string {
     if (Array.isArray(value)) {
         return `[${value.map(stringifyValue).join(', ')}]`;

@@ -153,8 +153,8 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
   let mut ctr = 0;
   for char in bytes {
     // Update the machine
-    println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    println!("char: {}, ctr: {}", *char as char, ctr);
+    // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    // println!("char: {}, ctr: {}", *char as char, ctr);
     match *char {
       START_BRACE => match (machine.clone().status, machine.current_location()) {
         (Status::None, Location::None | Location::ObjectValue | Location::ArrayIndex(_)) => {
@@ -271,41 +271,41 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
     }
     machine.write_to_label_stack();
     output.push(machine.clone());
-    let raw_state = RawJsonMachine::from(machine.clone());
-    let raw_stack = raw_state
-      .stack
-      .into_iter()
-      .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()), BigUint::from_bytes_le(&f.1.to_bytes())))
-      .collect::<Vec<(BigUint, BigUint)>>();
-    let raw_tree_hash = raw_state
-      .tree_hash
-      .into_iter()
-      .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()), BigUint::from_bytes_le(&f.1.to_bytes())))
-      .collect::<Vec<(BigUint, BigUint)>>();
-    // Debuggin'
+    // let raw_state = RawJsonMachine::from(machine.clone());
+    // let raw_stack = raw_state
+    //   .stack
+    //   .into_iter()
+    //   .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()),
+    // BigUint::from_bytes_le(&f.1.to_bytes())))   .collect::<Vec<(BigUint, BigUint)>>();
+    // let raw_tree_hash = raw_state
+    //   .tree_hash
+    //   .into_iter()
+    //   .map(|f| (BigUint::from_bytes_le(&f.0.to_bytes()),
+    // BigUint::from_bytes_le(&f.1.to_bytes())))   .collect::<Vec<(BigUint, BigUint)>>();
+    // // Debuggin'
 
-    for (i, (a, b)) in raw_stack.iter().enumerate() {
-      println!("state[ {ctr:?} ].stack[{:2} ]     = [ {} ][ {} ]", i, a, b);
-    }
-    for (i, (a, b)) in raw_tree_hash.iter().enumerate() {
-      println!("state[ {ctr:?} ].tree_hash[{:2} ] = [ {} ][ {} ]", i, a, b);
-    }
-    println!(
-      "state[ {ctr:?} ].monomial       = {:?}",
-      BigUint::from_bytes_le(&raw_state.monomial.to_bytes())
-    );
-    println!(
-      "state[ {ctr:?} ].parsing_string = {:?}",
-      BigUint::from_bytes_le(&raw_state.parsing_string.to_bytes())
-    );
-    println!(
-      "state[ {ctr:?} ].parsing_primitive = {:?}",
-      BigUint::from_bytes_le(&raw_state.parsing_primitive.to_bytes())
-    );
-    println!(
-      "state[ {ctr:?} ].escaped        = {:?}",
-      BigUint::from_bytes_le(&raw_state.escaped.to_bytes())
-    );
+    // for (i, (a, b)) in raw_stack.iter().enumerate() {
+    //   println!("state[ {ctr:?} ].stack[{:2} ]     = [ {} ][ {} ]", i, a, b);
+    // }
+    // for (i, (a, b)) in raw_tree_hash.iter().enumerate() {
+    //   println!("state[ {ctr:?} ].tree_hash[{:2} ] = [ {} ][ {} ]", i, a, b);
+    // }
+    // println!(
+    //   "state[ {ctr:?} ].monomial       = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.monomial.to_bytes())
+    // );
+    // println!(
+    //   "state[ {ctr:?} ].parsing_string = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.parsing_string.to_bytes())
+    // );
+    // println!(
+    //   "state[ {ctr:?} ].parsing_primitive = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.parsing_primitive.to_bytes())
+    // );
+    // println!(
+    //   "state[ {ctr:?} ].escaped        = {:?}",
+    //   BigUint::from_bytes_le(&raw_state.escaped.to_bytes())
+    // );
     ctr += 1;
     // dbg!(&RawJsonMachine::from(machine.clone()));
   }
@@ -415,5 +415,42 @@ mod tests {
     let input = "{".repeat(6) + &"}".repeat(6);
     let result = parse::<5>(input.as_bytes(), create_polynomial_input());
     assert!(result.is_err());
+  }
+
+  fn pretty_print<const MAX_STACK_HEIGHT: usize>(json_state: RawJsonMachine<MAX_STACK_HEIGHT>)
+  where [(); MAX_STACK_HEIGHT * 4 + 4]: {
+    let flattened = json_state.flatten();
+    for i in (0..flattened.len()).step_by(2) {
+      println!(
+        "BigInt({:?}), BigInt({:?}),",
+        field_element_to_base10_string(flattened[i]),
+        field_element_to_base10_string(flattened[i + 1])
+      );
+    }
+  }
+
+  #[test]
+  fn test_spotify_json() {
+    // TODO: Need to change the max stack back to 5 or whatever
+    let polynomial_input = create_polynomial_input();
+
+    // let input = SPOTIFY_TEST;
+    let input = std::fs::read("../examples/json/spotify.json").unwrap();
+    let states = parse::<12>(&input, polynomial_input).unwrap();
+    assert_eq!(states.last().unwrap().location, [Location::None; 12]);
+    assert_eq!(
+      states.last().unwrap().label_stack,
+      std::array::from_fn(|_| (String::new(), String::new()))
+    );
+
+    let raw_states =
+      states.into_iter().map(RawJsonMachine::from).collect::<Vec<RawJsonMachine<12>>>();
+    assert_eq!(raw_states.len(), input.len());
+
+    pretty_print(raw_states[1 * 512 - 1].clone());
+    println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    pretty_print(raw_states[2 * 512 - 1].clone());
+
+    verify_final_state(raw_states.last().unwrap());
   }
 }
