@@ -102,7 +102,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
         // log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     }
 
-    signal new_state[MAX_STACK_HEIGHT*4 + 3];
+    signal new_state[MAX_STACK_HEIGHT*4 + 4];
     for(var i = 0; i < MAX_STACK_HEIGHT; i++) {
         new_state[i*2] <== State[DATA_BYTES - 1].next_stack[i][0];
         new_state[i*2+1] <== State[DATA_BYTES - 1].next_stack[i][1];
@@ -112,11 +112,12 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     new_state[MAX_STACK_HEIGHT*4]     <== State[DATA_BYTES - 1].next_monomial;
     new_state[MAX_STACK_HEIGHT*4 + 1] <== State[DATA_BYTES - 1].next_parsing_string;
     new_state[MAX_STACK_HEIGHT*4 + 2] <== State[DATA_BYTES - 1].next_parsing_primitive;
-    signal new_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 3)(new_state, ciphertext_digest);
+    new_state[MAX_STACK_HEIGHT*4 + 3] <== State[DATA_BYTES - 1].next_escaped;
+    signal new_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 4)(new_state, ciphertext_digest);
 
-    // for (var i = 0 ; i < MAX_STACK_HEIGHT * 4 + 3 ; i++) {
-    //     log("new_state[", i, "] = ", new_state[i]);
-    // }
+    for (var i = 0 ; i < MAX_STACK_HEIGHT * 2 + 2 ; i++) {
+        log("new_state[", i, "] = ", new_state[i*2], new_state[i*2 + 1]);
+    }
 
     // Verify we have now processed all the data properly
     signal ciphertext_digest_pow[DATA_BYTES+1]; // ciphertext_digest ** i (Accumulates the polynomial_input)

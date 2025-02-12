@@ -7,6 +7,8 @@ import { poseidon1 } from "poseidon-lite";
 import { DataHasher } from "../common/poseidon";
 import { defaultHttpMachineState } from "../common/http";
 
+import { nearestMultiplePad } from "../common";
+
 // HTTP/1.1 200 OK
 // content-type: application/json; charset=utf-8
 // content-encoding: gzip
@@ -786,15 +788,6 @@ describe("512B circuit", function () {
         let request = reddit_test_case.request;
         let response = reddit_test_case.response;
         let manifest = RedditTestCaseManifest();
-
-        function nearestMultiplePad(input: number[], multiple: number): number[] {
-            let length = input.length;
-            let remainder = length % multiple;
-            if (remainder === 0) {
-                return input;
-            }
-            return input.concat(Array(multiple - remainder).fill(-1));
-        }
 
         async function testPlaintextAuthenticationCircuit(plaintext: number[][], ciphertext: number[][], key: number[], iv: number[], seq: number, ciphertext_digest: bigint, plaintextDigest: bigint, plaintextLengthSoFar: number, prevCiphertextDigest: bigint, stepIn: bigint[], init_nivc_input: bigint[]): Promise<[bigint[], number, bigint]> {
             let plaintext_packets_length = plaintext.length;
