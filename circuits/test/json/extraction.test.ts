@@ -676,17 +676,10 @@ describe("JSON Extraction", () => {
 
             jsonExtractionStepIn = jsonExtractionStepOut;
         }
-        // let json_extraction_step_out = await hash_parser.compute({
-        //     data: input_padded,
-        //     ciphertext_digest: mock_ct_digest,
-        //     sequence_digest,
-        //     value_digest,
-        //     step_in,
-        //     state,
-        // }, ["step_out"]);
-        // assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[0], value_digest);
-        // assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[7], modPow(mock_ct_digest, BigInt(input.length)));
-        // assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[9], sequence_digest_hashed);
+
+        assert.deepEqual(jsonExtractionStepOut[0], value_digest);
+        assert.deepEqual(jsonExtractionStepOut[7], modPow(mock_ct_digest, BigInt(input.length)));
+        assert.deepEqual(jsonExtractionStepOut[9], sequence_digest_hashed);
     });
 
     it(`split input: reddit`, async () => {
