@@ -47,10 +47,12 @@ export const INITIAL_IN = {
     stack: [[0, 0], [0, 0], [0, 0], [0, 0]],
     parsing_string: 0,
     parsing_number: 0,
+    escaped: 0,
 };
 
 export const INITIAL_OUT = {
     next_stack: INITIAL_IN.stack,
     next_parsing_string: INITIAL_IN.parsing_string,
     next_parsing_number: INITIAL_IN.parsing_number,
+    next_escaped: INITIAL_IN.escaped
 };

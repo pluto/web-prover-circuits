@@ -9,6 +9,15 @@ export const circomkit = new Circomkit({
 
 export { WitnessTester };
 
+export function nearestMultiplePad(input: number[], multiple: number): number[] {
+    let length = input.length;
+    let remainder = length % multiple;
+    if (remainder === 0) {
+        return input;
+    }
+    return input.concat(Array(multiple - remainder).fill(-1));
+}
+
 function stringifyValue(value: any): string {
     if (Array.isArray(value)) {
         return `[${value.map(stringifyValue).join(', ')}]`;
@@ -604,8 +613,13 @@ export function CombinedInitialDigest(
 
     let allDigests = [requestStartLineDigest, responseStartLineDigest, ...requestHeadersDigest, ...responseHeadersDigest];
 
+    let initialHttpMachineState = Array(8).fill(BigInt(0));
+    initialHttpMachineState[0] = BigInt(1);
+    initialHttpMachineState[7] = BigInt(1);
+    let initialHttpMachineStateDigest = PolynomialDigest(initialHttpMachineState, ciphertextDigest, BigInt(0));
+
     const numMatches = 1 + Object.keys(manifest.response.headers).length + 1 + Object.keys(manifest.request.headers).length;
-    return [ciphertextDigest, [ciphertextDigest, BigInt(1), BigInt(1), BigInt(1), headerVerificationLock, BigInt(numMatches), BigInt(0), BigInt(1), BigInt(0), jsonSequenceDigestHash, BigInt(0)], allDigests];
+    return [ciphertextDigest, [ciphertextDigest, BigInt(1), BigInt(1), initialHttpMachineStateDigest, headerVerificationLock, BigInt(numMatches), BigInt(0), BigInt(1), BigInt(0), jsonSequenceDigestHash, BigInt(0)], allDigests];
 }
 
 export function MockManifest(): Manifest {

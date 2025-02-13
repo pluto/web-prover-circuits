@@ -175,7 +175,7 @@ describe("Plaintext Authentication", () => {
             let paddedPlaintextBytes = plaintextBytes.concat(Array(totalLength - plaintextBytes.length).fill(-1));
             const counterBits0 = uintArray32ToBits([1])[0];
             let ciphertext_digest = DataHasher(ciphertextBytes, BigInt(0));
-            console.log("ciphertext_digest: ", ciphertext_digest);
+            // console.log("ciphertext_digest: ", ciphertext_digest);
             let step_in = Array(PUBLIC_IO_VARIABLES).fill(0);
             step_in[1] = BigInt(1);
             let w_0 = await circuit.compute({

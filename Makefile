@@ -32,7 +32,7 @@ params:
 	@for target_dir in $(TARGET_DIRS); do \
 		size=$$(basename "$$target_dir" | sed 's/target_//' | sed 's/b//'); \
 		echo "Generating parameters for $${size}b with ROM length 100..."; \
-		cargo +nightly run --release -- "$$target_dir/artifacts" "$${size}b" "100" || exit 1; \
+		cargo +nightly run --release -p create-pp -- "$$target_dir/artifacts" "$${size}b" "100" || exit 1; \
 	done
 
 .PHONY: check

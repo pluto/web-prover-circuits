@@ -6,9 +6,9 @@ include "hash_machine.circom";
 template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     signal input data[DATA_BYTES];
     signal input ciphertext_digest;
-    signal input sequence_digest;
+    signal input sequence_digest; // todo(sambhav): should sequence digest be 0 for first json circuit?
     signal input value_digest;
-    signal input state[MAX_STACK_HEIGHT * 4 + 3];
+    signal input state[MAX_STACK_HEIGHT * 4 + 4];
 
     signal input step_in[PUBLIC_IO_LENGTH];
     signal output step_out[PUBLIC_IO_LENGTH];
@@ -16,8 +16,8 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     //--------------------------------------------------------------------------------------------//
 
     // assertions:
-    step_in[5] === 0; // HTTP statements matched
-    signal input_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 3)(state, ciphertext_digest);
+    // step_in[5] === 0; // HTTP statements matched // TODO: either remove this or send a public io var
+    signal input_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 4)(state, ciphertext_digest);
     step_in[8] === input_state_digest;
     signal sequence_digest_hashed <== Poseidon(1)([sequence_digest]);
     step_in[9] === sequence_digest_hashed;
@@ -34,18 +34,6 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     signal intermediate_digest[DATA_BYTES][3 * MAX_STACK_HEIGHT];
     signal state_digest[DATA_BYTES];
 
-    // Debugging
-    // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-    //     log("State[", 0, "].next_stack[", i,"]      = [",State[0].next_stack[i][0], "][", State[0].next_stack[i][1],"]" );
-    // }
-    // for(var i = 0; i<MAX_STACK_HEIGHT; i++) {
-    //     log("State[", 0, "].next_tree_hash[", i,"]  = [",State[0].next_tree_hash[i][0], "][", State[0].next_tree_hash[i][1],"]" );
-    // }
-    // log("State[", 0, "].next_monomial        =", State[0].next_monomial);
-    // log("State[", 0, "].next_parsing_string  =", State[0].next_parsing_string);
-    // log("State[", 0, "].next_parsing_number  =", State[0].next_parsing_number);
-    // log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-
     var total_matches = 0;
     signal sequence_is_matched[DATA_BYTES];
     signal value_is_matched[DATA_BYTES];
@@ -61,7 +49,8 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
             State[0].polynomial_input <== ciphertext_digest;
             State[0].monomial         <== state[MAX_STACK_HEIGHT*4];
             State[0].parsing_string   <== state[MAX_STACK_HEIGHT*4 + 1];
-            State[0].parsing_number   <== state[MAX_STACK_HEIGHT*4 + 2];
+            State[0].parsing_primitive   <== state[MAX_STACK_HEIGHT*4 + 2];
+            State[0].escaped          <== state[MAX_STACK_HEIGHT*4 + 3];
         } else {
             State[data_idx]                    = StateUpdateHasher(MAX_STACK_HEIGHT);
             State[data_idx].byte             <== data[data_idx];
@@ -70,7 +59,8 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
             State[data_idx].tree_hash        <== State[data_idx - 1].next_tree_hash;
             State[data_idx].monomial         <== State[data_idx - 1].next_monomial;
             State[data_idx].parsing_string   <== State[data_idx - 1].next_parsing_string;
-            State[data_idx].parsing_number   <== State[data_idx - 1].next_parsing_number;
+            State[data_idx].parsing_primitive   <== State[data_idx - 1].next_parsing_primitive;
+            State[data_idx].escaped          <== State[data_idx - 1].next_escaped;
         }
 
         // Digest the whole stack and key tree hash
@@ -104,14 +94,15 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
         // }
         // log("State[", data_idx, "].next_monomial       =", State[data_idx].next_monomial);
         // log("State[", data_idx, "].next_parsing_string =", State[data_idx].next_parsing_string);
-        // log("State[", data_idx, "].next_parsing_number =", State[data_idx].next_parsing_number);
+        // log("State[", data_idx, "].next_parsing_primitive =", State[data_idx].next_parsing_primitive);
+        // log("State[", data_idx, "].next_escaped        =", State[data_idx].next_escaped);
         // log("++++++++++++++++++++++++++++++++++++++++++++++++");
         // log("state_digest[", data_idx,"]              = ", state_digest[data_idx]);
         // log("total_matches                   = ", total_matches);
         // log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     }
 
-    signal new_state[MAX_STACK_HEIGHT*4 + 3];
+    signal new_state[MAX_STACK_HEIGHT*4 + 4];
     for(var i = 0; i < MAX_STACK_HEIGHT; i++) {
         new_state[i*2] <== State[DATA_BYTES - 1].next_stack[i][0];
         new_state[i*2+1] <== State[DATA_BYTES - 1].next_stack[i][1];
@@ -120,11 +111,12 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     }
     new_state[MAX_STACK_HEIGHT*4]     <== State[DATA_BYTES - 1].next_monomial;
     new_state[MAX_STACK_HEIGHT*4 + 1] <== State[DATA_BYTES - 1].next_parsing_string;
-    new_state[MAX_STACK_HEIGHT*4 + 2] <== State[DATA_BYTES - 1].next_parsing_number;
-    signal new_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 3)(new_state, ciphertext_digest);
+    new_state[MAX_STACK_HEIGHT*4 + 2] <== State[DATA_BYTES - 1].next_parsing_primitive;
+    new_state[MAX_STACK_HEIGHT*4 + 3] <== State[DATA_BYTES - 1].next_escaped;
+    signal new_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 4)(new_state, ciphertext_digest);
 
-    // for (var i = 0 ; i < MAX_STACK_HEIGHT * 4 + 3 ; i++) {
-    //     log("new_state[", i, "] = ", new_state[i]);
+    // for (var i = 0 ; i < MAX_STACK_HEIGHT * 2 + 2 ; i++) {
+    //     log("new_state[", i, "] = ", new_state[i*2], new_state[i*2 + 1]);
     // }
 
     // Verify we have now processed all the data properly
@@ -145,10 +137,12 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     // Set the output to the digest of the intended value
     step_out[0] <== step_in[0] - data_digest + value_digest * total_matches;
 
+    // value_digest should be non-zero
+    signal is_value_digest_zero <== IsEqual()([value_digest, 0]);
     // both should be 0 or 1 together
     signal is_new_state_digest_zero <== IsEqual()([new_state_digest, 0]);
     signal is_step_out_zero_matched <== IsEqual()([step_out[0], value_digest]);
-    0 === is_new_state_digest_zero - is_step_out_zero_matched; // verify final value matches
+    0 === (1 - is_value_digest_zero) * (is_new_state_digest_zero - is_step_out_zero_matched); // verify final value matches
 
     step_out[1] <== step_in[1];
     step_out[2] <== step_in[2];
@@ -160,9 +154,8 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     step_out[8] <== new_state_digest;
     step_out[9] <== step_in[9];
     step_out[10] <== step_in[10];
-    for (var i = 11 ; i < PUBLIC_IO_LENGTH ; i++) {
-        step_out[i] <== step_in[i];
-    }
+
+    step_out[1] === step_out[2]; // assert http and plaintext parsed same amount
 
     // for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {
     //     log("step_out[", i, "] = ", step_out[i]);
