@@ -153,10 +153,7 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     step_out[8] <== new_state_digest;
     step_out[9] <== step_in[9];
     step_out[10] <== step_in[10];
-    // wtf is this loop for lol
-    for (var i = 11 ; i < PUBLIC_IO_LENGTH ; i++) {
-        step_out[i] <== step_in[i];
-    }
+
     step_out[1] === step_out[2]; // assert http and plaintext parsed same amount
 
     // for (var i = 0 ; i < PUBLIC_IO_LENGTH ; i++) {

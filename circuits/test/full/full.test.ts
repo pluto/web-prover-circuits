@@ -525,7 +525,7 @@ describe("Example NIVC Proof", async () => {
         let requestJsonInitialState = Array(MAX_STACK_HEIGHT * 4 + 4).fill(0);
         const requestJsonState = [requestJsonInitialState, requestJsonInitialState];
 
-        // TODO: request sequence digest is same as response sequence digest
+        // IMP: request sequence digest is same as response sequence digest
         const [responseStack, responseTreeHashes] = jsonTreeHasher(ciphertext_digest, manifest.response.body.json, MAX_STACK_HEIGHT);
         const response_sequence_digest = compressTreeHash(ciphertext_digest, [responseStack, responseTreeHashes]);
         const response_sequence_digest_hashed = poseidon1([response_sequence_digest]);
@@ -1016,7 +1016,7 @@ describe("512B circuit", function () {
         ]
         const requestJsonState = [requestJsonInitialState, requestJsonState1];
 
-        // TODO: request sequence digest is same as response sequence digest
+        // IMP: request sequence digest is same as response sequence digest
         const [responseStack, responseTreeHashes] = jsonTreeHasher(ciphertext_digest, manifest.response.body.json, MAX_STACK_HEIGHT);
         const response_sequence_digest = compressTreeHash(ciphertext_digest, [responseStack, responseTreeHashes]);
         const request_value_digest = BigInt(0);

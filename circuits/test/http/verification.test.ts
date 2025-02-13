@@ -107,7 +107,6 @@ describe("HTTP Verification", async () => {
             main_digests: [header_1_digest, start_line_digest, header_0_digest],
             ciphertext_digest: mock_ct_digest
         }, ["step_out"]);
-        // TODO: need to check more of the assertions
         assert.deepEqual((http_nivc_compute.step_out as BigInt[])[0], output_difference);
         assert.deepEqual((http_nivc_compute.step_out as BigInt[])[6], modPow(mock_ct_digest, BigInt(http_body.length - 1)));
     });
