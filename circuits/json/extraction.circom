@@ -115,9 +115,9 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     new_state[MAX_STACK_HEIGHT*4 + 3] <== State[DATA_BYTES - 1].next_escaped;
     signal new_state_digest <== PolynomialDigest(MAX_STACK_HEIGHT * 4 + 4)(new_state, ciphertext_digest);
 
-    for (var i = 0 ; i < MAX_STACK_HEIGHT * 2 + 2 ; i++) {
-        log("new_state[", i, "] = ", new_state[i*2], new_state[i*2 + 1]);
-    }
+    // for (var i = 0 ; i < MAX_STACK_HEIGHT * 2 + 2 ; i++) {
+    //     log("new_state[", i, "] = ", new_state[i*2], new_state[i*2 + 1]);
+    // }
 
     // Verify we have now processed all the data properly
     signal ciphertext_digest_pow[DATA_BYTES+1]; // ciphertext_digest ** i (Accumulates the polynomial_input)
