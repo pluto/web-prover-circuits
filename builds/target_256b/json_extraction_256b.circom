@@ -2,4 +2,4 @@ pragma circom 2.1.9;
 
 include "../../circuits/json/extraction.circom";
 
-component main { public [step_in] } = JSONExtraction(256, 10, 11);
+component main { public [step_in] } = JSONExtraction(256, 12, 11);
