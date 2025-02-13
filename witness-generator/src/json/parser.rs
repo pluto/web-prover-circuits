@@ -150,7 +150,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
   };
   let mut output = vec![];
   // ctr used only for debuggin
-  let mut ctr = 0;
+  // let mut ctr = 0;
   for char in bytes {
     // Update the machine
     // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
@@ -309,7 +309,7 @@ pub fn parse<const MAX_STACK_HEIGHT: usize>(
     //   "state[ {ctr:?} ].escaped        = {:?}",
     //   BigUint::from_bytes_le(&raw_state.escaped.to_bytes())
     // );
-    ctr += 1;
+    // ctr += 1;
     // dbg!(&RawJsonMachine::from(machine.clone()));
   }
   Ok(output)
@@ -420,6 +420,7 @@ mod tests {
     assert!(result.is_err());
   }
 
+  #[allow(unused)]
   fn pretty_print<const MAX_STACK_HEIGHT: usize>(json_state: RawJsonMachine<MAX_STACK_HEIGHT>)
   where [(); MAX_STACK_HEIGHT * 4 + 4]: {
     let flattened = json_state.flatten();
@@ -432,13 +433,15 @@ mod tests {
     }
   }
 
-  #[test]
-  fn test_spotify_json() {
-    // TODO: Need to change the max stack back to 5 or whatever
+  #[rstest]
+  #[case::spotify("spotify")]
+  #[case::reddit("reddit")]
+  #[case::binance("binance")]
+  fn test_complex_json(#[case] filename: &str) {
     let polynomial_input = create_polynomial_input();
 
     // let input = SPOTIFY_TEST;
-    let input = std::fs::read("../examples/json/spotify.json").unwrap();
+    let input = std::fs::read(format!("../examples/json/{}.json", filename)).unwrap();
     let states = parse::<12>(&input, polynomial_input).unwrap();
     assert_eq!(states.last().unwrap().location, [Location::None; 12]);
     assert_eq!(
@@ -449,14 +452,6 @@ mod tests {
     let raw_states =
       states.into_iter().map(RawJsonMachine::from).collect::<Vec<RawJsonMachine<12>>>();
     assert_eq!(raw_states.len(), input.len());
-
-    pretty_print(raw_states[1 * 512 - 1].clone());
-    println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    pretty_print(raw_states[2 * 512 - 1].clone());
-    println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    pretty_print(raw_states[3 * 512 - 1].clone());
-    // println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    // pretty_print(raw_states[4 * 512 - 1].clone());
 
     verify_final_state(raw_states.last().unwrap());
   }
