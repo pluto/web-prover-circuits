@@ -685,8 +685,7 @@ describe("JSON Extraction", () => {
     it(`split input: reddit`, async () => {
         let filename = "reddit";
         let [input, _keyUnicode, _output] = readJSONInputFile(`${filename}.json`, []);
-        let [input1, input2, input3] = [input.slice(0, DATA_BYTES), input.slice(DATA_BYTES, DATA_BYTES * 2), input.slice(DATA_BYTES * 2)];
-        input3 = input3.concat(Array(DATA_BYTES - input3.length).fill(-1));
+        let [input1, input2] = [input.slice(0, DATA_BYTES), input.slice(DATA_BYTES, DATA_BYTES * 2)];
 
         const KEY0 = strToBytes("data");
         const KEY1 = strToBytes("redditorInfoByName");
@@ -729,24 +728,36 @@ describe("JSON Extraction", () => {
         state = [
             1, 1,
             1, 1,
-            2, 0,
+            2, 1,
             1, 1,
-            1, 1,
+            1, 0,
+            0, 0,
+            0, 0,
+            0, 0,
+            0, 0,
+            0, 0,
+            0, 0,
             0, 0,
             BigInt("21114443489864049154001762655191180301122514770016290267650674674192767465697"), 0,
             BigInt("5598430990202924133535403001375485211379346439428387975269023087121609504266"), 0,
             BigInt("0"), 0,
             BigInt("4215832829314030653029106205864494290655121331068956006579751774144816160308"), 0,
-            BigInt("10193689792027765875739665277472584711579103240499433210836208365265070585573"), 51,
+            BigInt("5246441899134905677385878544168914162812821659359814307393023359653386558866"), 0,
             0, 0,
-            1, 0, 1, 0
+            0, 0,
+            0, 0,
+            0, 0,
+            0, 0,
+            0, 0,
+            0, 0,
+            BigInt("4867204701236088702941544733654106581221207892466505318353687073841230613376"), 1, 0, 0
         ];
         state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
         assert.deepEqual(state_digest, json_step_out[8]);
 
         let input2_digest = PolynomialDigest(input2, mock_ct_digest, BigInt(DATA_BYTES));
         json_extraction_step_out = await hash_parser.compute({
-            data: input2,
+            data: input2.concat(Array(DATA_BYTES - input2.length).fill(-1)),
             ciphertext_digest: mock_ct_digest,
             sequence_digest,
             value_digest,
@@ -754,36 +765,6 @@ describe("JSON Extraction", () => {
             state,
         }, ["step_out"]);
         assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[0], modAdd(data_digest - split_data_digest - input2_digest, value_digest));
-        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[7], modPow(mock_ct_digest, BigInt(DATA_BYTES * 2)));
-        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[9], sequence_digest_hashed);
-
-        state = [
-            1, 1,
-            1, 1,
-            2, 1,
-            1, 1,
-            1, 1,
-            0, 0,
-            BigInt("21114443489864049154001762655191180301122514770016290267650674674192767465697"), 0,
-            BigInt("5598430990202924133535403001375485211379346439428387975269023087121609504266"), 0,
-            BigInt("0"), 0,
-            BigInt("4215832829314030653029106205864494290655121331068956006579751774144816160308"), 0,
-            BigInt("10193689792027765875739665277472584711579103240499433210836208365265070585573"), 0,
-            0, 0,
-            0, 0, 0, 0
-        ];
-        state_digest = PolynomialDigest(state, mock_ct_digest, BigInt(0));
-        assert.deepEqual(state_digest, (json_extraction_step_out.step_out as BigInt[])[8]);
-
-        json_extraction_step_out = await hash_parser.compute({
-            data: input3,
-            ciphertext_digest: mock_ct_digest,
-            sequence_digest,
-            value_digest,
-            step_in: json_extraction_step_out.step_out as bigint[],
-            state,
-        }, ["step_out"]);
-        assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[0], value_digest);
         assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[7], modPow(mock_ct_digest, BigInt(input.length)));
         assert.deepEqual((json_extraction_step_out.step_out as BigInt[])[9], sequence_digest_hashed);
     });
