@@ -149,9 +149,6 @@ mod tests {
     let machine_state: [String; 8] = RawHttpMachine::from(states[511].to_owned()).into();
     dbg!(machine_state);
 
-    let machine_state: [String; 8] = RawHttpMachine::from(states[1023].to_owned()).into();
-    dbg!(machine_state);
-
     let machine_state = RawHttpMachine::from(states.last().unwrap().to_owned());
     assert_eq!(machine_state.parsing_start, F::ZERO);
     assert_eq!(machine_state.parsing_header, F::ZERO);
