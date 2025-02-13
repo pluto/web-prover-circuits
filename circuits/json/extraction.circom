@@ -137,11 +137,12 @@ template JSONExtraction(DATA_BYTES, MAX_STACK_HEIGHT, PUBLIC_IO_LENGTH) {
     // Set the output to the digest of the intended value
     step_out[0] <== step_in[0] - data_digest + value_digest * total_matches;
 
+    // value_digest should be non-zero
+    signal is_value_digest_zero <== IsEqual()([value_digest, 0]);
     // both should be 0 or 1 together
-    // TODO: fuck security!!
-    // signal is_new_state_digest_zero <== IsEqual()([new_state_digest, 0]);
-    // signal is_step_out_zero_matched <== IsEqual()([step_out[0], value_digest]);
-    // 0 === is_new_state_digest_zero - is_step_out_zero_matched; // verify final value matches
+    signal is_new_state_digest_zero <== IsEqual()([new_state_digest, 0]);
+    signal is_step_out_zero_matched <== IsEqual()([step_out[0], value_digest]);
+    0 === (1 - is_value_digest_zero) * (is_new_state_digest_zero - is_step_out_zero_matched); // verify final value matches
 
     step_out[1] <== step_in[1];
     step_out[2] <== step_in[2];
