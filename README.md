@@ -11,6 +11,12 @@
   </a>
 </div>
 
+> [!WARNING]
+> ⚠️ Repository No Longer Maintained ⚠️
+>https://github.com/pluto/noir-web-prover-circuits
+> This repository has been archived and is no longer maintained.
+All development has moved to the [noir-web-prover-circuits](https://github.com/pluto/noir-web-prover-circuits) repository under the Pluto organization.
+
 ## Overview
 
 `web-prover-circuits` is a project focused on implementing parsers and extractors/selective-disclosure for various data formats inside zero-knowledge circuits.
